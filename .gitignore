@@ -1,0 +1,32 @@
+# Dependencies
+/node_modules
+/vendor
+
+# Environment variables
+.env
+
+# IDE files
+/.idea
+/.vscode
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build outputs (keep .gitkeep files)
+/public/css/*
+!/public/css/.gitkeep
+/public/js/*
+!/public/js/.gitkeep
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Database files
+/database/*.sqlite
+/database/*.db
+!/database/.gitkeep

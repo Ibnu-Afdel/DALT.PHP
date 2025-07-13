@@ -1,0 +1,37 @@
+{
+    "name": "ibnuafdel/dalt-php",
+    "authors": [
+        {
+            "name": "ibnuafdel",
+            "email": "ibnuafdel@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Core\\": "Core/",
+            "Http\\": "Http/",
+            "Tests\\": "tests/"
+        }
+    },
+    "require-dev": {
+        "pestphp/pest": "^3.8"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "scripts": {
+        "setup": "@php bin/setup_framework.php",
+        "serve": "php artisan serve",
+        "test": "vendor/bin/pest",
+        "migrate": "php artisan migrate",
+        "migrate:fresh": "php artisan migrate:fresh",
+        "make:migration": "php artisan make:migration",
+        "seed": "php bin/seed.php"
+    },
+    "require": {
+        "vlucas/phpdotenv": "^5.6",
+        "illuminate/database": "^12.20"
+    }
+}

@@ -1,0 +1,85 @@
+#!/usr/bin/env php
+<?php
+
+$arguments = $argv;
+
+if (count($arguments) < 2) {
+    echo "Usage: php artisan <command>\n";
+    echo "Available commands:\n";
+    echo "  serve                   - Start development server\n";
+    echo "  migrate                 - Run migrations\n";
+    echo "  migrate:fresh          - Drop all tables and run migrations\n";
+    echo "  make:migration <name>  - Create a new migration\n";
+    exit(1);
+}
+
+$command = $arguments[1];
+
+switch ($command) {
+    case 'serve':
+        $host = $arguments[2] ?? '127.0.0.1';
+        $port = $arguments[3] ?? '8000';
+        
+        echo "Starting development server: http://{$host}:{$port}\n";
+        echo "Press Ctrl+C to stop the server\n\n";
+        
+        // Start the PHP development server
+        $command = "php -S {$host}:{$port} -t public";
+        passthru($command);
+        break;
+        
+    case 'migrate':
+        require __DIR__ . '/bin/migrate.php';
+        break;
+        
+    case 'migrate:fresh':
+        require __DIR__ . '/bin/migrate_fresh.php';
+        break;
+        
+    case 'make:migration':
+        if (!isset($arguments[2])) {
+            echo "Usage: php artisan make:migration <table_name>\n";
+            exit(1);
+        }
+        
+        $tableName = $arguments[2];
+        
+        // Remove 'create_' prefix and '_table' suffix if present
+        $tableName = preg_replace('/^create_/', '', $tableName);
+        $tableName = preg_replace('/_table$/', '', $tableName);
+        
+        $migrationFileName = date('YmdHis') . "_create_{$tableName}_table.php";
+        $migrationFilePath = __DIR__ . "/database/migrations/$migrationFileName";
+        
+        // Ensure migrations directory exists
+        if (!is_dir(__DIR__ . '/database/migrations')) {
+            mkdir(__DIR__ . '/database/migrations', 0755, true);
+        }
+        
+        $migrationContent = <<<'EOD'
+<?php
+
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Capsule\Manager as Capsule;
+
+return function () {
+    Capsule::schema()->create('%s', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+        // Add more fields here
+        $table->timestamps();
+    });
+
+    echo "Created %s table\n";
+};
+EOD;
+
+        file_put_contents($migrationFilePath, sprintf($migrationContent, $tableName, $tableName));
+        echo "Migration created: database/migrations/$migrationFileName\n";
+        break;
+        
+    default:
+        echo "Unknown command: $command\n";
+        echo "Available commands: serve, migrate, migrate:fresh, make:migration\n";
+        exit(1);
+}
