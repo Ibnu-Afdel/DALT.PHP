@@ -1,20 +1,12 @@
 <?php
 
-// return  [
-//    '/' => 'controllers/index.php',
-//    '/about' => 'controllers/about.php',
-//    '/notes' => 'controllers/notes/index.php',
-//    '/note' => 'controllers/notes/show.php',
-//    '/notes/create' => 'controllers/notes/create.php',
-//    '/contact' => 'controllers/contact.php',
-//];
-
 global $router;
 
 // Main routes
 $router->get('/', 'index.php');
 $router->get('/about', 'about.php');
 $router->get('/contact', 'contact.php');
+$router->get('/test','test.php');
 
 // Authentication routes
 $router->get('/register', 'registration/create.php')->only('guest');
