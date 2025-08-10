@@ -14,9 +14,9 @@ require BASE_PATH . 'vendor/autoload.php';
 session_start();
 
 
-require BASE_PATH . ('Core/functions.php');
+require BASE_PATH . ('framework/Core/functions.php');
 
-require base_path('Core/bootstrap.php');
+require base_path('framework/Core/bootstrap.php');
 
 
 $router = new \Core\Router();

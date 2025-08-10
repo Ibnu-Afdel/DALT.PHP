@@ -8,7 +8,7 @@
     ],
     "autoload": {
         "psr-4": {
-            "Core\\": "Core/",
+            "Core\\": "framework/Core/",
             "Http\\": "Http/",
             "Tests\\": "tests/"
         }
@@ -22,13 +22,11 @@
         }
     },
     "scripts": {
-        "setup": "@php bin/setup_framework.php",
         "serve": "php artisan serve",
         "test": "vendor/bin/pest",
         "migrate": "php artisan migrate",
         "migrate:fresh": "php artisan migrate:fresh",
-        "make:migration": "php artisan make:migration",
-        "seed": "php bin/seed.php"
+        "make:migration": "php artisan make:migration"
     },
     "require": {
         "vlucas/phpdotenv": "^5.6",

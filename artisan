@@ -3,155 +3,24 @@
 
 $arguments = $argv;
 
-// Helper function to generate controller content
-function generateControllerContent($action, $resourceName) {
-    $singular = rtrim($resourceName, 's');
-    $modelName = ucfirst($singular);
-    
-    switch ($action) {
-        case 'index':
-            return "<?php\n\n// Get all {$resourceName}\n// \${$resourceName} = {$modelName}::all();\n\nview('{$resourceName}/index.view.php', [\n    '{$resourceName}' => []\n]);\n";
-            
-        case 'create':
-            return "<?php\n\nview('{$resourceName}/create.view.php');\n";
-            
-        case 'store':
-            return "<?php\n\n// Validate and store new {$singular}\n// \$attributes = validate(\$_POST, [\n//     'name' => 'required|string|max:255'\n// ]);\n\n// {$modelName}::create(\$attributes);\n\nredirect('/{$resourceName}');\n";
-            
-        case 'show':
-            return "<?php\n\n// Get {$singular} by ID\n// \$id = \$_GET['id'];\n// \${$singular} = {$modelName}::find(\$id);\n\nview('{$resourceName}/show.view.php', [\n    '{$singular}' => []\n]);\n";
-            
-        case 'edit':
-            return "<?php\n\n// Get {$singular} by ID for editing\n// \$id = \$_GET['id'];\n// \${$singular} = {$modelName}::find(\$id);\n\nview('{$resourceName}/edit.view.php', [\n    '{$singular}' => []\n]);\n";
-            
-        case 'update':
-            return "<?php\n\n// Validate and update {$singular}\n// \$id = \$_GET['id'];\n// \$attributes = validate(\$_POST, [\n//     'name' => 'required|string|max:255'\n// ]);\n\n// {$modelName}::update(\$id, \$attributes);\n\nredirect('/{$resourceName}');\n";
-            
-        case 'destroy':
-            return "<?php\n\n// Delete {$singular}\n// \$id = \$_GET['id'];\n// {$modelName}::delete(\$id);\n\nredirect('/{$resourceName}');\n";
-            
-        default:
-            return "<?php\n\nview('{$resourceName}/{$action}.view.php');\n";
-    }
-}
-
-// Helper function to generate view content
-function generateViewContent($action, $resourceName) {
-    $singular = rtrim($resourceName, 's');
-    $title = ucfirst($action) . ' ' . ucfirst($resourceName);
-    
-    $baseContent = "<?php require base_path('resources/views/partials/head.php') ?>\n"
-                  . "<?php require base_path('resources/views/partials/nav.php') ?>\n\n"
-                  . "<main class=\"min-h-screen bg-gradient-to-br from-gray-900 to-gray-800\">\n"
-                  . "    <div class=\"max-w-7xl mx-auto px-6 py-20\">\n";
-    
-    switch ($action) {
-        case 'index':
-            $content = $baseContent
-                     . "        <div class=\"flex justify-between items-center mb-8\">\n"
-                     . "            <h1 class=\"text-3xl font-bold text-white\">{$title}</h1>\n"
-                     . "            <a href=\"/{$resourceName}/create\" class=\"bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium transition-colors\">\n"
-                     . "                Create New " . ucfirst($singular) . "\n"
-                     . "            </a>\n"
-                     . "        </div>\n"
-                     . "        \n"
-                     . "        <!-- {$resourceName} list -->\n"
-                     . "        <div class=\"bg-gray-800 rounded-lg shadow-lg overflow-hidden\">\n"
-                     . "            <div class=\"p-6\">\n"
-                     . "                <p class=\"text-gray-300\">List of {$resourceName} will be displayed here.</p>\n"
-                     . "                <!-- Add your {$resourceName} listing logic here -->\n"
-                     . "            </div>\n"
-                     . "        </div>\n";
-            break;
-            
-        case 'create':
-            $content = $baseContent
-                     . "        <h1 class=\"text-3xl font-bold text-white mb-8\">{$title}</h1>\n"
-                     . "        \n"
-                     . "        <div class=\"bg-gray-800 rounded-lg shadow-lg p-6\">\n"
-                     . "            <form action=\"/{$resourceName}\" method=\"POST\" class=\"space-y-6\">\n"
-                     . "                <div>\n"
-                     . "                    <label for=\"name\" class=\"block text-sm font-medium text-gray-300 mb-2\">Name</label>\n"
-                     . "                    <input type=\"text\" id=\"name\" name=\"name\" required \n"
-                     . "                           class=\"w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500\">\n"
-                     . "                </div>\n"
-                     . "                \n"
-                     . "                <div class=\"flex justify-end space-x-4\">\n"
-                     . "                    <a href=\"/{$resourceName}\" class=\"bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg font-medium transition-colors\">\n"
-                     . "                        Cancel\n"
-                     . "                    </a>\n"
-                     . "                    <button type=\"submit\" class=\"bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium transition-colors\">\n"
-                     . "                        Create " . ucfirst($singular) . "\n"
-                     . "                    </button>\n"
-                     . "                </div>\n"
-                     . "            </form>\n"
-                     . "        </div>\n";
-            break;
-            
-        case 'show':
-            $content = $baseContent
-                     . "        <div class=\"flex justify-between items-center mb-8\">\n"
-                     . "            <h1 class=\"text-3xl font-bold text-white\">{$title}</h1>\n"
-                     . "            <div class=\"space-x-2\">\n"
-                     . "                <a href=\"/{$resourceName}\" class=\"bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-colors\">\n"
-                     . "                    Back to List\n"
-                     . "                </a>\n"
-                     . "                <a href=\"/{$resourceName}/{id}/edit\" class=\"bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium transition-colors\">\n"
-                     . "                    Edit\n"
-                     . "                </a>\n"
-                     . "            </div>\n"
-                     . "        </div>\n"
-                     . "        \n"
-                     . "        <div class=\"bg-gray-800 rounded-lg shadow-lg p-6\">\n"
-                     . "            <p class=\"text-gray-300\">" . ucfirst($singular) . " details will be displayed here.</p>\n"
-                     . "        </div>\n";
-            break;
-            
-        case 'edit':
-            $content = $baseContent
-                     . "        <h1 class=\"text-3xl font-bold text-white mb-8\">{$title}</h1>\n"
-                     . "        \n"
-                     . "        <div class=\"bg-gray-800 rounded-lg shadow-lg p-6\">\n"
-                     . "            <form action=\"/{$resourceName}/{id}\" method=\"POST\" class=\"space-y-6\">\n"
-                     . "                <input type=\"hidden\" name=\"_method\" value=\"PATCH\">\n"
-                     . "                \n"
-                     . "                <div>\n"
-                     . "                    <label for=\"name\" class=\"block text-sm font-medium text-gray-300 mb-2\">Name</label>\n"
-                     . "                    <input type=\"text\" id=\"name\" name=\"name\" required \n"
-                     . "                           class=\"w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500\">\n"
-                     . "                </div>\n"
-                     . "                \n"
-                     . "                <div class=\"flex justify-end space-x-4\">\n"
-                     . "                    <a href=\"/{$resourceName}\" class=\"bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg font-medium transition-colors\">\n"
-                     . "                        Cancel\n"
-                     . "                    </a>\n"
-                     . "                    <button type=\"submit\" class=\"bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium transition-colors\">\n"
-                     . "                        Update " . ucfirst($singular) . "\n"
-                     . "                    </button>\n"
-                     . "                </div>\n"
-                     . "            </form>\n"
-                     . "        </div>\n";
-            break;
-            
-        default:
-            $content = $baseContent
-                     . "        <h1 class=\"text-3xl font-bold text-white mb-8\">{$title}</h1>\n"
-                     . "        <div class=\"bg-gray-800 rounded-lg shadow-lg p-6\">\n"
-                     . "            <p class=\"text-gray-300\">This is the {$action} page for {$resourceName}.</p>\n"
-                     . "        </div>\n";
-    }
-    
-    return $content . "    </div>\n</main>\n\n<?php require base_path('resources/views/partials/footer.php') ?>\n";
+function load_env_and_boot(): array {
+    define('BASE_PATH', __DIR__ . '/');
+    require BASE_PATH . 'framework/Core/functions.php';
+    require base_path('vendor/autoload.php');
+    $dotenv = Dotenv\Dotenv::createImmutable(base_path(''));
+    $dotenv->load();
+    $dbConfig = require base_path('config/database.php');
+    return $dbConfig;
 }
 
 if (count($arguments) < 2) {
     echo "Usage: php artisan <command>\n";
     echo "Available commands:\n";
-    echo "  serve                   - Start development server\n";
+    echo "  serve [host] [port]     - Start development server\n";
     echo "  migrate                 - Run migrations\n";
-    echo "  migrate:fresh          - Drop all tables and run migrations\n";
-    echo "  make:migration <name>  - Create a new migration\n";
-    echo "  make:all <name>        - Create migration, routes, controller, and views for a resource\n";
+    echo "  migrate:fresh           - Drop DB (sqlite) and run migrations\n";
+    echo "  make:migration <name>   - Create a new migration\n";
+    echo "  example:install auth    - Copy auth demo into app and add routes\n";
     exit(1);
 }
 
@@ -161,111 +30,49 @@ switch ($command) {
     case 'serve':
         $host = $arguments[2] ?? '127.0.0.1';
         $port = $arguments[3] ?? '8000';
-        
         echo "Starting development server: http://{$host}:{$port}\n";
-        echo "Press Ctrl+C to stop the server\n\n";
-        
-        // Start the PHP development server
-        $command = "php -S {$host}:{$port} -t public";
-        passthru($command);
-        break;
-        
-    case 'make:all':
-        if (!isset($arguments[2])) {
-            echo "Usage: php artisan make:all <resource name>\n";
-            exit(1);
-        }
-        $resourceName = strtolower($arguments[2]);
-        
-        // Create migration
-        passthru("php artisan make:migration create_{$resourceName}_table");
-
-        // Add routes
-        $routesPath = __DIR__ . '/routes/routes.php';
-        $routesContent = file_get_contents($routesPath);
-        $newRoutes = "\n// {$resourceName} routes\n"
-                    . "\$router->get('/{$resourceName}', '{$resourceName}/index.php');\n"
-                    . "\$router->get('/{$resourceName}/create', '{$resourceName}/create.php');\n"
-                    . "\$router->post('/{$resourceName}', '{$resourceName}/store.php');\n"
-                    . "\$router->get('/{$resourceName}/{id}', '{$resourceName}/show.php');\n"
-                    . "\$router->get('/{$resourceName}/{id}/edit', '{$resourceName}/edit.php');\n"
-                    . "\$router->patch('/{$resourceName}/{id}', '{$resourceName}/update.php');\n"
-                    . "\$router->delete('/{$resourceName}/{id}', '{$resourceName}/destroy.php');\n";
-        
-        file_put_contents($routesPath, $routesContent . $newRoutes);
-        echo "Routes added to routes/routes.php\n";
-
-        // Create controller directory
-        $controllerDirectory = __DIR__ . "/Http/controllers/{$resourceName}";
-        if (!is_dir($controllerDirectory)) {
-            mkdir($controllerDirectory, 0755, true);
-        }
-
-        // Create controller files with proper templates
-        $actions = ['index', 'create', 'store', 'show', 'edit', 'update', 'destroy'];
-        foreach ($actions as $action) {
-            $controllerFilePath = "$controllerDirectory/$action.php";
-            $controllerContent = generateControllerContent($action, $resourceName);
-            file_put_contents($controllerFilePath, $controllerContent);
-        }
-        echo "Controller files created in Http/controllers/{$resourceName}\n";
-
-        // Create views directory
-        $viewsDirectory = __DIR__ . "/resources/views/{$resourceName}";
-        if (!is_dir($viewsDirectory)) {
-            mkdir($viewsDirectory, 0755, true);
-        }
-
-        // Create view files
-        foreach ($actions as $action) {
-            $viewFilePath = "$viewsDirectory/{$action}.view.php";
-            $viewContent = generateViewContent($action, $resourceName);
-            file_put_contents($viewFilePath, $viewContent);
-        }
-        echo "View files created in resources/views/{$resourceName}\n";
-        echo "\n✅ Resource '{$resourceName}' created successfully!\n";
-        echo "\nFiles created:\n";
-        echo "- Migration: database/migrations/create_{$resourceName}_table.php\n";
-        echo "- Routes: Added to routes/routes.php\n";
-        echo "- Controllers: Http/controllers/{$resourceName}/\n";
-        echo "- Views: resources/views/{$resourceName}/\n";
-        echo "\nNext steps:\n";
-        echo "1. Run 'php artisan migrate' to create the database table\n";
-        echo "2. Update the migration file with your desired fields\n";
-        echo "3. Implement the controller logic\n";
-        echo "4. Customize the views as needed\n";
-
+        passthru("php -S {$host}:{$port} -t public");
         break;
 
     case 'migrate':
-        require __DIR__ . '/bin/migrate.php';
+        $dbConfig = load_env_and_boot();
+        $database = new Core\Database($dbConfig['database']);
+        $migration = new Core\Migration($database);
+        $migration->runMigrations();
+        echo "Migration process completed.\n";
         break;
-        
+
     case 'migrate:fresh':
-        require __DIR__ . '/bin/migrate_fresh.php';
+        $dbConfig = load_env_and_boot();
+        echo "Running migrate:fresh...\n";
+        if (($dbConfig['database']['driver'] ?? 'sqlite') === 'sqlite') {
+            $dbPath = $dbConfig['database']['database'];
+            if (file_exists($dbPath)) {
+                unlink($dbPath);
+                echo "Dropped existing database file.\n";
+            }
+        } else {
+            echo "Warning: migrate:fresh for non-SQLite databases not implemented yet.\n";
+        }
+        $database = new Core\Database($dbConfig['database']);
+        $migration = new Core\Migration($database);
+        $migration->runMigrations();
+        echo "Fresh migration completed.\n";
         break;
-        
+
     case 'make:migration':
         if (!isset($arguments[2])) {
             echo "Usage: php artisan make:migration <table_name>\n";
             exit(1);
         }
-        
-        $tableName = $arguments[2];
-        
-        // Remove 'create_' prefix and '_table' suffix if present
-        $tableName = preg_replace('/^create_/', '', $tableName);
+        $tableName = preg_replace('/^create_/', '', $arguments[2]);
         $tableName = preg_replace('/_table$/', '', $tableName);
-        
         $migrationFileName = date('YmdHis') . "_create_{$tableName}_table.php";
         $migrationFilePath = __DIR__ . "/database/migrations/$migrationFileName";
-        
-        // Ensure migrations directory exists
         if (!is_dir(__DIR__ . '/database/migrations')) {
             mkdir(__DIR__ . '/database/migrations', 0755, true);
         }
-        
-        $migrationContent = <<<'EOD'
+        $template = <<<'EOD'
 <?php
 
 use Illuminate\Database\Schema\Blueprint;
@@ -275,20 +82,52 @@ return function () {
     Capsule::schema()->create('%s', function (Blueprint $table) {
         $table->id();
         $table->string('name');
-        // Add more fields here
         $table->timestamps();
     });
 
     echo "Created %s table\n";
 };
 EOD;
-
-        file_put_contents($migrationFilePath, sprintf($migrationContent, $tableName, $tableName));
+        file_put_contents($migrationFilePath, sprintf($template, $tableName, $tableName));
         echo "Migration created: database/migrations/$migrationFileName\n";
         break;
-        
+
+    case 'example:install':
+        $which = $arguments[2] ?? '';
+        if ($which !== 'auth') {
+            echo "Usage: php artisan example:install auth\n";
+            exit(1);
+        }
+        $source = base_path('framework/examples/auth');
+        if (!is_dir($source)) {
+            echo "Examples not found.\n";
+            exit(1);
+        }
+        // Copy controllers
+        @mkdir(base_path('Http/controllers/session'), 0755, true);
+        @mkdir(base_path('Http/controllers/registration'), 0755, true);
+        foreach (['session/create.php','session/store.php','session/destroy.php','registration/create.php','registration/store.php'] as $file) {
+            copy($source . '/Http/controllers/' . $file, base_path('Http/controllers/' . $file));
+        }
+        // Copy views
+        @mkdir(base_path('resources/views/auth'), 0755, true);
+        foreach (['auth/login.view.php','auth/register.view.php'] as $file) {
+            copy($source . '/resources/views/' . $file, base_path('resources/views/' . $file));
+        }
+        // Append routes
+        $routesPath = base_path('routes/routes.php');
+        $routeBlock = "\n// Auth example routes\n"
+            . "\$router->get('/register', 'registration/create.php')->only('guest');\n"
+            . "\$router->post('/register', 'registration/store.php')->only(['guest','csrf']);\n"
+            . "\$router->get('/login', 'session/create.php')->only('guest');\n"
+            . "\$router->post('/session', 'session/store.php')->only(['guest','csrf']);\n"
+            . "\$router->delete('/session', 'session/destroy.php')->only(['auth','csrf']);\n";
+        file_put_contents($routesPath, $routeBlock, FILE_APPEND);
+        echo "Auth example installed and routes appended to routes/routes.php.\n";
+        break;
+
     default:
         echo "Unknown command: $command\n";
-        echo "Available commands: serve, migrate, migrate:fresh, make:migration\n";
+        echo "Available commands: serve, migrate, migrate:fresh, make:migration, example:install\n";
         exit(1);
 }
