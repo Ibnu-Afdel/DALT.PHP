@@ -52,10 +52,13 @@
       </div>
       <div class="rounded-xl border border-[#93DA97] bg-white p-6 s-card">
         <h3 class="font-semibold">Requirements</h3>
-        <p class="mt-3 text-sm">Try PHP in the browser at php.new. When ready, install PHP 8+ and Composer locally.</p>
-        <ul class="mt-3 space-y-2 text-sm">
-          <li><a href="https://php.new" target="_blank" class="link">Try PHP online (php.new)</a></li>
-          <!-- <li><a href="https://www.php.net/" target="_blank" class="link">PHP</a> · <a href="https://getcomposer.org/" target="_blank" class="link">Composer</a></li> -->
+        <p class="mt-3 text-sm">Try PHP in your browser first at <a href="https://php.new" target="_blank" class="underline">php.new</a>. Ready to install locally? Get PHP and Composer for your OS:</p>
+        <ul class="mt-3 space-y-2 text-sm list-disc pl-5">
+          <li><a href="https://www.php.net/downloads.php" target="_blank" class="link">PHP downloads</a></li>
+          <li><a href="https://getcomposer.org/download/" target="_blank" class="link">Composer install (Windows/macOS/Linux)</a></li>
+          <li class="s-muted">macOS: you can also use Homebrew (brew install php)</li>
+          <li class="s-muted">Linux: use your package manager (apt/yum/pacman) or the official PHP builds</li>
+          <li class="s-muted">Windows: Composer provides an installer; PHP is available via packages like XAMPP or winget</li>
         </ul>
       </div>
     </div>

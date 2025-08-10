@@ -4,6 +4,11 @@
 <main class="mx-auto max-w-md p-6">
   <h1 class="text-2xl font-bold mb-4">Register</h1>
   <?php $errors = Core\Session::get('errors', []); ?>
+  <?php if (!empty($errors)): ?>
+  <div class="alert alert-error mb-4">
+    <span>Please fix the errors below.</span>
+  </div>
+  <?php endif; ?>
   <form method="POST" action="/register" class="space-y-4">
     <?= csrf_field() ?>
     <div>
