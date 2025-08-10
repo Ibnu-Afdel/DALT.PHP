@@ -44,7 +44,7 @@ try {
     }
     app_log(get_class($e) . ': ' . $e->getMessage());
     http_response_code(500);
-    require base_path('resources/views/500.php');
+    require base_path('resources/views/status/500.php');
     exit;
 }
 

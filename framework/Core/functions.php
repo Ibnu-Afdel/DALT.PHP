@@ -16,7 +16,7 @@ return $_SERVER['REQUEST_URI'] === $value;
 {
     http_response_code($code);
 
-    require base_path("resources/views/{$code}.php");
+    require base_path("resources/views/status/{$code}.php");
     die();
 }
 
