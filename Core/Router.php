@@ -54,25 +54,50 @@ class Router
     public function route($uri, $method)
     {
         foreach ($this->routes as $route) {
-            if($route['uri'] === $uri && $route['method'] === strtoupper($method)) {
-
-                Middleware::resolve($route['middleware']);
-
-                // so for new roles, just add in Middleware/Middleware class constant array..
-
-
-//                if($route['middleware'] === 'guest'){
-//                    (new Guest)->handel();
-//                }
-//
-//                if ($route['middleware'] === 'auth'){
-//                    (new Auth)->handel();
-//                }
-
-                return require base_path('Http/controllers/' . $route['controller']);
+            if (strtoupper($method) !== $route['method']) {
+                continue;
             }
+
+            $params = $this->matchUri($route['uri'], $uri);
+            if ($params === false) {
+                continue;
+            }
+
+            Middleware::resolve($route['middleware']);
+
+            // Inject parameters into $_GET so controllers can access via 
+            // $_GET['id'] or similar without extra abstractions
+            foreach ($params as $key => $value) {
+                $_GET[$key] = $value;
+            }
+
+            return require base_path('Http/controllers/' . $route['controller']);
         }
         $this->abort();
+    }
+
+    protected function matchUri(string $pattern, string $actual)
+    {
+        // Exact match fast-path
+        if ($pattern === $actual) {
+            return [];
+        }
+
+        // Convert /path/{id}/edit to regex ^/path/([^/]+)/edit$
+        $paramNames = [];
+        $regex = preg_replace_callback('/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/', function ($matches) use (&$paramNames) {
+            $paramNames[] = $matches[1];
+            return '([^/]+)';
+        }, $pattern);
+
+        $regex = '#^' . $regex . '$#';
+
+        if (preg_match($regex, $actual, $matches)) {
+            array_shift($matches); // remove full match
+            return array_combine($paramNames, $matches) ?: [];
+        }
+
+        return false;
     }
 
     public function previousUrl()
