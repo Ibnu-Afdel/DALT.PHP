@@ -24,6 +24,10 @@ if (count($arguments) < 2) {
     exit(1);
 }
 
+// Bootstrap core for all commands so helpers like base_path() exist
+// (harmless for commands that don't need env)
+$dbConfigBoot = load_env_and_boot();
+
 $command = $arguments[1];
 
 switch ($command) {
@@ -35,7 +39,7 @@ switch ($command) {
         break;
 
     case 'migrate':
-        $dbConfig = load_env_and_boot();
+        $dbConfig = $dbConfigBoot;
         $database = new Core\Database($dbConfig['database']);
         $migration = new Core\Migration($database);
         $migration->runMigrations();
@@ -43,7 +47,7 @@ switch ($command) {
         break;
 
     case 'migrate:fresh':
-        $dbConfig = load_env_and_boot();
+        $dbConfig = $dbConfigBoot;
         echo "Running migrate:fresh...\n";
         if (($dbConfig['database']['driver'] ?? 'sqlite') === 'sqlite') {
             $dbPath = $dbConfig['database']['database'];
