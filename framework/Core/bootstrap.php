@@ -10,7 +10,11 @@ require base_path('vendor/autoload.php');
 
 // Load environment variables
 $dotenv = Dotenv\Dotenv::createImmutable(base_path(''));
-$dotenv->load();
+if (method_exists($dotenv, 'safeLoad')) {
+    $dotenv->safeLoad();
+} else {
+    try { $dotenv->load(); } catch (\Throwable $e) { /* ignore missing .env */ }
+}
 
 // Load configuration files
 $appConfig = require base_path('config/app.php');

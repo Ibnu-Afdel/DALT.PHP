@@ -26,11 +26,10 @@ class Database {
         switch ($driver) {
             case 'pgsql':
                 return sprintf(
-                    'pgsql:host=%s;port=%s;dbname=%s;charset=%s',
+                    'pgsql:host=%s;port=%s;dbname=%s',
                     $config['host'],
                     $config['port'],
-                    $config['dbname'],
-                    $config['charset'] ?? 'utf8'
+                    $config['dbname']
                 );
                 
             case 'mysql':

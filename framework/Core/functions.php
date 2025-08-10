@@ -63,6 +63,17 @@ function vite(string $entryPath): string
     $manifestPath = file_exists($manifestPathPrimary) ? $manifestPathPrimary : $manifestPathFallback;
 
     if (!file_exists($manifestPath)) {
+        // Static fallback if manifest is missing
+        $fallback = [];
+        if (file_exists(base_path('public/app.css'))) {
+            $fallback[] = '<link rel="stylesheet" href="/app.css">';
+        }
+        if (file_exists(base_path('public/app.js'))) {
+            $fallback[] = '<script defer src="/app.js"></script>';
+        }
+        if ($fallback) {
+            return implode("\n", $fallback);
+        }
         return "<!-- Vite manifest not found. Run 'npm run build'. -->";
     }
 

@@ -43,9 +43,23 @@ $command = $arguments[1];
 switch ($command) {
     case 'serve':
         $host = $arguments[2] ?? '127.0.0.1';
-        $port = $arguments[3] ?? '8000';
-        echo "Starting development server: http://{$host}:{$port}\n";
-        passthru("php -S {$host}:{$port} -t public");
+        $port = (int) ($arguments[3] ?? 8000);
+        $maxTries = 50;
+        $chosenPort = $port;
+        $isFree = function(string $h, int $p): bool {
+            $conn = @fsockopen($h, $p, $errno, $errstr, 0.2);
+            if (is_resource($conn)) { fclose($conn); return false; }
+            return true;
+        };
+        while ($maxTries-- > 0 && !$isFree($host, $chosenPort)) {
+            $chosenPort++;
+        }
+        if ($chosenPort !== $port) {
+            echo "Port {$port} in use. Using {$chosenPort} instead.\n";
+        }
+        echo "Starting development server: http://{$host}:{$chosenPort}\n";
+        // Use router script for front-controller routing
+        passthru("php -S {$host}:{$chosenPort} -t public public/index.php");
         break;
 
     case 'migrate':
