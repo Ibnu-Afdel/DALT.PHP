@@ -4,8 +4,14 @@
 $arguments = $argv;
 
 function load_env_and_boot(): array {
-    define('BASE_PATH', __DIR__ . '/');
-    require BASE_PATH . 'framework/Core/functions.php';
+    if (!defined('BASE_PATH')) {
+        define('BASE_PATH', __DIR__ . '/');
+    }
+    if (!function_exists('base_path')) {
+        function base_path(string $path = ''): string {
+            return BASE_PATH . $path;
+        }
+    }
     require base_path('vendor/autoload.php');
     $dotenv = Dotenv\Dotenv::createImmutable(base_path(''));
     $dotenv->load();
@@ -25,7 +31,6 @@ if (count($arguments) < 2) {
 }
 
 // Bootstrap core for all commands so helpers like base_path() exist
-// (harmless for commands that don't need env)
 $dbConfigBoot = load_env_and_boot();
 
 $command = $arguments[1];
