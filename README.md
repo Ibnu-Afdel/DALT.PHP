@@ -1,53 +1,54 @@
-# DALT.PHP (learn-by-building PHP starter)
+# DALT.PHP — learn-by-building PHP starter
 
-A tiny, beginner‑friendly PHP micro framework for learning by doing. SQLite by default, Postgres ready. Tailwind + DaisyUI + Vite out of the box. No heavy abstractions: plain PHP controllers, raw SQL, tiny helpers.
+A tiny, beginner‑friendly PHP micro‑framework for learning by doing.
+- Plain PHP controllers and views
+- Raw SQL (SQLite by default; Postgres/MySQL ready)
+- Minimal helpers (Router, DB, Session, CSRF)
+- Optional Tailwind + DaisyUI + Vite + Alpine.js
 
-## Quick start
-
-1) Install deps and env
+## Create a new project
 ```bash
-composer install
-npm install
-cp .env.example .env
+composer create-project ibnuafdel/daltphp my-app "^0.1@alpha"
+cd my-app
 ```
+What happens automatically:
+- `.env` is created with SQLite defaults (no DB setup required)
+- `storage/logs` is prepared
+- If Node is available, post-create may install/build assets (optional)
 
-2) Build frontend
+## Run the app
 ```bash
-npm run dev   # during development
-# or
-npm run build # production
+php artisan serve
 ```
+- Starts the PHP built-in server on a free port (8000, 8001, ...)
+- Uses `public/router.php` so static files (e.g. `/favicon.svg`, `/css/*`, `/js/*`) are served correctly
+- Keep the terminal open to see request logs
 
-3) Database (SQLite by default)
+Optional (for HMR/live reload):
 ```bash
-php artisan migrate
+npm ci
+npm run dev
 ```
-
-4) Run the app
-```bash
-php artisan serve    # http://127.0.0.1:8000
-```
+If Vite dev server or manifest is not available, views fall back to static assets under `/js/app.js`, `/js/app.css`, or `/css/style.css`.
 
 ## File structure (small and familiar)
 ```
-public/                 # index.php (front controller)
+public/                 # index.php (front controller), router.php, favicon.svg
 routes/routes.php       # define routes
 Http/controllers/       # your plain PHP controllers
-Core/                   # tiny framework (Router, Database, Session, Middleware)
+config/                 # app.php, database.php (SQLite default)
 resources/
   views/
     layouts/            # head.php, nav.php, footer.php
+    status/             # 403.php, 404.php, 500.php
   js/app.js             # Vite entry (imports ../css/input.css)
   css/input.css         # Tailwind entry
-config/
-  app.php, database.php # env + db config (SQLite default)
-database/migrations/    # migrations (Illuminate Database)
-storage/logs/.gitkeep   # logs dir (kept empty by default)
 framework/
   Core/                 # router, db, session, middleware, helpers
   examples/             # auth demo (optional)
+database/migrations/    # migrations (Illuminate Database)
+storage/logs/.gitkeep   # logs dir
 artisan                 # minimal CLI: serve/migrate/etc
-.env.example            # copy to .env
 ```
 
 ## Routes and controllers
@@ -55,62 +56,84 @@ artisan                 # minimal CLI: serve/migrate/etc
 ```php
 $router->get('/', 'welcome.php');
 ```
-- Create controllers in `Http/controllers/` (plain PHP):
+- Create a controller in `Http/controllers/welcome.php`:
 ```php
 <?php
 view('welcome.view.php');
 ```
 - Views live in `resources/views/`.
 
-## Features you’ll use right away
-- {param} routes: `/users/{id}` becomes `$_GET['id']`
-- CSRF: call `<?= csrf_field() ?>` inside forms and add `->only(['csrf'])` on POST/DELETE routes
-- Validation: `Core\Validator` + throw `Core\ValidationException` (errors + old inputs are flashed)
-- DB: `Core\App::resolve(Core\Database::class)->query($sql, $params)` (raw SQL, fetch with `find()` / `get()`)
-- Debug: `APP_DEBUG=true` shows a simple stack trace; prod renders `resources/views/status/500.php`
+### Route parameters and middleware
+- Route params: `/posts/{id}` → available as `$_GET['id']`
+- Methods: `$router->get()`, `post()`, `patch()`, `delete()`
+- Middleware on a route:
+```php
+$router->post('/session', 'session/store.php')->only(['guest','csrf']);
+```
+Built-in keys: `csrf`, `auth`, `guest`.
 
-## Database config
-SQLite by default (zero setup). To switch to Postgres, edit `.env`:
+## Database
+SQLite by default (zero setup). To switch to PostgreSQL or MySQL, edit `.env`.
+
+SQLite (default):
 ```env
-# SQLite (default)
 DB_DRIVER=sqlite
 DB_DATABASE=database/app.sqlite
-
-# PostgreSQL
-# DB_DRIVER=pgsql
-# DB_HOST=127.0.0.1
-# DB_PORT=5432
-# DB_NAME=dalt_php_app
-# DB_USERNAME=postgres
-# DB_PASSWORD=
 ```
 
-## CLI commands
+PostgreSQL:
+```env
+DB_DRIVER=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_NAME=dalt_php_app
+DB_USERNAME=postgres
+DB_PASSWORD=
+```
+
+MySQL:
+```env
+DB_DRIVER=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=dalt_php_app
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+Migrations (powered by illuminate/database):
 ```bash
-php artisan serve                # start dev server
-php artisan migrate              # run migrations
-php artisan migrate:fresh        # drop sqlite DB and re-run migrations
-php artisan make:migration posts # create a timestamped migration file
-php artisan example:install auth # install optional auth example (controllers, views, routes)
+php artisan migrate          # run migrations
+php artisan migrate:fresh    # drop sqlite DB and re-run
+php artisan make:migration posts
 ```
 
-## Optional examples (not auto-installed)
-- Auth demo lives under `framework/examples/auth`.
-- To install it into your app folders:
+## Auth example (optional)
+Install the demo (register/login/logout):
 ```bash
 php artisan example:install auth
 ```
+What it does:
+- Copies demo controllers and views into your app
+- Appends auth routes to `routes/routes.php`
+- Shows Login/Register or Logout links in the header
+
+## Debug and errors
+- Set `APP_DEBUG=true` in `.env` for a simple stack trace on errors
+- In production, errors are logged to `storage/logs/app.log` and a clean `resources/views/status/500.php` is shown
+- Status pages: `resources/views/status/{403,404,500}.php`
 
 ## Frontend
-- Vite + Tailwind + DaisyUI are prewired
-- Entry is `resources/js/app.js` (which imports `../css/input.css`)
-- Dev server autoloaded in views via `<?= vite('resources/js/app.js') ?>`
+- Vite + Tailwind + DaisyUI + Alpine.js are prewired
+- Entry: `resources/js/app.js` (imports `../css/input.css`)
+- In views, assets are included via `<?= vite('resources/js/app.js') ?>`
+- No Node? It’s fine—static fallbacks are used if present under `/js` or `/css`
 
 ## Philosophy
 - Learn PHP by reading and writing plain PHP files
-- Keep the core small and explicit
-- Avoid hiding how HTTP, sessions, and SQL work
-- Once you’re comfortable, you can “graduate” to Laravel
+- Keep the core small and explicit (no magic)
+- Understand HTTP, sessions, and SQL fundamentals
+- When you’re ready, graduate to full frameworks like Laravel
 
 ## License
 MIT
