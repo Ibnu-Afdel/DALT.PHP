@@ -1,5 +1,5 @@
-<?php require base_path('resources/views/partials/head.php') ?>
-<?php require base_path('resources/views/partials/nav.php') ?>
+<?php require base_path('resources/views/layouts/head.php') ?>
+<?php require base_path('resources/views/layouts/nav.php') ?>
 
 <main class="mx-auto max-w-md p-6">
   <h1 class="text-2xl font-bold mb-4">Register</h1>
@@ -30,4 +30,4 @@
   </form>
 </main>
 
-<?php require base_path('resources/views/partials/footer.php') ?> 
+<?php require base_path('resources/views/layouts/footer.php') ?> 

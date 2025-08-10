@@ -67,7 +67,7 @@ view('welcome.view.php');
 - CSRF: call `<?= csrf_field() ?>` inside forms and add `->only(['csrf'])` on POST/DELETE routes
 - Validation: `Core\Validator` + throw `Core\ValidationException` (errors + old inputs are flashed)
 - DB: `Core\App::resolve(Core\Database::class)->query($sql, $params)` (raw SQL, fetch with `find()` / `get()`)
-- Debug: `APP_DEBUG=true` shows a simple stack trace; prod renders `resources/views/500.php`
+- Debug: `APP_DEBUG=true` shows a simple stack trace; prod renders `resources/views/status/500.php`
 
 ## Database config
 SQLite by default (zero setup). To switch to Postgres, edit `.env`:

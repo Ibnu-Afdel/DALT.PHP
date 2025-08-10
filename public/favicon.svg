@@ -1,4 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#818cf8">
-  <path d="M12 2L2 7v10c0 5.55 3.84 9.95 9 11 5.16-1.05 9-5.45 9-11V7l-10-5z"/>
-  <path d="M12 4.5L4.5 8.5v8.5c0 4.5 3.5 8 7.5 8s7.5-3.5 7.5-8V8.5L12 4.5z" fill="white"/>
+ <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="DALT.PHP logo">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5E936C"/>
+      <stop offset="100%" stop-color="#93DA97"/>
+    </linearGradient>
+  </defs>
+  <!-- Soft rounded background -->
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="#E8FFD7"/>
+  <rect x="7" y="7" width="50" height="50" rx="12" fill="url(#g)"/>
+  <!-- Monogram: abstract D and P using cutouts -->
+  <path d="M22 18 h10 a12 12 0 1 1 0 28 H22 Z" fill="#3E5F44"/>
+  <circle cx="36" cy="32" r="8" fill="#E8FFD7"/>
+  <!-- Small accent dot -->
+  <circle cx="44" cy="22" r="2" fill="#E8FFD7"/>
 </svg>
