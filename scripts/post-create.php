@@ -26,9 +26,15 @@ function run($cmd) {
 // Copy env
 $envExample = $base . '.env.example';
 $envFile = $base . '.env';
-if (file_exists($envExample) && !file_exists($envFile)) {
-    copy($envExample, $envFile);
-    info('Created .env from .env.example');
+if (!file_exists($envFile)) {
+    if (file_exists($envExample)) {
+        copy($envExample, $envFile);
+        info('Created .env from .env.example');
+    } else {
+        // Minimal default .env for sqlite
+        file_put_contents($envFile, "APP_ENV=local\nAPP_DEBUG=true\nDB_DRIVER=sqlite\nDB_DATABASE=database/app.sqlite\n");
+        info('Created .env with default SQLite config');
+    }
 }
 
 // Try to install and build frontend if npm exists

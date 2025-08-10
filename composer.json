@@ -37,9 +37,7 @@
         "migrate:fresh": "php artisan migrate:fresh",
         "make:migration": "php artisan make:migration",
         "post-create-project-cmd": [
-            "@php -r \"file_exists('.env') || (file_exists('.env.example') && copy('.env.example','.env')) || true;\"",
-            "@php -r \"@mkdir('storage/logs',0755,true); @touch('storage/logs/.gitkeep');\"",
-            "@php -r \"echo \\\"\\nYou're ready! Next steps:\\\\n  1) cd ".getcwd()."\\\\n  2) php artisan serve   # starts dev server on a free port\\\\n  3) npm run dev         # optional: start Vite dev server\\\\n\\\\nDocumentation: https://github.com/Ibnu-Afdel/DALT.PHP\\n\\\";\""
+            "@php scripts/post-create.php"
         ]
     },
     "bin": [
