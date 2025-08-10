@@ -1,16 +1,25 @@
 {
-    "name": "ibnuafdel/dalt-php",
+    "name": "ibnuafdel/daltphp",
+    "description": "A simple, beginner-friendly framework for learning PHP. Inspired by Laravel.",
+    "type": "project",
+    "license": "MIT",
+    "keywords": ["php", "framework", "micro", "learning", "sqlite", "tailwind", "vite", "daisyui", "Laravel"],
     "authors": [
         {
             "name": "ibnuafdel",
-            "email": "ibnuafdel@gmail.com"
+            "email": "ibnuafdel@gmail.com",
+            "role": "Developer"
         }
     ],
+    "require": {
+        "php": "^8.1",
+        "vlucas/phpdotenv": "^5.6",
+        "illuminate/database": "^12.20"
+    },
     "autoload": {
         "psr-4": {
             "Core\\": "framework/Core/",
-            "Http\\": "Http/",
-            "Tests\\": "tests/"
+            "Http\\": "Http/"
         }
     },
     "require-dev": {
@@ -28,8 +37,7 @@
         "migrate:fresh": "php artisan migrate:fresh",
         "make:migration": "php artisan make:migration"
     },
-    "require": {
-        "vlucas/phpdotenv": "^5.6",
-        "illuminate/database": "^12.20"
-    }
+    "bin": [
+        "artisan"
+    ]
 }
