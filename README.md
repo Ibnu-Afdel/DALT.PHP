@@ -35,14 +35,19 @@ routes/routes.php       # define routes
 Http/controllers/       # your plain PHP controllers
 Core/                   # tiny framework (Router, Database, Session, Middleware)
 resources/
-  views/                # PHP views
+  views/
+    layouts/            # head.php, nav.php, footer.php
   js/app.js             # Vite entry (imports ../css/input.css)
   css/input.css         # Tailwind entry
 config/
   app.php, database.php # env + db config (SQLite default)
 database/migrations/    # migrations (Illuminate Database)
 storage/logs/.gitkeep   # logs dir (kept empty by default)
+framework/
+  Core/                 # router, db, session, middleware, helpers
+  examples/             # auth demo (optional)
 artisan                 # minimal CLI: serve/migrate/etc
+.env.example            # copy to .env
 ```
 
 ## Routes and controllers
@@ -86,14 +91,14 @@ php artisan serve                # start dev server
 php artisan migrate              # run migrations
 php artisan migrate:fresh        # drop sqlite DB and re-run migrations
 php artisan make:migration posts # create a timestamped migration file
+php artisan example:install auth # install optional auth example (controllers, views, routes)
 ```
 
 ## Optional examples (not auto-installed)
-- Auth demo lives under `examples/auth`.
+- Auth demo lives under `framework/examples/auth`.
 - To install it into your app folders:
 ```bash
 php artisan example:install auth
-# then add the routes shown in routes/routes.php comments
 ```
 
 ## Frontend

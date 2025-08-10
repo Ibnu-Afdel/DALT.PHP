@@ -112,3 +112,18 @@ function csrf_field(): string
 {
     return '<input type="hidden" name="_token" value="' . htmlspecialchars(csrf_token()) . '">';
 }
+
+function app_log(string $message): void
+{
+    $debug = (bool) (($_ENV['APP_DEBUG'] ?? true));
+    if ($debug) {
+        return;
+    }
+    $dir = base_path('storage/logs');
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    $file = $dir . '/app.log';
+    $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
+    @file_put_contents($file, $line, FILE_APPEND);
+}

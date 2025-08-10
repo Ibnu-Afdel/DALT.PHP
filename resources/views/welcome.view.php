@@ -1,5 +1,5 @@
-<?php require base_path('resources/views/partials/head.php') ?>
-<?php require base_path('resources/views/partials/nav.php') ?>
+<?php require base_path('resources/views/layouts/head.php') ?>
+<?php require base_path('resources/views/layouts/nav.php') ?>
 
 <main class="mx-auto max-w-5xl p-6">
   <section class="text-center py-16">
@@ -12,4 +12,4 @@
   </section>
 </main>
 
-<?php require base_path('resources/views/partials/footer.php') ?> 
+<?php require base_path('resources/views/layouts/footer.php') ?> 
