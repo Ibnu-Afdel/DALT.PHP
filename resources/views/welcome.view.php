@@ -7,12 +7,6 @@
       <img src="/favicon.svg" alt="DALT.PHP logo" class="mx-auto mb-6 w-16 h-16" />
       <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-[#3E5F44]">Learn PHP by Building</h1>
       <p class="mt-4 text-base sm:text-lg text-[#3E5F44]/80">DALT.PHP is a minimal starter focused on clarity. SQLite by default. Use Tailwind, DaisyUI, Vite, and Alpine.js only when you need them.</p>
-      <?php if (file_exists(base_path('storage/auth_example_installed'))): ?>
-      <div class="mt-6 inline-flex gap-3">
-        <a href="/register" class="s-btn s-btn-primary">Register</a>
-        <a href="/login" class="s-btn">Login</a>
-      </div>
-      <?php endif; ?>
     </div>
   </section>
 
