@@ -10,9 +10,10 @@ require BASE_PATH . 'vendor/autoload.php';
 //    require base_path("{$class}.php");
 //});
 
-
+// Use a unique session name per project path to avoid cross-project session reuse
+$sessionName = 'daltphp_' . substr(sha1(BASE_PATH), 0, 8);
+session_name($sessionName);
 session_start();
-
 
 require BASE_PATH . ('framework/Core/functions.php');
 
