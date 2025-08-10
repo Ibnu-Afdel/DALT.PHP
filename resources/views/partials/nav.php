@@ -13,7 +13,7 @@
         </div>
 
         <div class="hidden lg:flex items-center space-x-3">
-            <?php if($_SESSION['user'] ?? false) : ?>
+            <?php if(\Core\Session::has('user')) : ?>
                 <form action="/session" method="POST">
                     <input type="hidden" name="_method" value="DELETE">
                     <button type="submit" class="bg-red-900/20 text-red-400 hover:bg-red-900/40 px-3 py-1.5 rounded-full text-sm font-medium">Logout</button>
@@ -37,7 +37,7 @@
         <div class="bg-gray-800/80 backdrop-blur-sm rounded-2xl p-4 border border-gray-700">
             <a href="/" class="<?= urlIs('/') ? 'bg-indigo-900/20 text-indigo-400' : 'text-gray-300 hover:text-indigo-400' ?> block px-4 py-2 rounded-xl text-sm font-medium">Home</a>
             <div class="mt-2">
-            <?php if($_SESSION['user'] ?? false) : ?>
+            <?php if(\Core\Session::has('user')) : ?>
                 <form action="/session" method="POST" class="mt-2">
                     <input type="hidden" name="_method" value="DELETE">
                     <button type="submit" class="w-full bg-red-900/20 text-red-400 hover:bg-red-900/40 px-4 py-2 rounded-xl text-sm font-medium">Logout</button>
