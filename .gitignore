@@ -22,6 +22,8 @@ Thumbs.db
 !/public/build/.gitkeep
 
 # Logs
+/storage/logs/*
+!/storage/logs/.gitkeep
 *.log
 
 # Temporary files

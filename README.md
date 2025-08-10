@@ -1,176 +1,111 @@
-# DALT.PHP Framework
+# DALT.PHP (learn-by-building PHP starter)
 
-A modern PHP framework with Laravel-like features including migrations, Tailwind CSS, DaisyUI, and Alpine.js.
+A tiny, beginner‑friendly PHP micro framework for learning by doing. SQLite by default, Postgres ready. Tailwind + DaisyUI + Vite out of the box. No heavy abstractions: plain PHP controllers, raw SQL, tiny helpers.
 
-## 🚀 Quick Start
+## Quick start
 
-After cloning the repository, run just **one command** to set up everything:
-
+1) Install deps and env
 ```bash
-composer setup
+composer install
+npm install
+cp .env.example .env
 ```
 
-This will automatically:
-- Copy `.env.example` to `.env`
-- Install Composer dependencies
-- Install npm packages (Tailwind CSS, DaisyUI, Alpine.js)
-- Build CSS and JS assets
-- Make scripts executable
-- Create necessary directories
-- Run initial database migration
-- Seed database with test user
-
-## 📋 Manual Setup (if needed)
-
-If you prefer to set up manually:
-
-1. **Clone the repository**
-   ```bash
-   git clone <your-repo-url>
-   cd DALT.PHP
-   ```
-
-2. **Install dependencies**
-   ```bash
-   composer install
-   npm install
-   ```
-
-3. **Environment setup**
-   ```bash
-   cp .env.example .env
-   ```
-
-4. **Build assets**
-   ```bash
-   npm run build
-   ```
-
-5. **Run migrations**
-   ```bash
-   php artisan migrate
-   ```
-
-6. **Seed database**
-   ```bash
-   composer seed
-   ```
-
-## 🛠️ Available Commands
-
-### Migration Commands
+2) Build frontend
 ```bash
-php artisan migrate           # Run pending migrations
-php artisan migrate:fresh     # Drop all tables and run migrations
-php artisan make:migration posts  # Create a new migration
-composer seed                 # Seed database with test data
+npm run dev   # during development
+# or
+npm run build # production
 ```
 
-### Asset Building
+3) Database (SQLite by default)
 ```bash
-npm run dev                   # Watch for changes (development) - Auto-rebuilds CSS/JS
-npm run watch                 # Same as dev (alias)
-npm run build                 # Build for production
-npm run prod                  # Build and minify for production
+php artisan migrate
 ```
 
-**Important:** Always run `npm run dev` during development to automatically rebuild your CSS and JavaScript files when you make changes. This eliminates the need to manually run `npm run build` every time.
-
-### Development Server
+4) Run the app
 ```bash
-php artisan serve              # Start server on localhost:8000
-php artisan serve 127.0.0.1 3000  # Custom host and port
-composer serve                 # Alternative way
+php artisan serve    # http://127.0.0.1:8000
 ```
 
-### Testing
-```bash
-composer test                 # Run tests with Pest
+## File structure (small and familiar)
+```
+public/                 # index.php (front controller)
+routes/routes.php       # define routes
+Http/controllers/       # your plain PHP controllers
+Core/                   # tiny framework (Router, Database, Session, Middleware)
+resources/
+  views/                # PHP views
+  js/app.js             # Vite entry (imports ../css/input.css)
+  css/input.css         # Tailwind entry
+config/
+  app.php, database.php # env + db config (SQLite default)
+database/migrations/    # migrations (Illuminate Database)
+storage/logs/.gitkeep   # logs dir (kept empty by default)
+artisan                 # minimal CLI: serve/migrate/etc
 ```
 
-## 📁 Project Structure
-
+## Routes and controllers
+- Add routes in `routes/routes.php`:
+```php
+$router->get('/', 'welcome.php');
 ```
-├── Core/                    # Framework core classes
-├── Http/                    # Controllers and forms
-├── resources/               # Views, CSS, JS
-├── database/migrations/     # Database migrations
-├── public/                  # Public web files
-├── routes/                  # Application routes
-│   └── routes.php
-├── bin/                     # CLI scripts and tools
-│   ├── migrate.php
-│   ├── migrate_fresh.php
-│   ├── seed.php
-│   └── setup_framework.php
-├── artisan                 # Main CLI tool
-└── .env.example           # Environment configuration
+- Create controllers in `Http/controllers/` (plain PHP):
+```php
+<?php
+view('welcome.view.php');
 ```
+- Views live in `resources/views/`.
 
-## 🗄️ Database
+## Features you’ll use right away
+- {param} routes: `/users/{id}` becomes `$_GET['id']`
+- CSRF: call `<?= csrf_field() ?>` inside forms and add `->only(['csrf'])` on POST/DELETE routes
+- Validation: `Core\Validator` + throw `Core\ValidationException` (errors + old inputs are flashed)
+- DB: `Core\App::resolve(Core\Database::class)->query($sql, $params)` (raw SQL, fetch with `find()` / `get()`)
+- Debug: `APP_DEBUG=true` shows a simple stack trace; prod renders `resources/views/500.php`
 
-The framework uses SQLite by default for easy development. You can switch to PostgreSQL or MySQL by updating your `.env` file:
-
+## Database config
+SQLite by default (zero setup). To switch to Postgres, edit `.env`:
 ```env
 # SQLite (default)
 DB_DRIVER=sqlite
 DB_DATABASE=database/app.sqlite
 
 # PostgreSQL
-DB_DRIVER=pgsql
-DB_HOST=127.0.0.1
-DB_PORT=5432
-DB_NAME=dalt_php_app
-DB_USERNAME=your_username
-DB_PASSWORD=your_password
-
-# MySQL
-DB_DRIVER=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_NAME=dalt_php_app
-DB_USERNAME=your_username
-DB_PASSWORD=your_password
+# DB_DRIVER=pgsql
+# DB_HOST=127.0.0.1
+# DB_PORT=5432
+# DB_NAME=dalt_php_app
+# DB_USERNAME=postgres
+# DB_PASSWORD=
 ```
 
-## 🎨 Frontend Stack
+## CLI commands
+```bash
+php artisan serve                # start dev server
+php artisan migrate              # run migrations
+php artisan migrate:fresh        # drop sqlite DB and re-run migrations
+php artisan make:migration posts # create a timestamped migration file
+```
 
-- **Tailwind CSS** - Utility-first CSS framework
-- **DaisyUI** - Tailwind CSS component library
-- **Alpine.js** - Lightweight JavaScript framework
-- **esbuild** - Fast JavaScript bundler
+## Optional examples (not auto-installed)
+- Auth demo lives under `examples/auth`.
+- To install it into your app folders:
+```bash
+php artisan example:install auth
+# then add the routes shown in routes/routes.php comments
+```
 
-## 🔧 Development
+## Frontend
+- Vite + Tailwind + DaisyUI are prewired
+- Entry is `resources/js/app.js` (which imports `../css/input.css`)
+- Dev server autoloaded in views via `<?= vite('resources/js/app.js') ?>`
 
-1. **Start the development server**
-   ```bash
-   php artisan serve
-   # or
-   php -S localhost:8000 -t public
-   ```
+## Philosophy
+- Learn PHP by reading and writing plain PHP files
+- Keep the core small and explicit
+- Avoid hiding how HTTP, sessions, and SQL work
+- Once you’re comfortable, you can “graduate” to Laravel
 
-2. **Watch for asset changes (in a separate terminal)**
-   ```bash
-   npm run dev
-   ```
-   This will automatically rebuild your CSS and JavaScript files whenever you make changes.
-
-3. **Visit** `http://localhost:8000`
-
-## 📧 Default User
-
-After running migrations, you can login with:
-- **Email:** test@example.com
-- **Password:** password123
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests: `composer test`
-5. Submit a pull request
-
-## 📄 License
-
-This project is open source and available under the MIT License.
+## License
+MIT

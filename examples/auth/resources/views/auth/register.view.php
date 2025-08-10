@@ -5,6 +5,7 @@
   <h1 class="text-2xl font-bold mb-4">Register</h1>
   <?php $errors = Core\Session::get('errors', []); ?>
   <form method="POST" action="/register" class="space-y-4">
+    <?= csrf_field() ?>
     <div>
       <label class="block text-sm mb-1">Name</label>
       <input name="name" type="text" value="<?= htmlspecialchars(old('name')) ?>" class="input input-bordered w-full" required />

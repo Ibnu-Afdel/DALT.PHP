@@ -5,6 +5,7 @@
   <h1 class="text-2xl font-bold mb-4">Login</h1>
   <?php $errors = Core\Session::get('errors', []); ?>
   <form method="POST" action="/session" class="space-y-4">
+    <?= csrf_field() ?>
     <div>
       <label class="block text-sm mb-1">Email</label>
       <input name="email" type="email" value="<?= htmlspecialchars(old('email')) ?>" class="input input-bordered w-full" required />
