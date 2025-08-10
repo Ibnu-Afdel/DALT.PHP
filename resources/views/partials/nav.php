@@ -12,6 +12,18 @@
             <a href="/" class="<?= urlIs('/') ? 'bg-gray-700 text-indigo-400 shadow-sm' : 'text-gray-300 hover:text-indigo-400' ?> px-4 py-2 rounded-full text-sm font-medium transition-all duration-200">Home</a>
         </div>
 
+        <div class="hidden lg:flex items-center space-x-3">
+            <?php if($_SESSION['user'] ?? false) : ?>
+                <form action="/session" method="POST">
+                    <input type="hidden" name="_method" value="DELETE">
+                    <button type="submit" class="bg-red-900/20 text-red-400 hover:bg-red-900/40 px-3 py-1.5 rounded-full text-sm font-medium">Logout</button>
+                </form>
+            <?php else : ?>
+                <a href="/login" class="text-gray-300 hover:text-indigo-400 px-3 py-1.5 rounded-full text-sm font-medium">Login</a>
+                <a href="/register" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-1.5 rounded-full text-sm font-medium">Register</a>
+            <?php endif; ?>
+        </div>
+
         <div class="lg:hidden">
             <button x-data @click="$dispatch('toggle-mobile-menu')" class="p-2 rounded-md text-gray-300 hover:text-indigo-400">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -23,7 +35,18 @@
 
     <div x-data="{ open: false }" @toggle-mobile-menu.window="open = !open" x-show="open" x-transition class="lg:hidden mt-4">
         <div class="bg-gray-800/80 backdrop-blur-sm rounded-2xl p-4 border border-gray-700">
-            <a href="/" class="<?= urlIs('/') ? 'bg-indigo-900/20 text-indigo-400' : 'text-gray-300 hover:text-indigo-400' ?> block px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200">Home</a>
+            <a href="/" class="<?= urlIs('/') ? 'bg-indigo-900/20 text-indigo-400' : 'text-gray-300 hover:text-indigo-400' ?> block px-4 py-2 rounded-xl text-sm font-medium">Home</a>
+            <div class="mt-2">
+            <?php if($_SESSION['user'] ?? false) : ?>
+                <form action="/session" method="POST" class="mt-2">
+                    <input type="hidden" name="_method" value="DELETE">
+                    <button type="submit" class="w-full bg-red-900/20 text-red-400 hover:bg-red-900/40 px-4 py-2 rounded-xl text-sm font-medium">Logout</button>
+                </form>
+            <?php else : ?>
+                <a href="/login" class="block w-full text-center bg-gray-700 text-gray-300 hover:text-indigo-400 px-4 py-2 rounded-xl text-sm font-medium">Login</a>
+                <a href="/register" class="block w-full text-center bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-medium mt-2">Register</a>
+            <?php endif; ?>
+            </div>
         </div>
     </div>
 </nav>
