@@ -31,10 +31,13 @@ if ($existing) {
 }
 
 $hashed = password_hash($password, PASSWORD_BCRYPT);
-$db->query('INSERT INTO users (name, email, password, created_at, updated_at) VALUES (:name, :email, :password, NOW(), NOW())', [
+$now = date('Y-m-d H:i:s');
+$db->query('INSERT INTO users (name, email, password, created_at, updated_at) VALUES (:name, :email, :password, :created_at, :updated_at)', [
     'name' => $name,
     'email' => $email,
     'password' => $hashed,
+    'created_at' => $now,
+    'updated_at' => $now,
 ]);
 
 Session::flash('success', 'Registration successful. You can now log in.');
