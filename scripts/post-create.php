@@ -1,7 +1,8 @@
 <?php
 
 // Post-create script for Composer create-project
-// - Copies .env.example to .env if missing
+// - Copies .env with SQLite defaults by default
+// - If an existing .env.example is present and explicitly uses sqlite, it will be copied instead
 // - Attempts to install JS deps and build assets if npm is available
 // - Prints next steps for the user
 
@@ -19,20 +20,31 @@ function run($cmd) {
     return [$code, $out, $err];
 }
 
+function sqliteEnvTemplate(): string {
+    return "APP_NAME=DALT_PHP\nAPP_ENV=local\nAPP_DEBUG=true\n\nDB_DRIVER=sqlite\nDB_DATABASE=database/app.sqlite\n";
+}
+
 // Ensure storage/logs exists
 @mkdir($base . 'storage/logs', 0755, true);
 @touch($base . 'storage/logs/.gitkeep');
 
-// Copy env
+// Copy/create env (prefer SQLite defaults)
 $envExample = $base . '.env.example';
 $envFile = $base . '.env';
 if (!file_exists($envFile)) {
+    $shouldCopyExample = false;
     if (file_exists($envExample)) {
+        $example = @file_get_contents($envExample) ?: '';
+        // Only copy example if it explicitly sets sqlite as the driver
+        if (preg_match('/^\s*DB_DRIVER\s*=\s*sqlite\s*$/mi', $example)) {
+            $shouldCopyExample = true;
+        }
+    }
+    if ($shouldCopyExample) {
         copy($envExample, $envFile);
-        info('Created .env from .env.example');
+        info('Created .env from .env.example (sqlite)');
     } else {
-        // Minimal default .env for sqlite
-        file_put_contents($envFile, "APP_ENV=local\nAPP_DEBUG=true\nDB_DRIVER=sqlite\nDB_DATABASE=database/app.sqlite\n");
+        file_put_contents($envFile, sqliteEnvTemplate());
         info('Created .env with default SQLite config');
     }
 }
