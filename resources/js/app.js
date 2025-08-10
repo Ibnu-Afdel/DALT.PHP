@@ -1,3 +1,4 @@
+import '../css/input.css'
 import Alpine from 'alpinejs'
 
 // Make Alpine available globally

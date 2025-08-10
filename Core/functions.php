@@ -47,3 +47,55 @@ function old($key, $default = '')
 {
     return Core\Session::get('old')[$key] ?? $default;
 }
+
+function vite(string $entryPath): string
+{
+    $devServerUrl = 'http://localhost:5173';
+
+    if (vite_is_dev_server_running($devServerUrl)) {
+        $client = '<script type="module" src="' . $devServerUrl . '/@vite/client"></script>';
+        $entry = '<script type="module" src="' . $devServerUrl . '/' . ltrim($entryPath, '/') . '"></script>';
+        return $client . "\n" . $entry;
+    }
+
+    $manifestPathPrimary = base_path('public/build/.vite/manifest.json');
+    $manifestPathFallback = base_path('public/build/manifest.json');
+    $manifestPath = file_exists($manifestPathPrimary) ? $manifestPathPrimary : $manifestPathFallback;
+
+    if (!file_exists($manifestPath)) {
+        return "<!-- Vite manifest not found. Run 'npm run build'. -->";
+    }
+
+    $manifest = json_decode(file_get_contents($manifestPath), true);
+    if (!isset($manifest[$entryPath])) {
+        return "<!-- Vite entry '$entryPath' not present in manifest. -->";
+    }
+
+    $tags = [];
+
+    if (!empty($manifest[$entryPath]['css'])) {
+        foreach ($manifest[$entryPath]['css'] as $cssFile) {
+            $tags[] = '<link rel="stylesheet" href="/build/' . $cssFile . '">';
+        }
+    }
+
+    if (!empty($manifest[$entryPath]['file'])) {
+        $tags[] = '<script type="module" src="/build/' . $manifest[$entryPath]['file'] . '"></script>';
+    }
+
+    return implode("\n", $tags);
+}
+
+function vite_is_dev_server_running(string $url): bool
+{
+    $host = parse_url($url, PHP_URL_HOST) ?: 'localhost';
+    $port = (int) (parse_url($url, PHP_URL_PORT) ?: 5173);
+
+    $connection = @fsockopen($host, $port, $errno, $errstr, 0.2);
+    if (is_resource($connection)) {
+        fclose($connection);
+        return true;
+    }
+
+    return false;
+}

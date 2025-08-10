@@ -18,6 +18,8 @@ Thumbs.db
 !/public/css/.gitkeep
 /public/js/*
 !/public/js/.gitkeep
+/public/build/*
+!/public/build/.gitkeep
 
 # Logs
 *.log

@@ -7,8 +7,7 @@
 <meta http-equiv="X-UA-Compatible" content="ie=edge">
 <title>DALTPHP - Modern Web Development</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<link href="/css/style.css" rel="stylesheet">
-<script defer src="/js/app.js"></script>
+<?= vite('resources/js/app.js') ?>
 </head>
 <body class="h-full bg-gray-900">
 <div class="min-h-full">
