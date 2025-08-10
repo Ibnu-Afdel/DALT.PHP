@@ -5,6 +5,7 @@ export default defineConfig({
   root: '.',
   base: '/',
   publicDir: false,
+  appType: 'custom',
   server: {
     strictPort: true,
     port: 5173,
@@ -20,6 +21,9 @@ export default defineConfig({
   plugins: [
     FullReload(['resources/views/**/*.php'])
   ],
+  optimizeDeps: {
+    entries: ['resources/js/app.js']
+  },
   build: {
     manifest: true,
     outDir: 'public/build',
