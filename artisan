@@ -13,8 +13,13 @@ function load_env_and_boot(): array {
         }
     }
     require base_path('vendor/autoload.php');
+    // Load env if present, otherwise continue silently
     $dotenv = Dotenv\Dotenv::createImmutable(base_path(''));
-    $dotenv->load();
+    if (method_exists($dotenv, 'safeLoad')) {
+        $dotenv->safeLoad();
+    } else {
+        try { $dotenv->load(); } catch (\Throwable $e) { /* ignore missing .env */ }
+    }
     $dbConfig = require base_path('config/database.php');
     return $dbConfig;
 }
@@ -132,7 +137,11 @@ EOD;
             . "\$router->post('/session', 'session/store.php')->only(['guest','csrf']);\n"
             . "\$router->delete('/session', 'session/destroy.php')->only(['auth','csrf']);\n";
         file_put_contents($routesPath, $routeBlock, FILE_APPEND);
+        // Create marker so UI can show CTAs
+        @mkdir(base_path('storage'), 0755, true);
+        file_put_contents(base_path('storage/auth_example_installed'), date('c'));
         echo "Auth example installed and routes appended to routes/routes.php.\n";
+        echo "Visit /register or /login (or see buttons on the welcome page).\n";
         break;
 
     default:

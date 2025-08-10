@@ -1,6 +1,6 @@
 {
     "name": "ibnuafdel/daltphp",
-    "description": "A simple, beginner-friendly framework for learning PHP. Inspired by Laravel.",
+    "description": "A simple, beginner-friendly PHP framework for learning. Inspired by Laravel.",
     "type": "project",
     "license": "MIT",
     "keywords": ["php", "framework", "micro", "learning", "sqlite", "tailwind", "vite", "daisyui", "Laravel"],
@@ -35,7 +35,10 @@
         "test": "vendor/bin/pest",
         "migrate": "php artisan migrate",
         "migrate:fresh": "php artisan migrate:fresh",
-        "make:migration": "php artisan make:migration"
+        "make:migration": "php artisan make:migration",
+        "post-create-project-cmd": [
+            "@php scripts/post-create.php"
+        ]
     },
     "bin": [
         "artisan"
