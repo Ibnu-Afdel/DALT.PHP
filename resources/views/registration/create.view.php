@@ -24,7 +24,8 @@
 
             <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
                 <div class="bg-gray-800/50 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-700/50 p-8">
-                    <form class="space-y-6" action="/register" method="POST">
+                    <form class="space-y-6" action="/register" method="post">
+                        <input type="hidden" name="_method" value="DELETE">
                         <div>
                             <label for="name" class="block text-sm font-medium text-gray-200">Full Name</label>
                             <div class="mt-2">

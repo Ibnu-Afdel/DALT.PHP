@@ -13,7 +13,7 @@ class Database {
         $username = $config['username'] ?? null;
         $password = $config['password'] ?? null;
 
-        $this->connection = new PDO($dsn, $username, $password, [
+        $this->connection = new PDO($dsn, $username, $password, options: [
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         ]);
