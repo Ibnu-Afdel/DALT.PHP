@@ -58,8 +58,8 @@ switch ($command) {
             echo "Port {$port} in use. Using {$chosenPort} instead.\n";
         }
         echo "Starting development server: http://{$host}:{$chosenPort}\n";
-        // Use router script for front-controller routing
-        passthru("php -S {$host}:{$chosenPort} -t public public/index.php");
+        // Use router script for static files + front-controller routing
+        passthru("php -S {$host}:{$chosenPort} -t public public/router.php");
         break;
 
     case 'migrate':
