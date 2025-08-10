@@ -37,6 +37,11 @@ if (!file_exists($envFile)) {
     }
 }
 
+// Ensure we have an .env.example with SQLite defaults for future reference
+if (!file_exists($envExample)) {
+    file_put_contents($envExample, "APP_NAME=DALT_PHP\nAPP_ENV=local\nAPP_DEBUG=true\n\nDB_DRIVER=sqlite\nDB_DATABASE=database/app.sqlite\n\n# PostgreSQL example\n# DB_DRIVER=pgsql\n# DB_HOST=127.0.0.1\n# DB_PORT=5432\n# DB_NAME=dalt_php_app\n# DB_USERNAME=postgres\n# DB_PASSWORD=\n\n# MySQL example\n# DB_DRIVER=mysql\n# DB_HOST=127.0.0.1\n# DB_PORT=3306\n# DB_NAME=dalt_php_app\n# DB_USERNAME=root\n# DB_PASSWORD=\n");
+}
+
 // Try to install and build frontend if npm exists
 [$whichCode] = run('which npm');
 if ($whichCode === 0) {
