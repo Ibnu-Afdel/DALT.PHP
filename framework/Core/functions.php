@@ -65,11 +65,28 @@ function vite(string $entryPath): string
     if (!file_exists($manifestPath)) {
         // Static fallback if manifest is missing
         $fallback = [];
-        if (file_exists(base_path('public/app.css'))) {
-            $fallback[] = '<link rel="stylesheet" href="/app.css">';
+        $cssCandidates = [
+            'public/app.css',
+            'public/js/app.css',
+            'public/css/style.css',
+        ];
+        $jsCandidates = [
+            'public/app.js',
+            'public/js/app.js',
+        ];
+        foreach ($cssCandidates as $cssPath) {
+            if (file_exists(base_path($cssPath))) {
+                $href = '/' . ltrim(str_replace('public/', '', $cssPath), '/');
+                $fallback[] = '<link rel="stylesheet" href="' . htmlspecialchars($href) . '">';
+                break;
+            }
         }
-        if (file_exists(base_path('public/app.js'))) {
-            $fallback[] = '<script defer src="/app.js"></script>';
+        foreach ($jsCandidates as $jsPath) {
+            if (file_exists(base_path($jsPath))) {
+                $src = '/' . ltrim(str_replace('public/', '', $jsPath), '/');
+                $fallback[] = '<script defer src="' . htmlspecialchars($src) . '"></script>';
+                break;
+            }
         }
         if ($fallback) {
             return implode("\n", $fallback);
