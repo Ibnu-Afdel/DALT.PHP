@@ -15,18 +15,18 @@
       <div class="rounded-xl border bg-white p-6 s-card">
         <h2 class="text-xl font-semibold">Getting Started</h2>
         <div class="mt-4 overflow-x-auto">
-          <div class="mockup-code text-sm">
-            <pre data-prefix="$"><code>composer install</code></pre>
-            <pre data-prefix="$"><code>npm install</code></pre>
-            <pre data-prefix="$"><code>cp .env.example .env</code></pre>
-            <pre data-prefix="$"><code>php artisan migrate</code></pre>
-            <pre data-prefix="$"><code>npm run dev</code></pre>
-            <pre data-prefix="$"><code>php artisan serve</code></pre>
+          <div class="text-sm font-mono bg-gray-800 text-gray-300 rounded p-3">
+            <div>$ composer install</div>
+            <div>$ npm install</div>
+            <div>$ cp .env.example .env</div>
+            <div>$ php artisan migrate</div>
+            <div>$ npm run dev</div>
+            <div>$ php artisan serve</div>
           </div>
         </div>
         <p class="mt-3 text-sm">Routes: <span class="font-mono">routes/routes.php</span> · Controllers: <span class="font-mono">Http/controllers/</span> · Views: <span class="font-mono">resources/views/</span></p>
         <div class="mt-4 text-sm">
-          <div class="rounded-lg border bg-base-200 p-3">
+          <div class="rounded-lg border bg-gray-100 p-3">
             <p>Want /login and /register?</p>
             <p class="mt-1 font-mono">php artisan example:install auth</p>
           </div>
@@ -40,10 +40,8 @@
       <div class="rounded-xl border bg-white p-6 s-card">
         <h3 class="font-semibold">Links</h3>
         <ul class="mt-3 space-y-2 text-sm">
-          <!-- <li><a href="#" target="_blank" class="link">Intro Video</a></li> -->
-          <li><a href="https://github.com/Ibnu-Afdel/DALT.PHP" target="_blank" class="link">GitHub</a></li>
-          <!-- <li><a href="#" target="_blank" class="link">Twitter (X)</a></li> -->
-          <li><a href="https://t.me/daltphp" target="_blank" class="link">Telegram</a></li>
+          <li><a href="https://github.com/Ibnu-Afdel/DALT.PHP" target="_blank" class="underline">GitHub</a></li>
+          <li><a href="https://t.me/daltphp" target="_blank" class="underline">Telegram</a></li>
         </ul>
       </div>
       <div class="rounded-xl border bg-white p-6 s-card">
@@ -54,8 +52,8 @@
         <h3 class="font-semibold">Requirements</h3>
         <p class="mt-3 text-sm">Try PHP in your browser first at <a href="https://php.new" target="_blank" class="underline">php.new</a>. Ready to install locally? Get PHP and Composer for your OS:</p>
         <ul class="mt-3 space-y-2 text-sm list-disc pl-5">
-          <li><a href="https://www.php.net/downloads.php" target="_blank" class="link">PHP downloads</a></li>
-          <li><a href="https://getcomposer.org/download/" target="_blank" class="link">Composer install (Windows/macOS/Linux)</a></li>
+          <li><a href="https://www.php.net/downloads.php" target="_blank" class="underline">PHP downloads</a></li>
+          <li><a href="https://getcomposer.org/download/" target="_blank" class="underline">Composer install (Windows/macOS/Linux)</a></li>
           <li class="opacity-70">macOS: you can also use Homebrew (brew install php)</li>
           <li class="opacity-70">Linux: use your package manager (apt/yum/pacman) or the official PHP builds</li>
           <li class="opacity-70">Windows: Composer provides an installer; PHP is available via packages like XAMPP or winget</li>
