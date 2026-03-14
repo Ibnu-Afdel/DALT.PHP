@@ -10,6 +10,6 @@ return [
         'password' => $_ENV['DB_PASSWORD'] ?? '',
         'charset' => $_ENV['DB_CHARSET'] ?? 'utf8',
         // SQLite specific
-        'database' => $_ENV['DB_DATABASE'] ?? (defined('BASE_PATH') ? BASE_PATH . 'database/app.sqlite' : __DIR__ . '/../database/app.sqlite'),
+        'database' => $_ENV['DB_DATABASE'] ?? base_path('database/app.sqlite'),
     ]
 ];
