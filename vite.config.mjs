@@ -24,17 +24,20 @@ export default defineConfig({
   plugins: [
     vue(),
     tailwindcss(),
-    FullReload(['resources/views/**/*.php'])
+    FullReload(['resources/views/**/*.php', 'internals/resources/views/**/*.php'])
   ],
   optimizeDeps: {
-    entries: ['resources/js/app.js']
+    entries: ['resources/js/app.js', 'internals/resources/js/app.js']
   },
   build: {
     manifest: true,
     outDir: 'public/build',
     emptyOutDir: true,
     rollupOptions: {
-      input: '/resources/js/app.js'
+      input: [
+        '/resources/js/app.js',
+        '/internals/resources/js/app.js'
+      ]
     }
   }
 }) 

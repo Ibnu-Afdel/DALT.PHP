@@ -24,6 +24,10 @@ require base_path('framework/Core/bootstrap.php');
 
 $router = new \Core\Router();
 
+// Load core platform routes
+require base_path('internals/routes/routes.php');
+
+// Load user routes
 $routes = require base_path('routes/routes.php');
 
 $request = Request::capture();

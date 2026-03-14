@@ -6,7 +6,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>DALT.PHP — Interactive Backend Debugging Playground</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <?= vite('resources/js/app.js') ?>
+  <?= vite('internals/resources/js/app.js') ?>
 </head>
 <body class="min-h-screen antialiased">
 <div class="min-h-screen flex flex-col">
