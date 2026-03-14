@@ -459,8 +459,8 @@ If you encounter issues:
 
 1. Check this guide's troubleshooting section
 2. Review the documentation in `docs/`
-3. Check the lesson READMEs in `lessons/`
-4. Review challenge READMEs in `challenges/`
+3. Check the lesson READMEs in `course/lessons/`
+4. Review challenge READMEs in `course/challenges/`
 5. Check the verification system docs: `docs/VERIFICATION_SYSTEM.md`
 
 ---

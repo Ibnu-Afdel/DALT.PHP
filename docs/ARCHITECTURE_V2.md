@@ -8,16 +8,18 @@ To reduce **cognitive overload** for beginners, we physically separated the "cou
 
 ## Key Changes
 
-### 1. The `internals/` Directory
-All code responsible for rendering the visually rich tutorial screens (`/learn` and `/api/verify` routes) has been moved into the `internals/` directory.
+### 1. The `.dalt/` Directory
+All code responsible for rendering the visually rich tutorial screens (`/learn` and `/api/verify` routes) has been moved into the `.dalt/` directory.
 
-Users **do not** need to look inside `internals/`. That folder functions as a black box engine that safely runs the interactive UI next to their PHP app. The core `public/index.php` gracefully hooks into these routes unseen.
+Users **do not** need to look inside `.dalt/`. That folder functions as a black box engine that safely runs the interactive UI next to their PHP app. The core `public/index.php` gracefully hooks into these routes unseen.
 
-**What Moved to Internals:**
-*   **The Learning UI:** `resources/views/learn` -> `internals/resources/views/learn`
-*   **Status & Error UI:** `resources/views/status` -> `internals/resources/views/status`
-*   **Vue Frontend Architecture:** `frontend/` and `resources/js/components/` -> `internals/frontend/` and `internals/resources/js/components`
-*   **Internal API Endpoints:** `Http/controllers/learn/` and `/api/verify` -> `internals/Http/controllers/`
+**What Moved to .dalt:**
+*   **The Learning UI:** `resources/views/learn` -> `.dalt/resources/views/learn`
+*   **Status & Error UI:** `resources/views/status` -> `.dalt/resources/views/status`
+*   **Vue Frontend Architecture:** `frontend/` and `resources/js/components/` -> `.dalt/frontend/` and `.dalt/resources/js/components`
+*   **Internal API Endpoints:** `Http/controllers/learn/` and `/api/verify` -> `.dalt/Http/controllers/`
+*   **Code Templates:** `framework/examples/` -> `.dalt/stubs/`
+*   **Build Configuration:** `package.json`, `vite.config.mjs` -> `.dalt/`
 
 ### 2. The `app/` Directory
 The `Http` directory (which holds user-created controllers) has been placed under standard MVC packaging: `app/`.
@@ -25,10 +27,18 @@ The `Http` directory (which holds user-created controllers) has been placed unde
 **What Moved:**
 *   `Http/` -> `app/Http/`
 
-### 3. Clearer Root Setup
+### 3. The `course/` Directory
+Learning content has been consolidated into a single `course/` directory:
+*   `lessons/` -> `course/lessons/`
+*   `challenges/` -> `course/challenges/`
+
+This groups all educational material together and reduces root directory clutter.
+
+### 4. Clearer Root Setup
 Everything else at the root now accurately reflects the app you are building:
+*   `.dalt/`: Hidden platform internals (learning UI, verification system)
 *   `framework/`: The transparent custom core framework designed to be reviewed and studied.
-*   `challenges/`: Where active user coding exercises take place.
+*   `course/`: Where active user coding exercises and lessons are located.
 *   `app/Http/`: Where standard user logic is maintained.
 *   `routes/routes.php`: An empty, standard entry file strictly for matching user code endpoints. 
 

@@ -80,27 +80,28 @@ cat storage/logs/challenges.log
 ## 📁 Project Structure
 
 ```
-Http/controllers/       # Plain PHP controllers
-  learn/               # Learning interface controllers
-  api/                 # Verification API
-routes/routes.php      # Route definitions
-resources/
-  views/               # PHP views
-    learn/             # Learning interface views
-  js/
-    app.js             # Vue 3 entry point
-    components/        # Vue components (LessonContent, ChallengeVerifier)
-  css/input.css        # Tailwind CSS v4
-framework/Core/        # Framework core (Router, DB, Session, etc.)
-lessons/               # 5 lesson markdown files
-challenges/            # 5 broken challenge folders
-  broken-routing/
-  broken-middleware/
-  broken-auth/
-  broken-database/
-  broken-session/
+.dalt/                 # Platform internals (hidden)
+  Http/controllers/    # Learning UI controllers
+  resources/           # Platform assets & views
+  routes/              # Platform routes
+  scripts/             # Setup scripts
+  stubs/               # Code templates
+app/Http/controllers/  # User controllers
+course/                # Learning content
+  lessons/             # 5 lesson markdown files
+  challenges/          # 5 broken challenge folders
+    broken-routing/
+    broken-middleware/
+    broken-auth/
+    broken-database/
+    broken-session/
+config/                # Configuration files
 database/              # SQLite database and migrations
-docs/                  # Architecture and milestone documentation
+framework/Core/        # Framework core (Router, DB, Session, etc.)
+public/                # Web root (index.php entry point)
+routes/routes.php      # User route definitions
+storage/               # Logs and runtime files
+tests/                 # Testing suite
 ```
 
 ## 🛠️ Tech Stack
