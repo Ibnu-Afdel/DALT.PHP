@@ -1,6 +1,7 @@
 <?php
 
 namespace Core;
+
 use Core\Middleware\Auth;
 use Core\Middleware\Guest;
 use Core\Middleware\Middleware;
@@ -9,6 +10,7 @@ class Router
 {
 
     protected $routes = [];
+    protected ?Request $request = null;
 
     public function add($method, $uri, $controller)
     {
@@ -51,8 +53,10 @@ class Router
         return $this;
     }
 
-    public function route($uri, $method)
+    public function route($uri, $method, ?Request $request = null)
     {
+        $this->request = $request;
+
         foreach ($this->routes as $route) {
             if (strtoupper($method) !== $route['method']) {
                 continue;
@@ -102,7 +106,7 @@ class Router
 
     public function previousUrl()
     {
-        return $_SERVER['HTTP_REFERER'];
+        return $this->request?->server('HTTP_REFERER') ?? $_SERVER['HTTP_REFERER'] ?? '/';
     }
 
     protected function abort($code = 404)

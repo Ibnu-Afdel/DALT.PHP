@@ -1,8 +1,27 @@
 import '../css/input.css'
-import Alpine from 'alpinejs'
+import { createApp } from 'vue'
 
-// Make Alpine available globally
-window.Alpine = Alpine
+// Auto-register all Vue components from the components directory
+const components = import.meta.glob('./components/**/*.vue', { eager: true })
 
-// Initialize Alpine
-Alpine.start() 
+// Create Vue app instance
+const app = createApp({})
+
+// Register all components globally
+Object.entries(components).forEach(([path, component]) => {
+  const componentName = path
+    .split('/')
+    .pop()
+    .replace(/\.\w+$/, '')
+  
+  app.component(componentName, component.default || component)
+})
+
+// Mount Vue to elements with [data-vue] attribute
+document.addEventListener('DOMContentLoaded', () => {
+  const vueElements = document.querySelectorAll('[data-vue]')
+  
+  vueElements.forEach(element => {
+    app.mount(element)
+  })
+}) 

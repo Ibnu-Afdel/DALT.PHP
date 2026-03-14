@@ -4,7 +4,7 @@ A tiny, beginner‑friendly PHP micro‑framework for learning by doing.
 - Plain PHP controllers and views
 - Raw SQL (SQLite by default; Postgres/MySQL ready)
 - Minimal helpers (Router, DB, Session, CSRF)
-- Optional Tailwind + DaisyUI + Vite + Alpine.js
+- Vue 3 + Tailwind CSS v4 + Vite for modern frontend
 
 ## Create a new project
 ```bash
@@ -41,8 +41,10 @@ resources/
   views/
     layouts/            # head.php, nav.php, footer.php
     status/             # 403.php, 404.php, 500.php
-  js/app.js             # Vite entry (imports ../css/input.css)
-  css/input.css         # Tailwind entry
+  js/
+    app.js              # Vite entry (imports ../css/input.css)
+    components/         # Vue 3 components (.vue files)
+  css/input.css         # Tailwind CSS v4 entry
 framework/
   Core/                 # router, db, session, middleware, helpers
   examples/             # auth demo (optional)
@@ -124,9 +126,11 @@ What it does:
 - Status pages: `resources/views/status/{403,404,500}.php`
 
 ## Frontend
-- Vite + Tailwind + DaisyUI + Alpine.js are prewired
+- Vite + Vue 3 + Tailwind CSS v4 are prewired
 - Entry: `resources/js/app.js` (imports `../css/input.css`)
+- Vue components: `resources/js/components/`
 - In views, assets are included via `<?= vite('resources/js/app.js') ?>`
+- Use `data-vue` attribute on elements to mount Vue components
 - No Node? It’s fine—static fallbacks are used if present under `/js` or `/css`
 
 ## Philosophy

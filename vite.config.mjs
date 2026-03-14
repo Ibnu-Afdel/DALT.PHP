@@ -1,4 +1,6 @@
 import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import tailwindcss from '@tailwindcss/vite'
 import FullReload from 'vite-plugin-full-reload'
 
 export default defineConfig({
@@ -15,10 +17,13 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': '/resources'
+      '@': '/resources',
+      'vue': 'vue/dist/vue.esm-bundler.js'
     }
   },
   plugins: [
+    vue(),
+    tailwindcss(),
     FullReload(['resources/views/**/*.php'])
   ],
   optimizeDeps: {

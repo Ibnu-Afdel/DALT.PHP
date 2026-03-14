@@ -46,7 +46,7 @@
       </div>
       <div class="rounded-xl border bg-white p-6 s-card">
         <h3 class="font-semibold">Stack</h3>
-        <p class="mt-3 text-sm">PHP 8+, SQLite by default (Postgres ready), Vite, Tailwind, DaisyUI, Alpine.js.</p>
+        <p class="mt-3 text-sm">PHP 8+, SQLite by default (Postgres ready), Vite, Vue 3, Tailwind CSS v4.</p>
       </div>
       <div class="rounded-xl border bg-white p-6 s-card">
         <h3 class="font-semibold">Requirements</h3>
