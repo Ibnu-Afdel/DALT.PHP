@@ -2,66 +2,213 @@
 
 ## Difficulty: Intermediate
 
-## Description
+## Setup Instructions
 
-The middleware system is not working correctly. Some middleware doesn't run at all, while other middleware blocks valid requests.
+1. **Backup your current middleware files:**
+   ```bash
+   cp framework/Core/Middleware/Auth.php framework/Core/Middleware/Auth.php.backup
+   cp framework/Core/Middleware/Csrf.php framework/Core/Middleware/Csrf.php.backup
+   ```
 
-## Bug Symptoms
+2. **Copy the broken middleware files:**
+   ```bash
+   cp challenges/broken-middleware/framework/Core/Middleware/Auth.php framework/Core/Middleware/
+   cp challenges/broken-middleware/framework/Core/Middleware/Csrf.php framework/Core/Middleware/
+   ```
 
-1. CSRF protection is not working - forms submit without tokens
-2. Auth middleware allows unauthenticated users to access protected routes
-3. Guest middleware doesn't redirect logged-in users away from login page
-4. Middleware execution order seems random
+3. **Copy the controller files:**
+   ```bash
+   cp -r challenges/broken-middleware/Http/controllers/dashboard Http/controllers/
+   ```
 
-## Expected Behavior
+4. **Add routes (append to routes/routes.php):**
+   ```bash
+   cat challenges/broken-middleware/routes/routes.php >> routes/routes.php
+   ```
 
-- CSRF middleware should validate tokens on POST requests
-- Auth middleware should redirect unauthenticated users to login
-- Guest middleware should redirect authenticated users to home
-- Middleware should execute in the specified order
+5. **Start the server:**
+   ```bash
+   php artisan serve
+   ```
 
-## Learning Objective
+6. **Test the broken middleware:**
+   - Visit http://localhost:8000/dashboard (should redirect to login, but doesn't!)
+   - Try submitting the form (CSRF should pass, but fails!)
 
-Understand how middleware is resolved, executed, and how it protects routes.
+## Concept: How Middleware Works
 
-## Files to Investigate
+Middleware runs between the router and controller to filter requests:
 
-- `framework/Core/Middleware/Middleware.php` - Middleware resolution
-- `framework/Core/Middleware/Auth.php` - Authentication guard
-- `framework/Core/Middleware/Guest.php` - Guest-only guard
-- `framework/Core/Middleware/Csrf.php` - CSRF protection
-- `framework/Core/Router.php` - Middleware invocation
+```
+Request → Router → Middleware → Controller → Response
+```
+
+If middleware fails, the controller never executes.
+
+**Common middleware types:**
+- **Auth** - Requires user to be logged in
+- **Guest** - Requires user to NOT be logged in
+- **CSRF** - Validates form tokens to prevent attacks
+
+## The Bugs
+
+### Bug #1: Auth Middleware Checks Wrong Session Key
+
+**Symptom:** Unauthenticated users can access protected routes.
+
+**What's happening:**
+```php
+// BROKEN
+if(!($_SESSION['authenticated'] ?? false)){
+    // ...
+}
+
+// CORRECT
+if(!($_SESSION['user'] ?? false)){
+    // ...
+}
+```
+
+The Auth middleware checks for `$_SESSION['authenticated']` but the login system stores user data in `$_SESSION['user']`.
+
+**Why it's broken:** Session key mismatch means the check always fails, allowing anyone to access protected routes.
+
+### Bug #2: CSRF Middleware Logic Inverted
+
+**Symptom:** Valid CSRF tokens are rejected, forms can't be submitted.
+
+**What's happening:**
+```php
+// BROKEN - rejects when tokens MATCH
+if ($sessionToken == $formToken) {
+    http_response_code(419);
+    echo 'CSRF token mismatch';
+    exit;
+}
+
+// CORRECT - rejects when tokens DON'T match
+if (!$sessionToken || !$formToken || !hash_equals($sessionToken, $formToken)) {
+    http_response_code(419);
+    echo 'CSRF token mismatch';
+    exit;
+}
+```
+
+The logic is inverted - it aborts when tokens match instead of when they don't match.
+
+**Additional issue:** Using `==` instead of `hash_equals()` creates a timing attack vulnerability.
+
+## Learning Objectives
+
+After fixing this challenge, you will understand:
+- How middleware checks session data
+- Why session key names must match
+- How CSRF protection works
+- Why timing-safe comparison matters
+- How to debug middleware issues
 
 ## Debugging Hints
 
-1. Check `Middleware::MAP` - are all middleware registered?
-2. Verify `Middleware::resolve()` - is it calling `handle()` on each?
-3. Look at middleware order in route definitions
-4. Check if middleware is being called before the controller
-5. Add `dd('Middleware running')` in each middleware's `handle()` method
+1. **Check session keys** - Add `dd($_SESSION)` in Auth middleware to see what's stored
+2. **Trace middleware execution** - Add `dd('Auth middleware running')` to verify it executes
+3. **Test CSRF logic** - Add `dd($sessionToken, $formToken)` to see token values
+4. **Read the condition carefully** - Is the logic checking what you think it's checking?
 
-## Questions to Ask
+## Files to Investigate
 
-- How does `Middleware::resolve()` convert keys to class names?
-- What happens if a middleware key is not in the MAP?
-- In what order do multiple middleware execute?
-- What happens when middleware fails (redirect vs abort)?
-- Where in the request lifecycle does middleware run?
+- `framework/Core/Middleware/Auth.php` - Authentication check (Bug #1 is here!)
+- `framework/Core/Middleware/Csrf.php` - CSRF validation (Bug #2 is here!)
+- `framework/Core/Middleware/Middleware.php` - Middleware resolution (read to understand flow)
+- `framework/Core/Authenticator.php` - See what session key is used during login
+
+## How to Fix
+
+### Fix #1: Correct Session Key in Auth Middleware
+
+Change the session key to match what's actually stored:
+```php
+// In framework/Core/Middleware/Auth.php
+public function handle()
+{
+    if(!($_SESSION['user'] ?? false)){  // Changed from 'authenticated' to 'user'
+        header('location: /' );
+        exit();
+    }
+}
+```
+
+### Fix #2: Fix CSRF Logic and Use Timing-Safe Comparison
+
+Invert the logic and use `hash_equals()`:
+```php
+// In framework/Core/Middleware/Csrf.php
+public function handle(): void
+{
+    $method = $_POST['_method'] ?? $_SERVER['REQUEST_METHOD'];
+    $method = strtoupper($method);
+    
+    if ($method === 'GET') {
+        return;
+    }
+
+    $sessionToken = $_SESSION['_csrf'] ?? null;
+    $formToken = $_POST['_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
+
+    // Fixed: Reject when tokens DON'T match, use hash_equals()
+    if (!$sessionToken || !$formToken || !hash_equals($sessionToken, $formToken)) {
+        http_response_code(419);
+        echo 'CSRF token mismatch';
+        exit;
+    }
+}
+```
 
 ## Success Criteria
 
-- All middleware executes when specified on routes
-- CSRF tokens are validated on POST requests
-- Auth middleware protects routes correctly
-- Guest middleware works as expected
-- Middleware executes in the correct order
+When fixed correctly:
+- ✅ Unauthenticated users are redirected from `/dashboard`
+- ✅ Forms with valid CSRF tokens submit successfully
+- ✅ Forms without CSRF tokens are rejected
+- ✅ Timing-safe comparison is used
+
+## Testing Your Fix
+
+### Test Auth Middleware:
+```bash
+# Without login, should redirect
+curl -I http://localhost:8000/dashboard
+# Should see: Location: /
+
+# After login, should work
+# (You'll need to implement login or mock $_SESSION['user'])
+```
+
+### Test CSRF Middleware:
+```bash
+# With valid token, should work
+curl -X POST http://localhost:8000/dashboard/update \
+  -d "_token=valid_token_here"
+
+# Without token, should fail with 419
+curl -X POST http://localhost:8000/dashboard/update
+```
+
+## Cleanup
+
+After completing the challenge:
+```bash
+# Restore original middleware
+cp framework/Core/Middleware/Auth.php.backup framework/Core/Middleware/Auth.php
+cp framework/Core/Middleware/Csrf.php.backup framework/Core/Middleware/Csrf.php
+
+# Remove challenge controllers (optional)
+rm -rf Http/controllers/dashboard
+```
 
 ## Related Lesson
 
-**Lesson 03: Middleware System**
+**Lesson 03: Middleware System** - Study this before attempting the challenge.
 
-## Solution
+## Next Challenge
 
-(Hidden until you attempt the challenge)
-
-The solution will be revealed after you've debugged the issue.
+After mastering middleware, try **Challenge: Broken Authentication**
