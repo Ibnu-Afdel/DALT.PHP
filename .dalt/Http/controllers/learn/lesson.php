@@ -3,7 +3,7 @@
 $lessonId = $_GET['lesson'] ?? '';
 
 // Validate lesson exists
-$lessonPath = base_path("lessons/{$lessonId}/README.md");
+$lessonPath = base_path("course/lessons/{$lessonId}/README.md");
 if (!file_exists($lessonPath)) {
     http_response_code(404);
     view('status/404.view.php');

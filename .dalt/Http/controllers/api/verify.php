@@ -5,7 +5,7 @@ header('Content-Type: application/json');
 $challengeId = $_GET['challenge'] ?? '';
 
 // Validate challenge exists
-$challengePath = base_path("challenges/{$challengeId}");
+$challengePath = base_path("course/challenges/{$challengeId}");
 if (!is_dir($challengePath)) {
     http_response_code(404);
     echo json_encode(['error' => 'Challenge not found']);

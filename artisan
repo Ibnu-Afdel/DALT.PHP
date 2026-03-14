@@ -173,11 +173,11 @@ EOD;
             exit(1);
         }
 
-        $challengePath = "challenges/{$challengeName}";
+        $challengePath = "course/challenges/{$challengeName}";
         
         if (!is_dir(base_path($challengePath))) {
             echo "Error: Challenge '{$challengeName}' not found.\n";
-            echo "Make sure the challenge exists in challenges/ directory.\n";
+            echo "Make sure the challenge exists in course/challenges/ directory.\n";
             exit(1);
         }
 

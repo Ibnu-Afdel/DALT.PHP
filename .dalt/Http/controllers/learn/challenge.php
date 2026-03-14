@@ -3,7 +3,7 @@
 $challengeId = $_GET['challenge'] ?? '';
 
 // Validate challenge exists
-$challengePath = base_path("challenges/{$challengeId}/README.md");
+$challengePath = base_path("course/challenges/{$challengeId}/README.md");
 if (!file_exists($challengePath)) {
     http_response_code(404);
     view('status/404.view.php');
