@@ -37,7 +37,7 @@
         "migrate:fresh": "php artisan migrate:fresh",
         "make:migration": "php artisan make:migration",
         "post-create-project-cmd": [
-            "@php scripts/post-create.php"
+            "@php internals/scripts/post-create.php"
         ]
     },
     "bin": [
