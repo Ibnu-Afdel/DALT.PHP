@@ -2,9 +2,10 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import FullReload from 'vite-plugin-full-reload'
+import { resolve } from 'path'
 
 export default defineConfig({
-  root: '.',
+  root: resolve(__dirname, '..'),
   base: '/',
   publicDir: false,
   appType: 'custom',
@@ -17,26 +18,32 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': '/resources',
+      '@': resolve(__dirname, '../resources'),
       'vue': 'vue/dist/vue.esm-bundler.js'
     }
   },
   plugins: [
     vue(),
     tailwindcss(),
-    FullReload(['resources/views/**/*.php', '.dalt/resources/views/**/*.php'])
+    FullReload([
+      resolve(__dirname, '../resources/views/**/*.php'),
+      resolve(__dirname, 'resources/views/**/*.php')
+    ])
   ],
   optimizeDeps: {
-    entries: ['resources/js/app.js', '.dalt/resources/js/app.js']
+    entries: [
+      resolve(__dirname, '../resources/js/app.js'),
+      resolve(__dirname, 'resources/js/app.js')
+    ]
   },
   build: {
     manifest: true,
-    outDir: 'public/build',
+    outDir: resolve(__dirname, '../public/build'),
     emptyOutDir: true,
     rollupOptions: {
       input: [
-        '/resources/js/app.js',
-        '/.dalt/resources/js/app.js'
+        resolve(__dirname, '../resources/js/app.js'),
+        resolve(__dirname, 'resources/js/app.js')
       ]
     }
   }

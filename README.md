@@ -21,7 +21,7 @@ cd DALT.PHP
 
 # Install dependencies
 composer install
-npm install
+npm run install-platform
 
 # Setup environment
 cp .env.example .env
