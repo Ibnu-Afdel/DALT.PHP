@@ -1,143 +1,152 @@
-# DALT.PHP — learn-by-building PHP starter
+# DALT.PHP — Interactive Backend Debugging Playground
 
-A tiny, beginner‑friendly PHP micro‑framework for learning by doing.
-- Plain PHP controllers and views
-- Raw SQL (SQLite by default; Postgres/MySQL ready)
-- Minimal helpers (Router, DB, Session, CSRF)
-- Vue 3 + Tailwind CSS v4 + Vite for modern frontend
+An educational platform where you learn backend development by debugging intentionally broken code.
 
-## Create a new project
+**Learn by fixing real bugs** in routing, middleware, authentication, database, and session handling.
+
+## 🎯 What is DALT.PHP?
+
+DALT.PHP is an interactive debugging playground that teaches web framework concepts through hands-on practice:
+- **5 comprehensive lessons** explaining backend fundamentals
+- **5 broken challenges** with realistic bugs to fix
+- **Automatic verification** with instant feedback
+- **Modern stack**: PHP 8+, Vue 3, Tailwind CSS v4, SQLite
+
+## 🚀 Quick Start
+
 ```bash
-composer create-project ibnuafdel/daltphp my-app "^0.1@alpha"
-cd my-app
-```
-What happens automatically:
-- `.env` is created with SQLite defaults (no DB setup required)
-- `storage/logs` is prepared
-- If Node is available, post-create may install/build assets (optional)
+# Clone the repository
+git clone https://github.com/Ibnu-Afdel/DALT.PHP.git
+cd DALT.PHP
 
-## Run the app
+# Install dependencies
+composer install
+npm install
+
+# Setup environment
+cp .env.example .env
+php artisan migrate
+
+# Start servers (2 terminals)
+npm run dev          # Terminal 1: Vite dev server
+php artisan serve    # Terminal 2: PHP server
+
+# Visit the app
+open http://localhost:8888
+```
+
+## 📚 Learning Path
+
+1. **Visit `/learn`** - Browse all lessons and challenges
+2. **Read a lesson** - Understand the concepts (e.g., routing, middleware)
+3. **Try a challenge** - Debug broken code in your editor
+4. **Run verification** - Click "Run Verification" or use CLI: `php artisan verify broken-routing`
+5. **Get feedback** - See which tests pass/fail with helpful hints
+6. **Fix and repeat** - Keep debugging until all tests pass!
+
+## 🐛 Available Challenges
+
+| Challenge | Difficulty | Bugs | Concept |
+|-----------|-----------|------|---------|
+| Broken Routing | Easy | 2 | Route order and registration |
+| Broken Middleware | Medium | 2 | Auth checks and CSRF validation |
+| Broken Authentication | Easy | 1 | Password verification |
+| Broken Database | Medium | 2 | SQL injection prevention |
+| Broken Session | Medium | 2 | Flash data handling |
+
+## 🎓 Features
+
+### Interactive Web Interface
+- Browse lessons and challenges at `/learn`
+- Read beautifully formatted markdown lessons
+- Run verifications directly from the browser
+- Get instant visual feedback with test results
+
+### CLI Verification
 ```bash
-php artisan serve
-```
-- Starts the PHP built-in server on a free port (8000, 8001, ...)
-- Uses `public/router.php` so static files (e.g. `/favicon.svg`, `/css/*`, `/js/*`) are served correctly
-- Keep the terminal open to see request logs
+# Verify a challenge
+php artisan verify broken-routing
 
-Optional (for HMR/live reload):
-```bash
-npm ci
-npm run dev
+# View progress logs
+cat storage/logs/challenges.log
 ```
-If Vite dev server or manifest is not available, views fall back to static assets under `/js/app.js`, `/js/app.css`, or `/css/style.css`.
 
-## File structure (small and familiar)
+### Automatic Testing
+- 19 automated tests across all challenges
+- Detailed pass/fail results
+- Helpful hints for failures
+- Progress tracking
+
+## 📁 Project Structure
+
 ```
-public/                 # index.php (front controller), router.php, favicon.svg
-routes/routes.php       # define routes
-Http/controllers/       # your plain PHP controllers
-config/                 # app.php, database.php (SQLite default)
+Http/controllers/       # Plain PHP controllers
+  learn/               # Learning interface controllers
+  api/                 # Verification API
+routes/routes.php      # Route definitions
 resources/
-  views/
-    layouts/            # head.php, nav.php, footer.php
-    status/             # 403.php, 404.php, 500.php
+  views/               # PHP views
+    learn/             # Learning interface views
   js/
-    app.js              # Vite entry (imports ../css/input.css)
-    components/         # Vue 3 components (.vue files)
-  css/input.css         # Tailwind CSS v4 entry
-framework/
-  Core/                 # router, db, session, middleware, helpers
-  examples/             # auth demo (optional)
-database/migrations/    # migrations (Illuminate Database)
-storage/logs/.gitkeep   # logs dir
-artisan                 # minimal CLI: serve/migrate/etc
+    app.js             # Vue 3 entry point
+    components/        # Vue components (LessonContent, ChallengeVerifier)
+  css/input.css        # Tailwind CSS v4
+framework/Core/        # Framework core (Router, DB, Session, etc.)
+lessons/               # 5 lesson markdown files
+challenges/            # 5 broken challenge folders
+  broken-routing/
+  broken-middleware/
+  broken-auth/
+  broken-database/
+  broken-session/
+database/              # SQLite database and migrations
+docs/                  # Architecture and milestone documentation
 ```
 
-## Routes and controllers
-- Add routes in `routes/routes.php`:
-```php
-$router->get('/', 'welcome.php');
-```
-- Create a controller in `Http/controllers/welcome.php`:
-```php
-<?php
-view('welcome.view.php');
-```
-- Views live in `resources/views/`.
+## 🛠️ Tech Stack
 
-### Route parameters and middleware
-- Route params: `/posts/{id}` → available as `$_GET['id']`
-- Methods: `$router->get()`, `post()`, `patch()`, `delete()`
-- Middleware on a route:
-```php
-$router->post('/session', 'session/store.php')->only(['guest','csrf']);
-```
-Built-in keys: `csrf`, `auth`, `guest`.
+- **Backend**: PHP 8+ with custom micro-framework
+- **Frontend**: Vue 3 + Tailwind CSS v4 + Vite
+- **Database**: SQLite (Postgres/MySQL ready)
+- **Testing**: Custom verification system
 
-## Database
-SQLite by default (zero setup). To switch to PostgreSQL or MySQL, edit `.env`.
+## 📖 Documentation
 
-SQLite (default):
-```env
-DB_DRIVER=sqlite
-DB_DATABASE=database/app.sqlite
-```
+- [Testing Guide](TESTING_GUIDE.md) - Complete testing instructions
+- [Framework Architecture](docs/FRAMEWORK_ARCHITECTURE.md) - How the framework works
+- [Project Architecture](docs/PROJECT_ARCHITECTURE.md) - Overall system design
+- [Verification System](docs/VERIFICATION_SYSTEM.md) - How verification works
+- [Milestone Summaries](docs/) - Development progress
 
-PostgreSQL:
-```env
-DB_DRIVER=pgsql
-DB_HOST=127.0.0.1
-DB_PORT=5432
-DB_NAME=dalt_php_app
-DB_USERNAME=postgres
-DB_PASSWORD=
-```
+## 🎯 Learning Objectives
 
-MySQL:
-```env
-DB_DRIVER=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_NAME=dalt_php_app
-DB_USERNAME=root
-DB_PASSWORD=
-```
+After completing DALT.PHP, you'll understand:
+- HTTP request lifecycle in web frameworks
+- Routing and URL-to-controller mapping
+- Middleware and request filtering
+- Authentication and password security
+- Database queries and SQL injection prevention
+- Session management and flash data
+- Common backend bugs and how to fix them
 
-Migrations (powered by illuminate/database):
-```bash
-php artisan migrate          # run migrations
-php artisan migrate:fresh    # drop sqlite DB and re-run
-php artisan make:migration posts
-```
+## 🤝 Contributing
 
-## Auth example (optional)
-Install the demo (register/login/logout):
-```bash
-php artisan example:install auth
-```
-What it does:
-- Copies demo controllers and views into your app
-- Appends auth routes to `routes/routes.php`
-- Shows Login/Register or Logout links in the header
+Contributions are welcome! You can:
+- Add new challenges
+- Improve lessons
+- Enhance the UI
+- Fix bugs
+- Add features
 
-## Debug and errors
-- Set `APP_DEBUG=true` in `.env` for a simple stack trace on errors
-- In production, errors are logged to `storage/logs/app.log` and a clean `resources/views/status/500.php` is shown
-- Status pages: `resources/views/status/{403,404,500}.php`
+## 📝 License
 
-## Frontend
-- Vite + Vue 3 + Tailwind CSS v4 are prewired
-- Entry: `resources/js/app.js` (imports `../css/input.css`)
-- Vue components: `resources/js/components/`
-- In views, assets are included via `<?= vite('resources/js/app.js') ?>`
-- Use `data-vue` attribute on elements to mount Vue components
-- No Node? It’s fine—static fallbacks are used if present under `/js` or `/css`
-
-## Philosophy
-- Learn PHP by reading and writing plain PHP files
-- Keep the core small and explicit (no magic)
-- Understand HTTP, sessions, and SQL fundamentals
-- When you’re ready, graduate to full frameworks like Laravel
-
-## License
 MIT
+
+## 🔗 Links
+
+- [GitHub](https://github.com/Ibnu-Afdel/DALT.PHP)
+- [Telegram Community](https://t.me/daltphp)
+
+---
+
+**Start learning backend development the practical way** - by debugging real code! 🐛🔧

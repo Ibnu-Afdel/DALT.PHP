@@ -7,21 +7,32 @@ const components = import.meta.glob('./components/**/*.vue', { eager: true })
 // Create Vue app instance
 const app = createApp({})
 
-// Register all components globally
+// Register all components globally with kebab-case names
 Object.entries(components).forEach(([path, component]) => {
   const componentName = path
     .split('/')
     .pop()
     .replace(/\.\w+$/, '')
   
-  app.component(componentName, component.default || component)
+  // Convert PascalCase to kebab-case for HTML usage
+  const kebabName = componentName
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .toLowerCase()
+  
+  app.component(kebabName, component.default || component)
 })
 
-// Mount Vue to elements with [data-vue] attribute
+// Mount Vue to #app or elements with [data-vue] attribute
 document.addEventListener('DOMContentLoaded', () => {
-  const vueElements = document.querySelectorAll('[data-vue]')
-  
-  vueElements.forEach(element => {
-    app.mount(element)
-  })
+  // Mount to #app if it exists
+  const appElement = document.getElementById('app')
+  if (appElement) {
+    app.mount('#app')
+  } else {
+    // Fallback to data-vue elements
+    const vueElements = document.querySelectorAll('[data-vue]')
+    vueElements.forEach(element => {
+      createApp({}).mount(element)
+    })
+  }
 }) 
