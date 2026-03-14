@@ -77,7 +77,7 @@ class Router
 
             $controllerPath = base_path('app/Http/controllers/' . $route['controller']);
             if (!file_exists($controllerPath)) {
-                $controllerPath = base_path('internals/Http/controllers/' . $route['controller']);
+                $controllerPath = base_path('.dalt/Http/controllers/' . $route['controller']);
             }
 
             return require $controllerPath;
@@ -120,7 +120,7 @@ class Router
 
         $viewPath = base_path("resources/views/status/{$code}.php");
         if (!file_exists($viewPath)) {
-            $viewPath = base_path("internals/resources/views/status/{$code}.php");
+            $viewPath = base_path(".dalt/resources/views/status/{$code}.php");
         }
         
         require $viewPath;

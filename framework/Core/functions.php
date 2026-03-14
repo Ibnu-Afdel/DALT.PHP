@@ -18,7 +18,7 @@ return $_SERVER['REQUEST_URI'] === $value;
 
     $viewPath = base_path("resources/views/status/{$code}.php");
     if (!file_exists($viewPath)) {
-        $viewPath = base_path("internals/resources/views/status/{$code}.php");
+        $viewPath = base_path(".dalt/resources/views/status/{$code}.php");
     }
     
     require $viewPath;
@@ -42,7 +42,7 @@ function view($path, $attributes = [])
     
     $viewPath = base_path('resources/views/' . $path);
     if (!file_exists($viewPath)) {
-        $viewPath = base_path('internals/resources/views/' . $path);
+        $viewPath = base_path('.dalt/resources/views/' . $path);
     }
     
     return require $viewPath;

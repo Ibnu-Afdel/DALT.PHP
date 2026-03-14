@@ -24,10 +24,10 @@ export default defineConfig({
   plugins: [
     vue(),
     tailwindcss(),
-    FullReload(['resources/views/**/*.php', 'internals/resources/views/**/*.php'])
+    FullReload(['resources/views/**/*.php', '.dalt/resources/views/**/*.php'])
   ],
   optimizeDeps: {
-    entries: ['resources/js/app.js', 'internals/resources/js/app.js']
+    entries: ['resources/js/app.js', '.dalt/resources/js/app.js']
   },
   build: {
     manifest: true,
@@ -36,7 +36,7 @@ export default defineConfig({
     rollupOptions: {
       input: [
         '/resources/js/app.js',
-        '/internals/resources/js/app.js'
+        '/.dalt/resources/js/app.js'
       ]
     }
   }

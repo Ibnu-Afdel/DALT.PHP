@@ -1,5 +1,5 @@
-<?php require base_path('internals/resources/views/layouts/head.php') ?>
-<?php require base_path('internals/resources/views/layouts/nav.php') ?>
+<?php require base_path('.dalt/resources/views/layouts/head.php') ?>
+<?php require base_path('.dalt/resources/views/layouts/nav.php') ?>
 
 <!-- Challenge Content Data (outside Vue app) -->
 <script type="application/json" id="challenge-content-data">
@@ -134,4 +134,4 @@
   </div>
 </main>
 
-<?php require base_path('internals/resources/views/layouts/footer.php') ?>
+<?php require base_path('.dalt/resources/views/layouts/footer.php') ?>
