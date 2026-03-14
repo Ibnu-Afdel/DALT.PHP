@@ -127,7 +127,7 @@ EOD;
             echo "Usage: php artisan example:install auth\n";
             exit(1);
         }
-        $source = base_path('framework/examples/auth');
+        $source = base_path('.dalt/stubs/auth');
         if (!is_dir($source)) {
             echo "Examples not found.\n";
             exit(1);
