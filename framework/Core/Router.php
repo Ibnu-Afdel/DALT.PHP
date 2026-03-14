@@ -75,7 +75,7 @@ class Router
                 $_GET[$key] = $value;
             }
 
-            $controllerPath = base_path('Http/controllers/' . $route['controller']);
+            $controllerPath = base_path('app/Http/controllers/' . $route['controller']);
             if (!file_exists($controllerPath)) {
                 $controllerPath = base_path('internals/Http/controllers/' . $route['controller']);
             }

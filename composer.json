@@ -19,7 +19,7 @@
     "autoload": {
         "psr-4": {
             "Core\\": "framework/Core/",
-            "Http\\": "Http/"
+            "App\\Http\\": "app/Http/"
         }
     },
     "require-dev": {
