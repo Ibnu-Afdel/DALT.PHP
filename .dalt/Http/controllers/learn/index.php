@@ -3,35 +3,35 @@
 // Get all lessons
 $lessons = [
     [
-        'id' => 'lesson-01-request-lifecycle',
+        'id' => '01-request-lifecycle',
         'title' => 'Request Lifecycle',
         'description' => 'Learn how HTTP requests flow through a web framework',
         'icon' => '🔄',
         'color' => 'blue'
     ],
     [
-        'id' => 'lesson-02-routing',
+        'id' => '02-routing',
         'title' => 'Routing',
         'description' => 'Understand how URLs map to controllers',
         'icon' => '🗺️',
         'color' => 'green'
     ],
     [
-        'id' => 'lesson-03-middleware',
+        'id' => '03-middleware',
         'title' => 'Middleware',
         'description' => 'Master request filtering and authentication',
         'icon' => '🛡️',
         'color' => 'purple'
     ],
     [
-        'id' => 'lesson-04-authentication',
+        'id' => '04-authentication',
         'title' => 'Authentication',
         'description' => 'Implement secure user login and registration',
         'icon' => '🔐',
         'color' => 'red'
     ],
     [
-        'id' => 'lesson-05-database',
+        'id' => '05-database',
         'title' => 'Database',
         'description' => 'Work with databases safely and efficiently',
         'icon' => '💾',

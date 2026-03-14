@@ -108,7 +108,7 @@
             Each challenge has hints and automatic verification to guide you.
           </p>
           <div class="flex gap-3">
-            <a href="/learn/lessons/lesson-01-request-lifecycle" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+            <a href="/learn/lessons/01-request-lifecycle" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
               Start with Lesson 1
             </a>
             <a href="https://github.com/Ibnu-Afdel/DALT.PHP/blob/main/TESTING_GUIDE.md" target="_blank" class="px-4 py-2 bg-white text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors text-sm font-medium">
