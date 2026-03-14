@@ -32,6 +32,7 @@ if (count($arguments) < 2) {
     echo "  migrate:fresh           - Drop DB (sqlite) and run migrations\n";
     echo "  make:migration <name>   - Create a new migration\n";
     echo "  example:install auth    - Copy auth demo into app and add routes\n";
+    echo "  verify <challenge>      - Verify a challenge fix (e.g., verify broken-routing)\n";
     exit(1);
 }
 
@@ -158,8 +159,77 @@ EOD;
         echo "Visit /register or /login (or see buttons on the welcome page).\n";
         break;
 
+    case 'verify':
+        $challengeName = $arguments[2] ?? '';
+        if (empty($challengeName)) {
+            echo "Usage: php artisan verify <challenge-name>\n";
+            echo "Example: php artisan verify broken-routing\n";
+            echo "\nAvailable challenges:\n";
+            echo "  - broken-routing\n";
+            echo "  - broken-middleware\n";
+            echo "  - broken-auth\n";
+            echo "  - broken-database\n";
+            echo "  - broken-session\n";
+            exit(1);
+        }
+
+        $challengePath = "challenges/{$challengeName}";
+        
+        if (!is_dir(base_path($challengePath))) {
+            echo "Error: Challenge '{$challengeName}' not found.\n";
+            echo "Make sure the challenge exists in challenges/ directory.\n";
+            exit(1);
+        }
+
+        echo "\n";
+        echo "╔══════════════════════════════════════════════════════════════╗\n";
+        echo "║           DALT Challenge Verification System                ║\n";
+        echo "╚══════════════════════════════════════════════════════════════╝\n";
+        echo "\n";
+        echo "Verifying: {$challengeName}\n";
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
+
+        $verifier = new Core\ChallengeVerifier($challengePath);
+        $result = $verifier->verify();
+
+        // Display results
+        foreach ($result['results'] as $test) {
+            $icon = $test['passed'] ? '✓' : '✗';
+            $color = $test['passed'] ? "\033[32m" : "\033[31m";
+            $reset = "\033[0m";
+            
+            echo "{$color}{$icon}{$reset} {$test['message']}\n";
+            
+            if (!$test['passed'] && !empty($test['hint'])) {
+                echo "  💡 Hint: {$test['hint']}\n";
+            }
+        }
+
+        echo "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+        echo "Results: {$result['passed']}/{$result['total']} tests passed\n";
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
+
+        if ($result['status'] === 'pass') {
+            echo "🎉 {$result['message']}\n\n";
+            echo "Great job! You've successfully fixed this challenge.\n";
+            echo "Check storage/logs/challenges.log for your progress.\n";
+        } else {
+            echo "❌ {$result['message']}\n\n";
+            if (!empty($result['hint'])) {
+                echo "💡 Next step: {$result['hint']}\n\n";
+            }
+            echo "Keep debugging! Check the challenge README for more hints.\n";
+        }
+
+        echo "\n";
+
+        // Log result
+        Core\ChallengeVerifier::logResult($challengeName, $result);
+        
+        exit($result['status'] === 'pass' ? 0 : 1);
+
     default:
         echo "Unknown command: $command\n";
-        echo "Available commands: serve, migrate, migrate:fresh, make:migration, example:install\n";
+        echo "Available commands: serve, migrate, migrate:fresh, make:migration, example:install, verify\n";
         exit(1);
 }
