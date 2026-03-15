@@ -34,7 +34,7 @@ public/database/app.sqlite
 ```
 
 **Problem**: 
-- SQLite database is web-accessible at `http://localhost:8888/database/app.sqlite`
+- SQLite database is web-accessible at `http://localhost:8000/database/app.sqlite`
 - Anyone can download the entire database with user credentials
 - This is a **critical security vulnerability**
 
@@ -857,7 +857,7 @@ mv internals .dalt/platform
 # 6. Test everything (7 min)
 php artisan serve
 npm run dev
-# Visit http://localhost:8888
+# Visit http://localhost:8000
 ```
 
 **Impact**: Immediate improvement in DX and security

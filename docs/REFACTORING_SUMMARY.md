@@ -26,7 +26,7 @@ public/database/app.sqlite  ❌ Web-accessible!
 database/app.sqlite  ✅ Secure
 ```
 
-**Impact**: Fixed critical security vulnerability where database was accessible at `http://localhost:8888/database/app.sqlite`
+**Impact**: Fixed critical security vulnerability where database was accessible at `http://localhost:8000/database/app.sqlite`
 
 ---
 

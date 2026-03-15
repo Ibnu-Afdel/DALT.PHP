@@ -291,7 +291,7 @@ SQL;
         echo "Starting DALT.PHP development environment...\n";
         echo "\n";
         echo "This will start:\n";
-        echo "  1. PHP development server (port 8888)\n";
+        echo "  1. PHP development server (port 8000)\n";
         echo "  2. Vite dev server (port 5173)\n";
         echo "\n";
         echo "Press Ctrl+C to stop both servers.\n";
@@ -314,7 +314,7 @@ SQL;
             passthru('cd ' . base_path('.dalt') . ' && npm run dev & php artisan serve');
         } else {
             echo "Starting servers...\n";
-            echo "  → PHP server: http://localhost:8888\n";
+            echo "  → PHP server: http://localhost:8000\n";
             echo "  → Vite server: http://localhost:5173\n";
             echo "\n";
             

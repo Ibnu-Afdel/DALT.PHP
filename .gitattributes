@@ -4,6 +4,8 @@
 /.gitattributes export-ignore
 /.gitignore export-ignore
 /TESTING_GUIDE.md export-ignore
+/BETA_RELEASE_CHECKLIST.md export-ignore
+/PORT_FIX_SUMMARY.md export-ignore
 /node_modules export-ignore
 /vendor export-ignore
 /.env export-ignore
