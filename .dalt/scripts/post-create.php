@@ -6,7 +6,7 @@
 // - Attempts to install JS deps and build assets if npm is available
 // - Prints next steps for the user
 
-$base = __DIR__ . '/../';
+$base = realpath(__DIR__ . '/../../') . '/';
 
 function info($msg) { echo $msg . "\n"; }
 function run($cmd) {
