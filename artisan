@@ -24,16 +24,56 @@ function load_env_and_boot(): array {
     return $dbConfig;
 }
 
-if (count($arguments) < 2) {
-    echo "Usage: php artisan <command>\n";
-    echo "Available commands:\n";
-    echo "  serve [host] [port]     - Start development server\n";
-    echo "  migrate                 - Run migrations\n";
-    echo "  migrate:fresh           - Drop DB (sqlite) and run migrations\n";
-    echo "  make:migration <name>   - Create a new migration\n";
-    echo "  example:install auth    - Copy auth demo into app and add routes\n";
-    echo "  verify <challenge>      - Verify a challenge fix (e.g., verify broken-routing)\n";
-    exit(1);
+if (count($arguments) < 2 || $arguments[1] === 'help' || $arguments[1] === '--help' || $arguments[1] === '-h') {
+    echo "\n";
+    echo "╔══════════════════════════════════════════════════════════════╗\n";
+    echo "║                    DALT.PHP Artisan CLI                      ║\n";
+    echo "╚══════════════════════════════════════════════════════════════╝\n";
+    echo "\n";
+    echo "Usage: php artisan <command> [options]\n";
+    echo "\n";
+    echo "Available Commands:\n";
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+    echo "\n";
+    echo "Development:\n";
+    echo "  serve [host] [port]     Start PHP development server\n";
+    echo "                          Example: php artisan serve\n";
+    echo "                          Example: php artisan serve 0.0.0.0 8080\n";
+    echo "\n";
+    echo "  dev                     Start both PHP and Vite dev servers\n";
+    echo "                          (Runs in background, use Ctrl+C to stop)\n";
+    echo "\n";
+    echo "Database:\n";
+    echo "  migrate                 Run pending database migrations\n";
+    echo "                          Executes .sql files from database/migrations/\n";
+    echo "\n";
+    echo "  migrate:fresh           Drop database and run all migrations\n";
+    echo "                          WARNING: Deletes all data! (SQLite only)\n";
+    echo "\n";
+    echo "  make:migration <name>   Create a new SQL migration file\n";
+    echo "                          Example: php artisan make:migration create_posts_table\n";
+    echo "\n";
+    echo "Testing:\n";
+    echo "  test                    Run Pest test suite\n";
+    echo "                          Executes all tests in tests/ directory\n";
+    echo "\n";
+    echo "  verify <challenge>      Verify a challenge solution\n";
+    echo "                          Example: php artisan verify broken-routing\n";
+    echo "                          Available: broken-routing, broken-middleware,\n";
+    echo "                                     broken-auth, broken-database, broken-session\n";
+    echo "\n";
+    echo "Examples:\n";
+    echo "  example:install auth    Install authentication example\n";
+    echo "                          Copies controllers, views, and routes\n";
+    echo "\n";
+    echo "Help:\n";
+    echo "  help                    Show this help message\n";
+    echo "\n";
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+    echo "\n";
+    echo "For more information, visit: https://github.com/Ibnu-Afdel/DALT.PHP\n";
+    echo "\n";
+    exit(0);
 }
 
 // Bootstrap core for all commands so helpers like base_path() exist
@@ -91,34 +131,53 @@ switch ($command) {
 
     case 'make:migration':
         if (!isset($arguments[2])) {
-            echo "Usage: php artisan make:migration <table_name>\n";
+            echo "Usage: php artisan make:migration <name>\n";
+            echo "Example: php artisan make:migration create_posts_table\n";
             exit(1);
         }
-        $tableName = preg_replace('/^create_/', '', $arguments[2]);
-        $tableName = preg_replace('/_table$/', '', $tableName);
-        $migrationFileName = date('YmdHis') . "_create_{$tableName}_table.php";
-        $migrationFilePath = __DIR__ . "/database/migrations/$migrationFileName";
-        if (!is_dir(__DIR__ . '/database/migrations')) {
-            mkdir(__DIR__ . '/database/migrations', 0755, true);
+        
+        $name = $arguments[2];
+        // Clean the name: remove 'create_' prefix and '_table' suffix if present
+        $cleanName = preg_replace('/^create_/', '', $name);
+        $cleanName = preg_replace('/_table$/', '', $cleanName);
+        
+        // Generate filename with timestamp
+        $timestamp = date('YmdHis');
+        $filename = "{$timestamp}_{$name}.sql";
+        $filepath = base_path("database/migrations/{$filename}");
+        
+        if (!is_dir(base_path('database/migrations'))) {
+            mkdir(base_path('database/migrations'), 0755, true);
         }
-        $template = <<<'EOD'
-<?php
+        
+        // Generate SQL template
+        $currentDate = date('Y-m-d H:i:s');
+        $template = <<<SQL
+-- Migration: {$name}
+-- Created: {$currentDate}
 
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Database\Capsule\Manager as Capsule;
+CREATE TABLE IF NOT EXISTS {$cleanName} (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name VARCHAR(255) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
-return function () {
-    Capsule::schema()->create('%s', function (Blueprint $table) {
-        $table->id();
-        $table->string('name');
-        $table->timestamps();
-    });
+-- Add indexes here
+-- CREATE INDEX IF NOT EXISTS idx_{$cleanName}_name ON {$cleanName}(name);
 
-    echo "Created %s table\n";
-};
-EOD;
-        file_put_contents($migrationFilePath, sprintf($template, $tableName, $tableName));
-        echo "Migration created: database/migrations/$migrationFileName\n";
+-- Notes:
+-- SQLite: INTEGER PRIMARY KEY AUTOINCREMENT
+-- MySQL:  INT AUTO_INCREMENT PRIMARY KEY
+-- PostgreSQL: SERIAL PRIMARY KEY
+SQL;
+        
+        file_put_contents($filepath, $template);
+        echo "Migration created: database/migrations/{$filename}\n";
+        echo "\n";
+        echo "Next steps:\n";
+        echo "1. Edit the migration file to define your table structure\n";
+        echo "2. Run: php artisan migrate\n";
         break;
 
     case 'example:install':
@@ -228,8 +287,73 @@ EOD;
         
         exit($result['status'] === 'pass' ? 0 : 1);
 
+    case 'dev':
+        echo "Starting DALT.PHP development environment...\n";
+        echo "\n";
+        echo "This will start:\n";
+        echo "  1. PHP development server (port 8888)\n";
+        echo "  2. Vite dev server (port 5173)\n";
+        echo "\n";
+        echo "Press Ctrl+C to stop both servers.\n";
+        echo "\n";
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+        
+        // Check if npm is available
+        exec('which npm', $output, $npmCheck);
+        if ($npmCheck !== 0) {
+            echo "⚠️  Warning: npm not found. Vite server will not start.\n";
+            echo "   Install Node.js to enable the frontend: https://nodejs.org/\n";
+            echo "\n";
+            echo "Starting PHP server only...\n";
+            passthru("php artisan serve");
+            exit(0);
+        }
+        
+        // Start both servers using concurrently if available, otherwise use background processes
+        if (file_exists(base_path('.dalt/node_modules/.bin/concurrently'))) {
+            passthru('cd ' . base_path('.dalt') . ' && npm run dev & php artisan serve');
+        } else {
+            echo "Starting servers...\n";
+            echo "  → PHP server: http://localhost:8888\n";
+            echo "  → Vite server: http://localhost:5173\n";
+            echo "\n";
+            
+            // Start Vite in background
+            $viteCmd = 'cd ' . base_path('.dalt') . ' && npm run dev > /dev/null 2>&1 &';
+            exec($viteCmd);
+            
+            sleep(2); // Give Vite time to start
+            
+            // Start PHP server in foreground
+            passthru("php artisan serve");
+        }
+        break;
+
+    case 'test':
+        echo "Running Pest test suite...\n";
+        echo "\n";
+        
+        if (!file_exists(base_path('vendor/bin/pest'))) {
+            echo "⚠️  Pest is not installed.\n";
+            echo "\n";
+            echo "Install Pest by running:\n";
+            echo "  composer require pestphp/pest --dev\n";
+            echo "\n";
+            exit(1);
+        }
+        
+        passthru('vendor/bin/pest');
+        break;
+
+    case 'help':
+    case '--help':
+    case '-h':
+        // Help is handled at the top, but include here for completeness
+        passthru("php artisan");
+        break;
+
     default:
         echo "Unknown command: $command\n";
-        echo "Available commands: serve, migrate, migrate:fresh, make:migration, example:install, verify\n";
+        echo "Run 'php artisan help' to see available commands.\n";
         exit(1);
 }
