@@ -9,3 +9,4 @@
 /node_modules export-ignore
 /vendor export-ignore
 /.env export-ignore
+tests export-ignore
