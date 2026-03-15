@@ -255,7 +255,7 @@ DALT.PHP/
 ## Testing
 
 All functionality verified:
-- ✅ Verification system works (`php artisan verify broken-routing`)
+- ✅ Verification system works (`php artisan challenge:start broken-routing` then `php artisan challenge:verify`)
 - ✅ No syntax errors in core files
 - ✅ Database connection works
 - ✅ All paths updated correctly

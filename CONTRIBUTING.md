@@ -81,8 +81,10 @@ Before submitting a PR:
 # Run all tests
 php artisan test
 
-# Test specific challenge verification
-php artisan verify broken-routing
+# List and run a challenge
+php artisan challenge:list
+php artisan challenge:start broken-routing
+php artisan challenge:verify
 
 # Test the development server
 php artisan serve
@@ -106,12 +108,13 @@ To add a new challenge:
 ### 1. Create Challenge Structure
 
 ```
-course/challenges/your-challenge-name/
-├── README.md              # Challenge description and hints
+.dalt/course/challenges/your-challenge-name/
+├── meta.json             # Required: title, difficulty, bugs, lesson
+├── README.md             # Challenge description and hints
 ├── tests.php             # Verification tests
 ├── Http/controllers/     # Broken controller code
 ├── framework/Core/       # Broken framework code (if needed)
-└── routes/              # Route definitions (if needed)
+└── routes/               # Route definitions (if needed)
 ```
 
 ### 2. Write the Challenge README
@@ -154,12 +157,13 @@ return [
 ### 4. Test Your Challenge
 
 ```bash
-php artisan verify your-challenge-name
+php artisan challenge:start your-challenge-name
+php artisan challenge:verify
 ```
 
 ## 📚 Improving Lessons
 
-Lessons are in `course/lessons/` as markdown files:
+Lessons are in `.dalt/course/lessons/` as markdown files (with meta.json):
 
 - Keep explanations clear and beginner-friendly
 - Use code examples liberally

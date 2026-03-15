@@ -68,36 +68,37 @@ We have 5 broken challenges to test. Each follows the same cycle:
 
 ### Challenge 1: Broken Routing
 
-**Location:** `challenges/broken-routing/`
+**Location:** `.dalt/course/challenges/broken-routing/`
 
 **Step 1 - Read the Challenge:**
 ```bash
-cat challenges/broken-routing/README.md
+cat .dalt/course/challenges/broken-routing/README.md
 ```
 
 **Step 2 - Run Verification (Should Fail):**
 ```bash
-php artisan verify broken-routing
+php artisan challenge:start broken-routing
+php artisan challenge:verify
 ```
 
 Expected output: ❌ Tests should fail
 
 **Step 3 - Understand the Bugs:**
 
-There are 2 bugs in `challenges/broken-routing/routes/web.php`:
+There are 2 bugs in `routes/routes.php` (copied into your app by challenge:start):
 
 1. **Route Order Problem:** `/posts/create` is registered AFTER `/posts/{id}`, so create gets caught by the wildcard
 2. **Missing Route:** The `/posts/{id}/edit` route is commented out
 
 **Step 4 - Fix the Bugs:**
 
-Open `challenges/broken-routing/routes/web.php` and:
+Open `routes/routes.php` in your app and:
 1. Move `/posts/create` BEFORE `/posts/{id}`
 2. Uncomment the `/posts/{id}/edit` route
 
 **Step 5 - Verify Again (Should Pass):**
 ```bash
-php artisan verify broken-routing
+php artisan challenge:verify
 ```
 
 Expected output: ✅ All tests pass
@@ -106,16 +107,17 @@ Expected output: ✅ All tests pass
 
 ### Challenge 2: Broken Middleware
 
-**Location:** `challenges/broken-middleware/`
+**Location:** `.dalt/course/challenges/broken-middleware/`
 
 **Step 1 - Read the Challenge:**
 ```bash
-cat challenges/broken-middleware/README.md
+cat .dalt/course/challenges/broken-middleware/README.md
 ```
 
 **Step 2 - Run Verification (Should Fail):**
 ```bash
-php artisan verify broken-middleware
+php artisan challenge:start broken-middleware
+php artisan challenge:verify
 ```
 
 **Step 3 - Understand the Bugs:**
@@ -153,23 +155,24 @@ if (hash_equals($sessionToken, $token)) {
 
 **Step 5 - Verify Again (Should Pass):**
 ```bash
-php artisan verify broken-middleware
+php artisan challenge:verify
 ```
 
 ---
 
 ### Challenge 3: Broken Authentication
 
-**Location:** `challenges/broken-auth/`
+**Location:** `.dalt/course/challenges/broken-auth/`
 
 **Step 1 - Read the Challenge:**
 ```bash
-cat challenges/broken-auth/README.md
+cat .dalt/course/challenges/broken-auth/README.md
 ```
 
 **Step 2 - Run Verification (Should Fail):**
 ```bash
-php artisan verify broken-auth
+php artisan challenge:start broken-auth
+php artisan challenge:verify
 ```
 
 **Step 3 - Understand the Bug:**
@@ -193,23 +196,24 @@ if ($user && password_verify($password, $user['password'])) {
 
 **Step 5 - Verify Again (Should Pass):**
 ```bash
-php artisan verify broken-auth
+php artisan challenge:verify
 ```
 
 ---
 
 ### Challenge 4: Broken Database
 
-**Location:** `challenges/broken-database/`
+**Location:** `.dalt/course/challenges/broken-database/`
 
 **Step 1 - Read the Challenge:**
 ```bash
-cat challenges/broken-database/README.md
+cat .dalt/course/challenges/broken-database/README.md
 ```
 
 **Step 2 - Run Verification (Should Fail):**
 ```bash
-php artisan verify broken-database
+php artisan challenge:start broken-database
+php artisan challenge:verify
 ```
 
 **Step 3 - Understand the Bugs:**
@@ -239,23 +243,24 @@ $statement->execute($params);
 
 **Step 5 - Verify Again (Should Pass):**
 ```bash
-php artisan verify broken-database
+php artisan challenge:verify
 ```
 
 ---
 
 ### Challenge 5: Broken Session
 
-**Location:** `challenges/broken-session/`
+**Location:** `.dalt/course/challenges/broken-session/`
 
 **Step 1 - Read the Challenge:**
 ```bash
-cat challenges/broken-session/README.md
+cat .dalt/course/challenges/broken-session/README.md
 ```
 
 **Step 2 - Run Verification (Should Fail):**
 ```bash
-php artisan verify broken-session
+php artisan challenge:start broken-session
+php artisan challenge:verify
 ```
 
 **Step 3 - Understand the Bugs:**
@@ -285,7 +290,7 @@ unset($_SESSION['_flash']);
 
 **Step 5 - Verify Again (Should Pass):**
 ```bash
-php artisan verify broken-session
+php artisan challenge:verify
 ```
 
 ---
@@ -418,7 +423,7 @@ If tests fail after you've fixed the code:
 1. Check the exact error message
 2. Verify you fixed the correct file (challenge folder, not main framework)
 3. Check for syntax errors: `php -l path/to/file.php`
-4. Review the test specification in `challenges/*/tests.php`
+4. Review the test specification in `.dalt/course/challenges/*/tests.php`
 
 ---
 
@@ -459,8 +464,8 @@ If you encounter issues:
 
 1. Check this guide's troubleshooting section
 2. Review the documentation in `docs/`
-3. Check the lesson READMEs in `course/lessons/`
-4. Review challenge READMEs in `course/challenges/`
+3. Check the lesson READMEs in `.dalt/course/lessons/`
+4. Review challenge READMEs in `.dalt/course/challenges/`
 5. Check the verification system docs: `docs/VERIFICATION_SYSTEM.md`
 
 ---

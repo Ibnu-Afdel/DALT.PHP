@@ -6,9 +6,14 @@
     <!-- Header -->
     <header class="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-4">
       <div>
-        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-4">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          Local Environment Active
+        <div class="flex flex-wrap items-center gap-2 mb-4">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            Local Environment Active
+          </div>
+          <div class="inline-flex items-center px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold">
+            0.1.0-beta.2
+          </div>
         </div>
         <h1 class="text-3xl font-bold text-gray-50 tracking-tight">Your Debugging Sandbox</h1>
         <p class="text-gray-400 mt-2">Fix deliberate backend bugs to master web architecture.</p>
@@ -104,7 +109,7 @@
             <div>
               <div class="text-gray-500 mb-1"># Test a specific challenge</div>
               <div class="bg-black/60 text-[#93DA97] px-3 py-2 rounded-md break-all border border-gray-800">
-                php artisan verify [id]
+                php artisan challenge:verify
               </div>
             </div>
             <div>

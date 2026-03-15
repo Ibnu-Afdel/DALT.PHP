@@ -95,6 +95,9 @@ php artisan challenge:verify
 # Reset to buggy baseline if you get stuck
 php artisan challenge:reset
 
+# Stop challenge and restore clean app
+php artisan challenge:stop
+
 # View progress logs
 cat storage/logs/challenges.log
 ```

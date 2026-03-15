@@ -94,7 +94,7 @@
             <div>
               <div class="text-gray-500 mb-1"># Verify your fix</div>
               <div class="bg-black/60 border border-gray-800 rounded px-3 py-2 text-[#93DA97] select-all break-all">
-                php artisan verify <?= $challengeId ?>
+                php artisan challenge:verify
               </div>
             </div>
             <div>
