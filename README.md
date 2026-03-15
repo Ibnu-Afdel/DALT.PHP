@@ -1,5 +1,10 @@
 # DALT.PHP — Interactive Backend Debugging Playground
 
+[![Latest Version](https://img.shields.io/packagist/v/ibnuafdel/daltphp.svg?style=flat-square)](https://packagist.org/packages/ibnuafdel/daltphp)
+[![Total Downloads](https://img.shields.io/packagist/dt/ibnuafdel/daltphp.svg?style=flat-square)](https://packagist.org/packages/ibnuafdel/daltphp)
+[![License](https://img.shields.io/packagist/l/ibnuafdel/daltphp.svg?style=flat-square)](https://packagist.org/packages/ibnuafdel/daltphp)
+[![PHP Version](https://img.shields.io/packagist/php-v/ibnuafdel/daltphp.svg?style=flat-square)](https://packagist.org/packages/ibnuafdel/daltphp)
+
 An educational platform where you learn backend development by debugging intentionally broken code.
 
 **Learn by fixing real bugs** in routing, middleware, authentication, database, and session handling.
@@ -14,6 +19,22 @@ DALT.PHP is an interactive debugging playground that teaches web framework conce
 
 ## 🚀 Quick Start
 
+### For New Projects (Recommended)
+
+```bash
+# Create a new project
+composer create-project ibnuafdel/daltphp my-dalt-project
+cd my-dalt-project
+
+# Install frontend dependencies
+npm run install-platform
+
+# Start development
+php artisan serve    # Visit http://localhost:8000
+```
+
+### For Development/Contributing
+
 ```bash
 # Clone the repository
 git clone https://github.com/Ibnu-Afdel/DALT.PHP.git
@@ -27,12 +48,8 @@ npm run install-platform
 cp .env.example .env
 php artisan migrate
 
-# Start servers (2 terminals)
-npm run dev          # Terminal 1: Vite dev server
-php artisan serve    # Terminal 2: PHP server
-
-# Visit the app
-open http://localhost:8888
+# Start servers
+php artisan serve    # Visit http://localhost:8000
 ```
 
 ## 📚 Learning Path
@@ -80,13 +97,13 @@ cat storage/logs/challenges.log
 ## 📁 Project Structure
 
 ```
-.dalt/                 # Platform internals (hidden)
+.dalt/                 # Platform internals (learning UI & assets)
   Http/controllers/    # Learning UI controllers
   resources/           # Platform assets & views
   routes/              # Platform routes
   scripts/             # Setup scripts
   stubs/               # Code templates
-app/Http/controllers/  # User controllers
+app/Http/controllers/  # Your controllers (start building here)
 course/                # Learning content
   lessons/             # 5 lesson markdown files
   challenges/          # 5 broken challenge folders
@@ -99,10 +116,12 @@ config/                # Configuration files
 database/              # SQLite database and migrations
 framework/Core/        # Framework core (Router, DB, Session, etc.)
 public/                # Web root (index.php entry point)
-routes/routes.php      # User route definitions
+routes/routes.php      # Your route definitions
 storage/               # Logs and runtime files
 tests/                 # Testing suite
 ```
+
+**Note**: When you install via Composer, development-only files (like internal docs) are automatically excluded.
 
 ## 🛠️ Tech Stack
 
@@ -132,16 +151,28 @@ After completing DALT.PHP, you'll understand:
 
 ## 🤝 Contributing
 
-Contributions are welcome! You can:
-- Add new challenges
-- Improve lessons
+We welcome contributions! Whether you want to:
+- Add new challenges or lessons
+- Improve documentation
+- Fix bugs or add features
 - Enhance the UI
-- Fix bugs
-- Add features
+
+Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+## 🔒 Security
+
+Found a security vulnerability? Please review our [Security Policy](SECURITY.md) for responsible disclosure guidelines.
 
 ## 📝 License
 
-MIT
+MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 📖 Documentation
+
+- [CHANGELOG](CHANGELOG.md) - Version history and changes
+- [CONTRIBUTING](CONTRIBUTING.md) - How to contribute
+- [SECURITY](SECURITY.md) - Security policy and reporting
+- [TESTING_GUIDE](TESTING_GUIDE.md) - Complete testing instructions
 
 ## 🔗 Links
 

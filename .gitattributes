@@ -1,0 +1,9 @@
+# Exclude development and documentation files from distribution
+/docs export-ignore
+/.git export-ignore
+/.gitattributes export-ignore
+/.gitignore export-ignore
+/TESTING_GUIDE.md export-ignore
+/node_modules export-ignore
+/vendor export-ignore
+/.env export-ignore
