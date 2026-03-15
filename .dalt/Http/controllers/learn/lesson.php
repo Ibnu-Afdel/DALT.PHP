@@ -21,29 +21,34 @@ $iconDatabase = '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox=
 $lessons = [
     '01-request-lifecycle' => [
         'title' => 'Request Lifecycle',
+        'description' => 'Learn how HTTP requests flow through a web framework',
         'icon' => $iconLifecycle,
         'next' => '02-routing'
     ],
     '02-routing' => [
         'title' => 'Routing',
+        'description' => 'Understand how URLs map to controllers',
         'icon' => $iconRouting,
         'prev' => '01-request-lifecycle',
         'next' => '03-middleware'
     ],
     '03-middleware' => [
         'title' => 'Middleware',
+        'description' => 'Master request filtering and authentication',
         'icon' => $iconMiddleware,
         'prev' => '02-routing',
         'next' => '04-authentication'
     ],
     '04-authentication' => [
         'title' => 'Authentication',
+        'description' => 'Implement secure user login and registration',
         'icon' => $iconAuth,
         'prev' => '03-middleware',
         'next' => '05-database'
     ],
     '05-database' => [
         'title' => 'Database',
+        'description' => 'Work with databases safely and efficiently',
         'icon' => $iconDatabase,
         'prev' => '04-authentication'
     ]
