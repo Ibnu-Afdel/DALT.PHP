@@ -2,58 +2,25 @@
 
 $lessonId = $_GET['lesson'] ?? '';
 
-// Validate lesson exists
-$lessonPath = base_path("course/lessons/{$lessonId}/README.md");
-if (!file_exists($lessonPath)) {
-    http_response_code(404);
-    view('status/404.view.php');
-    exit;
-}
-
-// Read lesson content
-$content = file_get_contents($lessonPath);
-
-// Parse lesson metadata
-$lessons = [
-    'lesson-01-request-lifecycle' => [
-        'title' => 'Request Lifecycle',
-        'icon' => '🔄',
-        'next' => 'lesson-02-routing'
-    ],
-    'lesson-02-routing' => [
-        'title' => 'Routing',
-        'icon' => '🗺️',
-        'prev' => 'lesson-01-request-lifecycle',
-        'next' => 'lesson-03-middleware'
-    ],
-    'lesson-03-middleware' => [
-        'title' => 'Middleware',
-        'icon' => '🛡️',
-        'prev' => 'lesson-02-routing',
-        'next' => 'lesson-04-authentication'
-    ],
-    'lesson-04-authentication' => [
-        'title' => 'Authentication',
-        'icon' => '🔐',
-        'prev' => 'lesson-03-middleware',
-        'next' => 'lesson-05-database'
-    ],
-    'lesson-05-database' => [
-        'title' => 'Database',
-        'icon' => '💾',
-        'prev' => 'lesson-04-authentication'
-    ]
-];
-
-$lesson = $lessons[$lessonId] ?? null;
+// Load lesson from meta.json
+$lesson = \Core\CourseLoader::getLesson($lessonId);
 if (!$lesson) {
-    http_response_code(404);
-    view('status/404.view.php');
-    exit;
+    abort(404);
 }
+
+$readmePath = base_path(".dalt/course/lessons/{$lessonId}/README.md");
+if (!file_exists($readmePath)) {
+    abort(404);
+}
+$content = file_get_contents($readmePath);
+
+// Find related challenge(s) - first one that links to this lesson
+$relatedChallenges = \Core\CourseLoader::getChallengesForLesson($lessonId);
+$relatedChallengeId = !empty($relatedChallenges) ? $relatedChallenges[0]['id'] : null;
 
 view('learn/lesson.view.php', [
     'lessonId' => $lessonId,
     'lesson' => $lesson,
-    'content' => $content
+    'content' => $content,
+    'relatedChallengeId' => $relatedChallengeId
 ]);

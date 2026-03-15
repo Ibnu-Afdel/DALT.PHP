@@ -1,0 +1,6 @@
+{
+  "title": "Middleware",
+  "description": "Master request filtering and authentication",
+  "icon": "middleware",
+  "color": "purple"
+}

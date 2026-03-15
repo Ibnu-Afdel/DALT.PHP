@@ -23,16 +23,15 @@
 
 2. **Setup Challenge** ✅
    ```bash
-   cp routes/routes.php routes/routes.php.backup
-   cp course/challenges/broken-routing/routes/routes.php routes/routes.php
-   cp -r course/challenges/broken-routing/Http/controllers/posts app/Http/controllers/
+   php artisan challenge:start broken-routing
    ```
+   - Loads broken files from .dalt/course/challenges/broken-routing into the app
    - All commands worked perfectly
    - No errors or confusion
 
 3. **Run Verification (Before Fix)** ✅
    ```bash
-   php artisan verify broken-routing
+   php artisan challenge:verify
    ```
    
    **Output**:
@@ -76,7 +75,7 @@
 
 5. **Run Verification (After Fix)** ✅
    ```bash
-   php artisan verify broken-routing
+   php artisan challenge:verify
    ```
    
    **Output**:
@@ -310,7 +309,7 @@ A complete blog system with:
    - `php artisan serve` - works
    - `php artisan migrate` - works
    - `php artisan make:migration` - works
-   - `php artisan verify` - works
+   - `php artisan challenge:verify` - works
    - All commands are intuitive
 
 ### ⚠️ Minor Issues Found

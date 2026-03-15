@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-beta.2] - 2026-03-15
+
+### Added
+- `challenge:list` - List available challenges with difficulty and pass status
+- `challenge:start <name>` - Load broken files into app (with confirmation)
+- `challenge:stop` - Restore clean app, remove challenge files
+- meta.json per challenge/lesson for scalable content (add new without touching PHP)
+- CourseLoader and ChallengeManager for discovery and lifecycle
+- Standalone welcome in `resources/views/` for app without .dalt
+
+### Changed
+- Moved `course/` into `.dalt/course/` (lessons + challenges)
+- Docs and view templates: `verify` → `challenge:start` + `challenge:verify` workflow
+- View priority: .dalt first if exists, else app (standalone mode)
+- Web verification requires active challenge (fixes false pass on unloaded challenges)
+- ChallengeVerifier supports verify-against-base mode for real app checking
+
+### Fixed
+- Web "Run Verification" falsely passing when challenge not loaded
+
 ## [0.1.0-beta.1] - 2026-03-15
 
 ### Added
@@ -57,6 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **0.1.0-alpha.2** - Early alpha
 - **0.1.0-alpha.1** - Initial alpha release
 
-[Unreleased]: https://github.com/Ibnu-Afdel/DALT.PHP/compare/v0.1.0-beta.1...HEAD
+[Unreleased]: https://github.com/Ibnu-Afdel/DALT.PHP/compare/v0.1.0-beta.2...HEAD
+[0.1.0-beta.2]: https://github.com/Ibnu-Afdel/DALT.PHP/compare/v0.1.0-beta.1...v0.1.0-beta.2
 [0.1.0-beta.1]: https://github.com/Ibnu-Afdel/DALT.PHP/releases/tag/v0.1.0-beta.1
 [0.1.0-alpha.3]: https://github.com/Ibnu-Afdel/DALT.PHP/releases/tag/v0.1.0-alpha.3

@@ -1,0 +1,8 @@
+{
+  "title": "Broken Authentication",
+  "difficulty": "Easy",
+  "bugs": 1,
+  "lesson": "04-authentication",
+  "description": "Fix insecure password comparison",
+  "color": "purple"
+}

@@ -15,14 +15,16 @@ return $_SERVER['REQUEST_URI'] === $value;
  function abort($code = 404)
 {
     http_response_code($code);
-
-    $viewPath = base_path("resources/views/status/{$code}.php");
-    if (!file_exists($viewPath)) {
-        $viewPath = base_path(".dalt/resources/views/status/{$code}.php");
-    }
     
-    require $viewPath;
-    die();
+    $messages = [
+        403 => 'Forbidden',
+        404 => 'Not Found',
+        500 => 'Internal Server Error',
+    ];
+    
+    $message = $messages[$code] ?? 'Error';
+    
+    throw new \Exception("HTTP {$code}: {$message}");
 }
 
 function authorize($condition, $status = 403){
@@ -40,12 +42,17 @@ function view($path, $attributes = [])
 {
     extract($attributes);
     
-    $viewPath = base_path('resources/views/' . $path);
-    if (!file_exists($viewPath)) {
-        $viewPath = base_path('.dalt/resources/views/' . $path);
+    $daltView = base_path('.dalt/resources/views/' . $path);
+    $appView = base_path('resources/views/' . $path);
+    
+    if (file_exists($daltView)) {
+        return require $daltView;
+    }
+    if (file_exists($appView)) {
+        return require $appView;
     }
     
-    return require $viewPath;
+    throw new \RuntimeException("View not found: {$path}");
 }
 
 function redirect($path)

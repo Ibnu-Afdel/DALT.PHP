@@ -25,7 +25,9 @@ require base_path('framework/Core/bootstrap.php');
 $router = new \Core\Router();
 
 // Load core platform routes
-require base_path('.dalt/routes/routes.php');
+if (file_exists(base_path('.dalt/routes/routes.php'))) {
+    require base_path('.dalt/routes/routes.php');
+}
 
 // Load user routes
 $routes = require base_path('routes/routes.php');
@@ -45,18 +47,8 @@ try {
 
     redirect($router->previousUrl());
 } catch (\Throwable $e) {
-    $debug = (bool) (($_ENV['APP_DEBUG'] ?? true));
-    if ($debug) {
-        http_response_code(500);
-        echo "<h1>Unhandled Exception</h1>";
-        echo "<p><strong>" . htmlspecialchars(get_class($e)) . ":</strong> " . htmlspecialchars($e->getMessage()) . "</p>";
-        echo "<pre>" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
-        exit;
-    }
     app_log(get_class($e) . ': ' . $e->getMessage());
-    http_response_code(500);
-    require base_path('resources/views/status/500.php');
-    exit;
+    throw $e;
 }
 
 Session::unflash();

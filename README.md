@@ -54,12 +54,14 @@ php artisan serve    # Visit http://localhost:8000
 
 ## 📚 Learning Path
 
-1. **Visit `/learn`** - Browse all lessons and challenges
-2. **Read a lesson** - Understand the concepts (e.g., routing, middleware)
-3. **Try a challenge** - Debug broken code in your editor
-4. **Run verification** - Click "Run Verification" or use CLI: `php artisan verify broken-routing`
+1. **List challenges** - `php artisan challenge:list` to see what's available
+2. **Start a challenge** - `php artisan challenge:start broken-routing` loads broken code into your app
+3. **Fix the bugs** - Edit the real files in your IDE (`routes/`, `framework/`, `app/Http/controllers/`)
+4. **Verify** - `php artisan challenge:verify` checks your fix
 5. **Get feedback** - See which tests pass/fail with helpful hints
-6. **Fix and repeat** - Keep debugging until all tests pass!
+6. **Reset if stuck** - `php artisan challenge:reset` restores the buggy baseline
+
+Or use the web UI: visit `/learn`, read lessons, start challenges, and run verification from the browser.
 
 ## 🐛 Available Challenges
 
@@ -79,10 +81,22 @@ php artisan serve    # Visit http://localhost:8000
 - Run verifications directly from the browser
 - Get instant visual feedback with test results
 
-### CLI Verification
+### Challenge CLI
 ```bash
-# Verify a challenge
-php artisan verify broken-routing
+# List available challenges
+php artisan challenge:list
+
+# Start a challenge (copies broken files into your app)
+php artisan challenge:start broken-routing
+
+# Verify your fix (checks the real app)
+php artisan challenge:verify
+
+# Reset to buggy baseline if you get stuck
+php artisan challenge:reset
+
+# Stop challenge and restore clean app
+php artisan challenge:stop
 
 # View progress logs
 cat storage/logs/challenges.log
@@ -98,20 +112,20 @@ cat storage/logs/challenges.log
 
 ```
 .dalt/                 # Platform internals (learning UI & assets)
-  Http/controllers/    # Learning UI controllers
+  course/              # Learning content (lessons + challenges)
+    lessons/           # 5 lesson markdown files
+    challenges/        # 5 broken challenge folders
+      broken-routing/
+      broken-middleware/
+      broken-auth/
+      broken-database/
+      broken-session/
+  Http/controllers/   # Learning UI controllers
   resources/           # Platform assets & views
   routes/              # Platform routes
   scripts/             # Setup scripts
   stubs/               # Code templates
 app/Http/controllers/  # Your controllers (start building here)
-course/                # Learning content
-  lessons/             # 5 lesson markdown files
-  challenges/          # 5 broken challenge folders
-    broken-routing/
-    broken-middleware/
-    broken-auth/
-    broken-database/
-    broken-session/
 config/                # Configuration files
 database/              # SQLite database and migrations
 framework/Core/        # Framework core (Router, DB, Session, etc.)

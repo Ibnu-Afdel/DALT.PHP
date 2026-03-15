@@ -114,7 +114,7 @@ DALT.PHP is designed as a **learning platform** with intentionally broken code i
 
 While DALT.PHP can be used as a foundation for real projects:
 
-1. **Remove challenge code** - Delete `course/challenges/` in production
+1. **Remove challenge code** - Delete `.dalt/` (or use without it) for production
 2. **Review all code** - Audit before deploying
 3. **Add additional security layers** - Rate limiting, WAF, etc.
 4. **Follow security best practices** - See above

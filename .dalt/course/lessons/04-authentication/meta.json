@@ -1,0 +1,6 @@
+{
+  "title": "Authentication",
+  "description": "Implement secure user login and registration",
+  "icon": "auth",
+  "color": "red"
+}

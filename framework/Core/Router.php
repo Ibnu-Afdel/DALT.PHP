@@ -117,14 +117,16 @@ class Router
     protected function abort($code = 404)
     {
         http_response_code($code);
-
-        $viewPath = base_path("resources/views/status/{$code}.php");
-        if (!file_exists($viewPath)) {
-            $viewPath = base_path(".dalt/resources/views/status/{$code}.php");
-        }
         
-        require $viewPath;
-        die();
+        $messages = [
+            403 => 'Forbidden',
+            404 => 'Not Found',
+            500 => 'Internal Server Error',
+        ];
+        
+        $message = $messages[$code] ?? 'Error';
+        
+        throw new \Exception("HTTP {$code}: {$message}");
     }
 
 }

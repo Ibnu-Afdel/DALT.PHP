@@ -6,80 +6,51 @@
   <?= json_encode($content) ?>
 </script>
 
-<main class="flex-1 bg-gray-50" id="app">
+<main class="flex-1 bg-[#0f1117] text-gray-300 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px]" id="app">
   <!-- Header -->
-  <section class="bg-gradient-to-r from-[#3E5F44] to-[#2d4532] text-white py-8">
-    <div class="max-w-5xl mx-auto px-6">
-      <div class="flex items-center gap-3 mb-4 text-sm">
-        <a href="/" class="text-white/60 hover:text-white transition-colors">Home</a>
-        <span class="text-white/40">/</span>
-        <a href="/learn" class="text-white/60 hover:text-white transition-colors">Learn</a>
-        <span class="text-white/40">/</span>
-        <span class="text-white">Lessons</span>
+  <section class="border-b border-[#1e293b] bg-[#161b22]/50 py-8">
+    <div class="max-w-4xl mx-auto px-6">
+      <div class="flex items-center gap-3 mb-4 text-sm font-medium">
+        <a href="/" class="text-gray-500 hover:text-gray-300 transition-colors">Home</a>
+        <span class="text-gray-700">/</span>
+        <a href="/learn" class="text-gray-500 hover:text-gray-300 transition-colors">Learn</a>
+        <span class="text-gray-700">/</span>
+        <span class="text-gray-300">Lessons</span>
       </div>
-      <div class="flex items-center gap-4">
-        <div class="text-5xl"><?= $lesson['icon'] ?></div>
-        <div>
-          <h1 class="text-3xl font-bold"><?= htmlspecialchars($lesson['title']) ?></h1>
-          <p class="text-gray-300 mt-1">Master the fundamentals</p>
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+          <div class="text-5xl drop-shadow-md"><?= $lesson['icon'] ?></div>
+          <div>
+            <h1 class="text-3xl font-bold text-gray-50 tracking-tight"><?= htmlspecialchars($lesson['title']) ?></h1>
+            <p class="text-gray-400 mt-2"><?= htmlspecialchars($lesson['description']) ?></p>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
-  <div class="max-w-5xl mx-auto px-6 py-12">
-    <!-- Navigation -->
-    <div class="flex items-center justify-between mb-8">
-      <?php if (isset($lesson['prev'])): ?>
-        <a href="/learn/lessons/<?= $lesson['prev'] ?>" class="flex items-center gap-2 text-gray-600 hover:text-[#3E5F44] transition-colors">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-          </svg>
-          <span class="font-medium">Previous Lesson</span>
-        </a>
-      <?php else: ?>
-        <div></div>
-      <?php endif; ?>
-
-      <a href="/learn" class="text-gray-600 hover:text-[#3E5F44] transition-colors font-medium">
+  <div class="max-w-4xl mx-auto px-6 py-12">
+    <!-- Quick Actions -->
+    <div class="mb-8 flex flex-wrap gap-4">
+      <a href="/learn" class="px-4 py-2 bg-[#161b22] border border-gray-700 text-gray-300 rounded-lg hover:bg-[#1e293b] hover:border-gray-600 transition-colors text-sm font-medium flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
         Back to Learn
       </a>
-
-      <?php if (isset($lesson['next'])): ?>
-        <a href="/learn/lessons/<?= $lesson['next'] ?>" class="flex items-center gap-2 text-gray-600 hover:text-[#3E5F44] transition-colors">
-          <span class="font-medium">Next Lesson</span>
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-          </svg>
-        </a>
-      <?php else: ?>
-        <div></div>
+      
+      <?php if (!empty($relatedChallengeId)): ?>
+      <a href="/learn/challenges/<?= $relatedChallengeId ?>" class="px-4 py-2 bg-[#93DA97]/10 border border-[#93DA97]/20 text-[#93DA97] rounded-lg hover:bg-[#93DA97]/20 transition-colors text-sm font-bold flex items-center gap-2">
+        Test Your Knowledge →
+      </a>
       <?php endif; ?>
     </div>
 
-    <!-- Lesson Content -->
-    <article class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 md:p-12">
-      <lesson-content></lesson-content>
-    </article>
-
-    <!-- Next Steps -->
-    <div class="mt-8 bg-[#3E5F44] text-white rounded-xl p-8">
-      <h3 class="text-2xl font-bold mb-3">Ready to Practice?</h3>
-      <p class="text-gray-300 mb-6">
-        Now that you've learned the concepts, try debugging a real challenge to test your knowledge.
-      </p>
-      <div class="flex gap-4">
-        <?php if (isset($lesson['next'])): ?>
-          <a href="/learn/lessons/<?= $lesson['next'] ?>" class="px-6 py-3 bg-white text-[#3E5F44] rounded-lg hover:bg-gray-100 transition-colors font-medium">
-            Next Lesson
-          </a>
-        <?php endif; ?>
-        <a href="/learn" class="px-6 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg hover:bg-white/20 transition-colors font-medium">
-          View All Challenges
-        </a>
+    <!-- Main Content -->
+    <div class="bg-[#161b22] rounded-xl shadow-lg border border-gray-800 p-8 md:p-12 mb-12">
+      <!-- We render parsed Markdown here using Vue -->
+      <div class="prose prose-invert prose-pre:bg-[#0d1117] prose-pre:border prose-pre:border-gray-800 max-w-none prose-headings:text-gray-100 prose-a:text-[#93DA97]">
+        <lesson-content></lesson-content>
       </div>
     </div>
+    
   </div>
 </main>
-
-<?php require base_path('.dalt/resources/views/layouts/footer.php') ?>

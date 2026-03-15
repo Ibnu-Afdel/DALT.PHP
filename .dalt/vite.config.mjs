@@ -10,12 +10,18 @@ export default defineConfig({
   publicDir: false,
   appType: 'custom',
   server: {
-    strictPort: true,
-    port: 5173,
-    host: true,
-    origin: 'http://localhost:5173',
-    cors: true
-  },
+  strictPort: true,
+  port: 5173,
+  host: true,
+  origin: 'http://localhost:5173',
+  cors: true,
+  proxy: {
+    '/api': {
+      target: 'http://localhost:8000',
+      changeOrigin: true
+    }
+  }
+},
   resolve: {
     alias: {
       '@': resolve(__dirname, '../resources'),

@@ -1,0 +1,6 @@
+{
+  "title": "Request Lifecycle",
+  "description": "Learn how HTTP requests flow through a web framework",
+  "icon": "lifecycle",
+  "color": "blue"
+}

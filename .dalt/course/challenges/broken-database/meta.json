@@ -1,0 +1,8 @@
+{
+  "title": "Broken Database",
+  "difficulty": "Medium",
+  "bugs": 2,
+  "lesson": "05-database",
+  "description": "Patch SQL injection vulnerabilities",
+  "color": "green"
+}

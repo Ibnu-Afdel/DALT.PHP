@@ -1,0 +1,8 @@
+{
+  "title": "Broken Routing",
+  "difficulty": "Easy",
+  "bugs": 2,
+  "lesson": "02-routing",
+  "description": "Fix route order issues and missing route registrations",
+  "color": "red"
+}

@@ -59,6 +59,18 @@
         </div>
       </div>
 
+      <!-- Not loaded -->
+      <div v-else-if="result.status === 'not_loaded'" class="bg-amber-50 border-2 border-amber-500 rounded-xl p-6">
+        <div class="flex items-start gap-4">
+          <div class="text-4xl">⚠️</div>
+          <div class="flex-1">
+            <h3 class="text-xl font-bold text-amber-900 mb-2">Challenge Not Loaded</h3>
+            <p class="text-amber-800 mb-4 font-mono text-sm">{{ result.message }}</p>
+            <p class="text-amber-700 text-sm">Load the broken code into your app first, then fix the bugs and run verification again.</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Failure -->
       <div v-else class="bg-red-50 border-2 border-red-500 rounded-xl p-6">
         <div class="flex items-start gap-4">

@@ -35,7 +35,10 @@ if (count($arguments) < 2 || $arguments[1] === 'help' || $arguments[1] === '--he
     echo "Available Commands:\n";
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
     echo "\n";
-    echo "Development:\n";
+    
+    echo "  dalt:test [challenge]   Run the test suite globally or for a specific challenge\n";
+    echo "                          Example: php artisan dalt:test broken-auth\n";
+    echo "\nDevelopment:\n";
     echo "  serve [host] [port]     Start PHP development server\n";
     echo "                          Example: php artisan serve\n";
     echo "                          Example: php artisan serve 0.0.0.0 8080\n";
@@ -57,12 +60,14 @@ if (count($arguments) < 2 || $arguments[1] === 'help' || $arguments[1] === '--he
     echo "  test                    Run Pest test suite\n";
     echo "                          Executes all tests in tests/ directory\n";
     echo "\n";
-    echo "  verify <challenge>      Verify a challenge solution\n";
-    echo "                          Example: php artisan verify broken-routing\n";
-    echo "                          Available: broken-routing, broken-middleware,\n";
-    echo "                                     broken-auth, broken-database, broken-session\n";
-    echo "\n";
-    echo "Examples:\n";
+    echo "  verify <challenge>      Verify a challenge (legacy, specify by name)\n";
+    echo "\nChallenges (use challenge:* for the full workflow):\n";
+    echo "  challenge:list          List all available challenges\n";
+    echo "  challenge:start <name>  Load broken files for a challenge into your app\n";
+    echo "  challenge:verify        Verify your fix (checks active challenge)\n";
+    echo "  challenge:reset         Reset to buggy baseline (fresh start)\n";
+    echo "  challenge:stop          Stop challenge and restore clean app\n";
+    echo "\nExamples:\n";
     echo "  example:install auth    Install authentication example\n";
     echo "                          Copies controllers, views, and routes\n";
     echo "\n";
@@ -101,6 +106,61 @@ switch ($command) {
         echo "Starting development server: http://{$host}:{$chosenPort}\n";
         // Use router script for static files + front-controller routing
         passthru("php -S {$host}:{$chosenPort} -t public public/router.php");
+        break;
+
+    
+    case 'dalt:test':
+        $dirs = array_filter(glob(base_path('.dalt/course/challenges/*')), 'is_dir');
+        $challenges = array_map('basename', $dirs);
+        
+        $target = $arguments[2] ?? null;
+        if ($target && in_array($target, $challenges)) {
+            $challenges = [$target];
+        } else if ($target) {
+            echo "Challenge '$target' not found.\n";
+            exit(1);
+        }
+
+        echo "\n=================================================\n";
+        echo "             DALT.PHP TEST RUNNER                \n";
+        echo "=================================================\n\n";
+
+        require_once base_path('framework/Core/ChallengeVerifier.php');
+
+        $totalTests = 0;
+        $totalPassed = 0;
+
+        foreach ($challenges as $ch) {
+            echo "\033[1;36mChallenge: $ch\033[0m\n";
+            $verifier = new \Core\ChallengeVerifier(".dalt/course/challenges/$ch");
+            $result = $verifier->verify();
+            
+            $tests = $result['results'] ?? [];
+            $chPassed = $result['passed'] ?? 0;
+            $chTotal = $result['total'] ?? 0;
+            
+            $totalTests += $chTotal;
+            $totalPassed += $chPassed;
+
+            foreach ($tests as $name => $test) {
+                if ($test['passed']) {
+                    echo "  \033[32m✔ {$test['name']}\033[0m\n";
+                } else {
+                    echo "  \033[31m✘ {$test['name']}\033[0m - {$test['message']}\n";
+                }
+            }
+            if ($chTotal === 0) {
+                 echo "  \033[33mNo tests configured or found.\033[0m\n\n";
+            } else if ($chPassed === $chTotal) {
+                 echo "  \033[1;32mStatus: PASSED ($chPassed/$chTotal)\033[0m\n\n";
+            } else {
+                 echo "  \033[1;31mStatus: FAILED ($chPassed/$chTotal)\033[0m\n\n";
+            }
+        }
+        
+        echo "=================================================\n";
+        echo " Total Progress: $totalPassed / $totalTests tests passed.\n";
+        echo "=================================================\n\n";
         break;
 
     case 'migrate':
@@ -192,10 +252,10 @@ SQL;
             exit(1);
         }
         // Copy controllers
-        @mkdir(base_path('Http/controllers/session'), 0755, true);
-        @mkdir(base_path('Http/controllers/registration'), 0755, true);
+        @mkdir(base_path('app/Http/controllers/session'), 0755, true);
+        @mkdir(base_path('app/Http/controllers/registration'), 0755, true);
         foreach (['session/create.php','session/store.php','session/destroy.php','registration/create.php','registration/store.php'] as $file) {
-            copy($source . '/Http/controllers/' . $file, base_path('Http/controllers/' . $file));
+            copy($source . '/Http/controllers/' . $file, base_path('app/Http/controllers/' . $file));
         }
         // Copy views
         @mkdir(base_path('resources/views/auth'), 0755, true);
@@ -218,25 +278,153 @@ SQL;
         echo "Visit /register or /login (or see buttons on the welcome page).\n";
         break;
 
+    case 'challenge:list':
+        require_once base_path('framework/Core/ChallengeManager.php');
+        $metadata = Core\ChallengeManager::getChallengeMetadata();
+        if (empty($metadata)) {
+            echo "\nNo challenges found. Make sure .dalt/course/challenges/ exists.\n\n";
+            break;
+        }
+        echo "\n";
+        echo "╔══════════════════════════════════════════════════════════════╗\n";
+        echo "║                    Available Challenges                      ║\n";
+        echo "╚══════════════════════════════════════════════════════════════╝\n\n";
+        foreach ($metadata as $m) {
+            $status = $m['passed'] ? "\033[32m✓\033[0m" : " ";
+            $line = sprintf("  %s %d. %-20s %-8s (%d bug%s)", $status, $m['num'], $m['id'], "[" . $m['difficulty'] . "]", $m['bugs'], $m['bugs'] === 1 ? '' : 's');
+            echo $line . "\n";
+        }
+        echo "\nRun: php artisan challenge:start <name> to begin\n";
+        echo "     php artisan challenge:verify when you think you fixed it\n\n";
+        break;
+
+    case 'challenge:start':
+        $challengeName = $arguments[2] ?? '';
+        if (empty($challengeName)) {
+            echo "Usage: php artisan challenge:start <challenge-name>\n";
+            echo "Example: php artisan challenge:start broken-routing\n";
+            echo "\nRun php artisan challenge:list to see available challenges.\n";
+            exit(1);
+        }
+        require_once base_path('framework/Core/ChallengeManager.php');
+        $challengeDir = base_path('.dalt/course/challenges/' . $challengeName);
+        if (!is_dir($challengeDir)) {
+            echo "Error: Challenge '{$challengeName}' not found.\n";
+            echo "Run php artisan challenge:list to see available challenges.\n";
+            exit(1);
+        }
+        $active = Core\ChallengeManager::getActiveChallenge();
+        if ($active !== null || file_exists(base_path('routes/routes.php'))) {
+            echo "\n⚠️  This will overwrite files in framework/, routes/, app/Http/controllers/.\n";
+            echo "Continue? [y/N]: ";
+            $handle = fopen('php://stdin', 'r');
+            $line = trim(fgets($handle));
+            fclose($handle);
+            if (strtolower($line) !== 'y' && strtolower($line) !== 'yes') {
+                echo "Aborted.\n";
+                exit(0);
+            }
+        }
+        if (!Core\ChallengeManager::start($challengeName)) {
+            echo "Error: Failed to start challenge.\n";
+            exit(1);
+        }
+        echo "\n🎯 Challenge '{$challengeName}' loaded!\n\n";
+        echo "Your app now has intentionally broken code. Fix the bugs in your IDE.\n\n";
+        if (in_array($challengeName, ['broken-auth'], true)) {
+            echo "Tip: Run \033[1mphp artisan migrate\033[0m if you haven't already (creates users table).\n\n";
+        }
+        echo "When ready, run: \033[1mphp artisan challenge:verify\033[0m\n";
+        echo "Stuck? Run: \033[1mphp artisan challenge:reset\033[0m for a fresh start.\n\n";
+        break;
+
+    case 'challenge:reset':
+        require_once base_path('framework/Core/ChallengeManager.php');
+        $active = Core\ChallengeManager::getActiveChallenge();
+        if ($active === null) {
+            echo "\nNo active challenge. Run php artisan challenge:start <name> first.\n\n";
+            exit(0);
+        }
+        Core\ChallengeManager::reset();
+        echo "\n🔄 Challenge '{$active}' reset to buggy baseline. Ready for another try!\n\n";
+        break;
+
+    case 'challenge:stop':
+        require_once base_path('framework/Core/ChallengeManager.php');
+        $active = Core\ChallengeManager::getActiveChallenge();
+        if ($active === null) {
+            echo "\nNo active challenge. Nothing to stop.\n\n";
+            exit(0);
+        }
+        Core\ChallengeManager::stop();
+        echo "\n✅ Challenge stopped. App restored to clean state.\n\n";
+        break;
+
+    case 'challenge:verify':
+        require_once base_path('framework/Core/ChallengeManager.php');
+        require_once base_path('framework/Core/ChallengeVerifier.php');
+        $active = Core\ChallengeManager::getActiveChallenge();
+        if ($active === null) {
+            echo "\nNo active challenge. Run: php artisan challenge:start <name>\n";
+            echo "Then fix the bugs and run this again.\n\n";
+            exit(1);
+        }
+        $challengePath = ".dalt/course/challenges/{$active}";
+        $verifier = new Core\ChallengeVerifier($challengePath, true);
+        $result = $verifier->verify();
+
+        echo "\n";
+        echo "╔══════════════════════════════════════════════════════════════╗\n";
+        echo "║           DALT Challenge Verification System                ║\n";
+        echo "╚══════════════════════════════════════════════════════════════╝\n";
+        echo "\nVerifying: {$active}\n";
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
+
+        foreach ($result['results'] as $test) {
+            $icon = $test['passed'] ? '✓' : '✗';
+            $color = $test['passed'] ? "\033[32m" : "\033[31m";
+            $reset = "\033[0m";
+            echo "{$color}{$icon}{$reset} {$test['message']}\n";
+            if (!$test['passed'] && !empty($test['hint'])) {
+                echo "  💡 Hint: {$test['hint']}\n";
+            }
+        }
+
+        echo "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+        echo "Results: {$result['passed']}/{$result['total']} tests passed\n";
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
+
+        if ($result['status'] === 'pass') {
+            Core\ChallengeManager::markPassed($active);
+            echo "🎉 {$result['message']}\n\n";
+            echo "Great job! You've successfully fixed this challenge.\n";
+            echo "Run php artisan challenge:list to pick the next one.\n\n";
+        } else {
+            echo "❌ {$result['message']}\n\n";
+            if (!empty($result['hint'])) {
+                echo "💡 Next step: {$result['hint']}\n\n";
+            }
+            echo "Keep debugging! Run php artisan challenge:reset for a fresh start.\n\n";
+        }
+
+        Core\ChallengeVerifier::logResult($active, $result);
+        exit($result['status'] === 'pass' ? 0 : 1);
+
     case 'verify':
         $challengeName = $arguments[2] ?? '';
         if (empty($challengeName)) {
             echo "Usage: php artisan verify <challenge-name>\n";
             echo "Example: php artisan verify broken-routing\n";
-            echo "\nAvailable challenges:\n";
-            echo "  - broken-routing\n";
-            echo "  - broken-middleware\n";
-            echo "  - broken-auth\n";
-            echo "  - broken-database\n";
-            echo "  - broken-session\n";
+            echo "\nPreferred: php artisan challenge:start <name> then challenge:verify\n";
+            echo "Available: broken-routing, broken-middleware, broken-auth, broken-database, broken-session\n";
             exit(1);
         }
 
-        $challengePath = "course/challenges/{$challengeName}";
+        $challengePath = ".dalt/course/challenges/{$challengeName}";
         
         if (!is_dir(base_path($challengePath))) {
             echo "Error: Challenge '{$challengeName}' not found.\n";
-            echo "Make sure the challenge exists in course/challenges/ directory.\n";
+            echo "Make sure the challenge exists in .dalt/course/challenges/ directory.\n";
             exit(1);
         }
 
@@ -248,7 +436,7 @@ SQL;
         echo "Verifying: {$challengeName}\n";
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
 
-        $verifier = new Core\ChallengeVerifier($challengePath);
+        $verifier = new Core\ChallengeVerifier($challengePath, true);
         $result = $verifier->verify();
 
         // Display results

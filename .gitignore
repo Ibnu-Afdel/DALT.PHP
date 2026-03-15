@@ -30,6 +30,11 @@ Thumbs.db
 *.tmp
 *.temp
 
+# Challenge runtime state (from php artisan challenge:start)
+.dalt/active_challenge.txt
+.dalt/progress.json
+.dalt/baseline/
+
 # Database files
 /database/*.sqlite
 /database/*.db
