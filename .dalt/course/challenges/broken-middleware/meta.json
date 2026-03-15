@@ -1,0 +1,8 @@
+{
+  "title": "Broken Middleware",
+  "difficulty": "Medium",
+  "bugs": 2,
+  "lesson": "03-middleware",
+  "description": "Debug auth checks and CSRF validation",
+  "color": "blue"
+}

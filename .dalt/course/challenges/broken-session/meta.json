@@ -1,0 +1,8 @@
+{
+  "title": "Broken Session",
+  "difficulty": "Medium",
+  "bugs": 2,
+  "lesson": "01-request-lifecycle",
+  "description": "Fix flash data handling and session persistence",
+  "color": "yellow"
+}
