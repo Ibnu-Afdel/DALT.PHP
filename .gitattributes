@@ -1,12 +1,9 @@
-# Exclude development and documentation files from distribution
-/docs export-ignore
+# Exclude files from composer archive
 /.git export-ignore
-/.gitattributes export-ignore
+/.github export-ignore
 /.gitignore export-ignore
-/TESTING_GUIDE.md export-ignore
-/BETA_RELEASE_CHECKLIST.md export-ignore
-/PORT_FIX_SUMMARY.md export-ignore
-/node_modules export-ignore
-/vendor export-ignore
-/.env export-ignore
-tests export-ignore
+/.gitattributes export-ignore
+/tests export-ignore
+/.editorconfig export-ignore
+/phpunit.xml export-ignore
+/phpunit.xml.dist export-ignore
