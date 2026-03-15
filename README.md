@@ -23,10 +23,7 @@ DALT.PHP is an interactive debugging playground that teaches web framework conce
 
 ```bash
 # Create a new project
-composer create-project ibnuafdel/daltphp my-dalt-project --stability=beta
-
-# If prompted "Do you want to remove the existing VCS (.git, .svn..) history?"
-# Answer: Y (yes, remove it - you'll init your own repo)
+composer create-project ibnuafdel/daltphp my-dalt-project --stability=beta --remove-vcs
 
 cd my-dalt-project
 

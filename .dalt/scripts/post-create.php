@@ -28,22 +28,6 @@ function sqliteEnvTemplate(): string {
 @mkdir($base . 'storage/logs', 0755, true);
 @touch($base . 'storage/logs/.gitkeep');
 
-// Remove .git directory (users should init their own repo)
-$gitDir = $base . '.git';
-if (is_dir($gitDir)) {
-    function removeDirectory($dir) {
-        if (!is_dir($dir)) return;
-        $items = array_diff(scandir($dir), ['.', '..']);
-        foreach ($items as $item) {
-            $path = $dir . DIRECTORY_SEPARATOR . $item;
-            is_dir($path) ? removeDirectory($path) : unlink($path);
-        }
-        rmdir($dir);
-    }
-    removeDirectory($gitDir);
-    info('Removed .git directory (initialize your own repo with: git init)');
-}
-
 // Copy/create env (prefer SQLite defaults)
 $envExample = $base . '.env.example';
 $envFile = $base . '.env';

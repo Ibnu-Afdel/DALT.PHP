@@ -1,7 +1,7 @@
 {
     "name": "ibnuafdel/daltphp",
     "description": "An interactive learning platform for backend development. Learn by debugging intentionally broken code in routing, middleware, authentication, database, and sessions. Includes 5 lessons and 5 challenges with automatic verification.",
-    "version": "0.2.0-beta.5",
+    "version": "0.2.0-beta.6",
     "type": "project",
     "license": "MIT",
     "keywords": [
@@ -60,7 +60,8 @@
         "migrate:fresh": "php artisan migrate:fresh",
         "make:migration": "php artisan make:migration",
         "post-root-package-install": [
-            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
+            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
+            "@php .dalt/scripts/remove-vcs.php"
         ],
         "post-create-project-cmd": [
             "@php .dalt/scripts/post-create.php"
