@@ -15,14 +15,14 @@ if (!is_dir($challengePath)) {
 // Run verification
 require_once base_path('framework/Core/ChallengeVerifier.php');
 
-$verifier = new \Core\ChallengeVerifier();
-$result = $verifier->verify($challengeId);
+$verifier = new \Core\ChallengeVerifier("course/challenges/{$challengeId}");
+$result = $verifier->verify();
 
 // Return result
 echo json_encode([
     'success' => $result['status'] === 'pass',
     'status' => $result['status'],
     'message' => $result['message'],
-    'tests' => $result['tests'] ?? [],
+    'tests' => $result['results'] ?? [],
     'timestamp' => date('Y-m-d H:i:s')
 ]);
