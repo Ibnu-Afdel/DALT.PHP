@@ -128,7 +128,7 @@ class ChallengeVerifier
      */
     private function testRouteExists(array $config): array
     {
-        $routesFile = base_path('routes/routes.php');
+        $routesFile = base_path($this->challengePath . '/routes/routes.php');
         $route = $config['route'] ?? '';
         $method = strtolower($config['method'] ?? 'get');
 
@@ -165,7 +165,7 @@ class ChallengeVerifier
      */
     private function testRouteOrder(array $config): array
     {
-        $routesFile = base_path('routes/routes.php');
+        $routesFile = base_path($this->challengePath . '/routes/routes.php');
         $specificRoute = $config['specific'] ?? '';
         $genericRoute = $config['generic'] ?? '';
 
@@ -218,7 +218,7 @@ class ChallengeVerifier
      */
     private function testFileContains(array $config): array
     {
-        $file = base_path($config['file'] ?? '');
+        $file = base_path($this->challengePath . '/' . ($config['file'] ?? ''));
         $search = $config['search'] ?? '';
 
         if (!file_exists($file)) {
@@ -251,7 +251,7 @@ class ChallengeVerifier
      */
     private function testFileNotContains(array $config): array
     {
-        $file = base_path($config['file'] ?? '');
+        $file = base_path($this->challengePath . '/' . ($config['file'] ?? ''));
         $search = $config['search'] ?? '';
 
         if (!file_exists($file)) {
@@ -284,7 +284,7 @@ class ChallengeVerifier
      */
     private function testSessionKey(array $config): array
     {
-        $file = base_path($config['file'] ?? '');
+        $file = base_path($this->challengePath . '/' . ($config['file'] ?? ''));
         $key = $config['key'] ?? '';
 
         if (!file_exists($file)) {
@@ -320,7 +320,7 @@ class ChallengeVerifier
      */
     private function testFunctionCall(array $config): array
     {
-        $file = base_path($config['file'] ?? '');
+        $file = base_path($this->challengePath . '/' . ($config['file'] ?? ''));
         $function = $config['function'] ?? '';
 
         if (!file_exists($file)) {
