@@ -37,20 +37,7 @@
         Back to Learn
       </a>
       
-      <?php 
-      // Find the first related challenge if it exists
-      $relatedChallengeId = null;
-      $challengesConfig = json_decode(file_get_contents(base_path('course/challenges/README.md')), true);
-      if ($challengesConfig) {
-          foreach ($challengesConfig as $id => $challenge) {
-              if (isset($challenge['lesson']) && $challenge['lesson'] === $lessonId) {
-                  $relatedChallengeId = $id;
-                  break;
-              }
-          }
-      }
-      if ($relatedChallengeId): 
-      ?>
+      <?php if (!empty($relatedChallengeId)): ?>
       <a href="/learn/challenges/<?= $relatedChallengeId ?>" class="px-4 py-2 bg-[#93DA97]/10 border border-[#93DA97]/20 text-[#93DA97] rounded-lg hover:bg-[#93DA97]/20 transition-colors text-sm font-bold flex items-center gap-2">
         Test Your Knowledge →
       </a>

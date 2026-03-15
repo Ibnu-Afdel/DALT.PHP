@@ -5,12 +5,40 @@ namespace Core;
 class ChallengeVerifier
 {
     private string $challengePath;
+    private bool $verifyAgainstBase;
     private array $tests = [];
     private array $results = [];
 
-    public function __construct(string $challengePath)
+    /**
+     * @param string $challengePath Path to challenge (e.g. .dalt/course/challenges/broken-auth)
+     * @param bool $verifyAgainstBase When true, check files in the base app instead of challenge folder
+     */
+    public function __construct(string $challengePath, bool $verifyAgainstBase = false)
     {
         $this->challengePath = rtrim($challengePath, '/');
+        $this->verifyAgainstBase = $verifyAgainstBase;
+    }
+
+    /**
+     * Resolve file path for testing. When verifyAgainstBase, maps Http/controllers -> app/Http/controllers.
+     */
+    private function resolveFilePath(string $relativePath): string
+    {
+        if ($this->verifyAgainstBase) {
+            $mapped = str_starts_with($relativePath, 'Http/controllers/')
+                ? 'app/' . $relativePath
+                : $relativePath;
+            return base_path($mapped);
+        }
+        return base_path($this->challengePath . '/' . $relativePath);
+    }
+
+    private function resolveRoutesFile(): string
+    {
+        if ($this->verifyAgainstBase) {
+            return base_path('routes/routes.php');
+        }
+        return base_path($this->challengePath . '/routes/routes.php');
     }
 
     /**
@@ -128,7 +156,7 @@ class ChallengeVerifier
      */
     private function testRouteExists(array $config): array
     {
-        $routesFile = base_path($this->challengePath . '/routes/routes.php');
+        $routesFile = $this->resolveRoutesFile();
         $route = $config['route'] ?? '';
         $method = strtolower($config['method'] ?? 'get');
 
@@ -165,7 +193,7 @@ class ChallengeVerifier
      */
     private function testRouteOrder(array $config): array
     {
-        $routesFile = base_path($this->challengePath . '/routes/routes.php');
+        $routesFile = $this->resolveRoutesFile();
         $specificRoute = $config['specific'] ?? '';
         $genericRoute = $config['generic'] ?? '';
 
@@ -218,7 +246,7 @@ class ChallengeVerifier
      */
     private function testFileContains(array $config): array
     {
-        $file = base_path($this->challengePath . '/' . ($config['file'] ?? ''));
+        $file = $this->resolveFilePath($config['file'] ?? '');
         $search = $config['search'] ?? '';
 
         if (!file_exists($file)) {
@@ -252,7 +280,7 @@ class ChallengeVerifier
      */
     private function testFileNotContains(array $config): array
     {
-        $file = base_path($this->challengePath . '/' . ($config['file'] ?? ''));
+        $file = $this->resolveFilePath($config['file'] ?? '');
         $search = $config['search'] ?? '';
 
         if (!file_exists($file)) {
@@ -285,7 +313,7 @@ class ChallengeVerifier
      */
     private function testSessionKey(array $config): array
     {
-        $file = base_path($this->challengePath . '/' . ($config['file'] ?? ''));
+        $file = $this->resolveFilePath($config['file'] ?? '');
         $key = $config['key'] ?? '';
 
         if (!file_exists($file)) {
@@ -321,7 +349,7 @@ class ChallengeVerifier
      */
     private function testFunctionCall(array $config): array
     {
-        $file = base_path($this->challengePath . '/' . ($config['file'] ?? ''));
+        $file = $this->resolveFilePath($config['file'] ?? '');
         $function = $config['function'] ?? '';
 
         if (!file_exists($file)) {
