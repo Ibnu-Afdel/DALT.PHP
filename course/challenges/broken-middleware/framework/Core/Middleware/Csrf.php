@@ -17,7 +17,7 @@ class Csrf
         $sessionToken = $_SESSION['_csrf'] ?? null;
         $formToken = $_POST['_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
 
-        // BUG: Using == instead of hash_equals() - timing attack vulnerability
+        // BUG: Using == instead of TIMING_SAFE_COMPARISON - timing attack vulnerability
         // BUG: Logic inverted - rejects when tokens MATCH instead of when they DON'T match
         if ($sessionToken == $formToken) {
             http_response_code(419);

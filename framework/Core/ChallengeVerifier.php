@@ -143,7 +143,7 @@ class ChallengeVerifier
         $content = file_get_contents($routesFile);
         
         // Check if route is registered
-        $pattern = "/\\\$router->{$method}\s*\(\s*['\"]" . preg_quote($route, '/') . "['\"]/";
+        $pattern = "/^\s*\\\$router->{$method}\s*\(\s*['\"]" . preg_quote($route, '/') . "['\"]/m";
         
         if (preg_match($pattern, $content)) {
             return [
@@ -231,7 +231,8 @@ class ChallengeVerifier
 
         $content = file_get_contents($file);
 
-        if (strpos($content, $search) !== false) {
+        $contentWithoutComments = preg_replace('!//.*!', '', $content);
+        if (strpos($contentWithoutComments, $search) !== false) {
             return [
                 'passed' => true,
                 'message' => "✓ File contains expected code",

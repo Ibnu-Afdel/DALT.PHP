@@ -35,7 +35,10 @@ if (count($arguments) < 2 || $arguments[1] === 'help' || $arguments[1] === '--he
     echo "Available Commands:\n";
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
     echo "\n";
-    echo "Development:\n";
+    
+    echo "  dalt:test [challenge]   Run the test suite globally or for a specific challenge\n";
+    echo "                          Example: php artisan dalt:test broken-auth\n";
+    echo "\nDevelopment:\n";
     echo "  serve [host] [port]     Start PHP development server\n";
     echo "                          Example: php artisan serve\n";
     echo "                          Example: php artisan serve 0.0.0.0 8080\n";
@@ -101,6 +104,61 @@ switch ($command) {
         echo "Starting development server: http://{$host}:{$chosenPort}\n";
         // Use router script for static files + front-controller routing
         passthru("php -S {$host}:{$chosenPort} -t public public/router.php");
+        break;
+
+    
+    case 'dalt:test':
+        $dirs = array_filter(glob(base_path('course/challenges/*')), 'is_dir');
+        $challenges = array_map('basename', $dirs);
+        
+        $target = $arguments[2] ?? null;
+        if ($target && in_array($target, $challenges)) {
+            $challenges = [$target];
+        } else if ($target) {
+            echo "Challenge '$target' not found.\n";
+            exit(1);
+        }
+
+        echo "\n=================================================\n";
+        echo "             DALT.PHP TEST RUNNER                \n";
+        echo "=================================================\n\n";
+
+        require_once base_path('framework/Core/ChallengeVerifier.php');
+
+        $totalTests = 0;
+        $totalPassed = 0;
+
+        foreach ($challenges as $ch) {
+            echo "\033[1;36mChallenge: $ch\033[0m\n";
+            $verifier = new \Core\ChallengeVerifier("course/challenges/$ch");
+            $result = $verifier->verify();
+            
+            $tests = $result['results'] ?? [];
+            $chPassed = $result['passed'] ?? 0;
+            $chTotal = $result['total'] ?? 0;
+            
+            $totalTests += $chTotal;
+            $totalPassed += $chPassed;
+
+            foreach ($tests as $name => $test) {
+                if ($test['passed']) {
+                    echo "  \033[32m✔ {$test['name']}\033[0m\n";
+                } else {
+                    echo "  \033[31m✘ {$test['name']}\033[0m - {$test['message']}\n";
+                }
+            }
+            if ($chTotal === 0) {
+                 echo "  \033[33mNo tests configured or found.\033[0m\n\n";
+            } else if ($chPassed === $chTotal) {
+                 echo "  \033[1;32mStatus: PASSED ($chPassed/$chTotal)\033[0m\n\n";
+            } else {
+                 echo "  \033[1;31mStatus: FAILED ($chPassed/$chTotal)\033[0m\n\n";
+            }
+        }
+        
+        echo "=================================================\n";
+        echo " Total Progress: $totalPassed / $totalTests tests passed.\n";
+        echo "=================================================\n\n";
         break;
 
     case 'migrate':

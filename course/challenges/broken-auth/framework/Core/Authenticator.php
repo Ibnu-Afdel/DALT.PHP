@@ -11,7 +11,7 @@ class Authenticator
         ])->find();
 
         if ($user) {
-            // BUG: Using == instead of password_verify() - plain text comparison!
+            // BUG: Using == instead of PASSWORD_VERIFY_FUNCTION - plain text comparison!
             // This will never work because passwords are hashed in the database
             if ($password == $user['password']) {
                 $this->login([
