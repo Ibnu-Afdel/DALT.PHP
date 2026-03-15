@@ -59,6 +59,9 @@
         "migrate": "php artisan migrate",
         "migrate:fresh": "php artisan migrate:fresh",
         "make:migration": "php artisan make:migration",
+        "post-root-package-install": [
+            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
+        ],
         "post-create-project-cmd": [
             "@php .dalt/scripts/post-create.php"
         ]
