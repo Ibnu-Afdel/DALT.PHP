@@ -34,3 +34,4 @@ Thumbs.db
 /database/*.sqlite
 /database/*.db
 !/database/.gitkeep
+!/database/migrations/

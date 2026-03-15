@@ -1,34 +1,57 @@
 {
     "name": "ibnuafdel/daltphp",
-    "description": "A simple, beginner-friendly PHP framework for learning. Inspired by Laravel. Now with Vue 3 and Tailwind CSS v4.",
+    "description": "An interactive learning platform for backend development. Learn by debugging intentionally broken code in routing, middleware, authentication, database, and sessions. Includes 5 lessons and 5 challenges with automatic verification.",
+    "version": "0.1.0-beta.1",
     "type": "project",
     "license": "MIT",
-    "keywords": ["php", "framework", "micro", "learning", "sqlite", "vue", "tailwind", "vite", "Laravel"],
+    "keywords": [
+        "php",
+        "framework",
+        "learning",
+        "education",
+        "debugging",
+        "backend",
+        "tutorial",
+        "sqlite",
+        "vue",
+        "tailwind",
+        "vite",
+        "laravel-inspired",
+        "beginner-friendly"
+    ],
+    "homepage": "https://github.com/Ibnu-Afdel/DALT.PHP",
+    "support": {
+        "issues": "https://github.com/Ibnu-Afdel/DALT.PHP/issues",
+        "source": "https://github.com/Ibnu-Afdel/DALT.PHP",
+        "chat": "https://t.me/daltphp"
+    },
     "authors": [
         {
-            "name": "ibnuafdel",
+            "name": "Ibnu Afdel",
             "email": "ibnuafdel@gmail.com",
-            "role": "Developer"
+            "role": "Creator & Maintainer"
         }
     ],
     "require": {
         "php": "^8.2",
-        "vlucas/phpdotenv": "^5.6",
-        "illuminate/database": "^12.20"
-    },
-    "autoload": {
-        "psr-4": {
-            "Core\\": "framework/Core/",
-            "Http\\": "Http/"
-        }
+        "vlucas/phpdotenv": "^5.6"
     },
     "require-dev": {
         "pestphp/pest": "^3.8"
     },
+    "autoload": {
+        "psr-4": {
+            "Core\\": "framework/Core/",
+            "App\\Http\\": "app/Http/"
+        }
+    },
     "config": {
         "allow-plugins": {
             "pestphp/pest-plugin": true
-        }
+        },
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true
     },
     "scripts": {
         "serve": "php artisan serve",
@@ -37,10 +60,12 @@
         "migrate:fresh": "php artisan migrate:fresh",
         "make:migration": "php artisan make:migration",
         "post-create-project-cmd": [
-            "@php scripts/post-create.php"
+            "@php .dalt/scripts/post-create.php"
         ]
     },
     "bin": [
         "artisan"
-    ]
+    ],
+    "minimum-stability": "beta",
+    "prefer-stable": true
 }

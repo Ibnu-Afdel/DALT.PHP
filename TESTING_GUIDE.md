@@ -20,7 +20,7 @@ You need two servers running simultaneously:
 ```bash
 php artisan serve
 ```
-This starts the PHP backend on `http://localhost:8888`
+This starts the PHP backend on `http://localhost:8000`
 
 **Terminal 2 - Vite Dev Server:**
 ```bash
@@ -32,7 +32,7 @@ This starts the Vite frontend on `http://localhost:5173`
 
 Open your browser and navigate to:
 ```
-http://localhost:8888
+http://localhost:8000
 ```
 
 The Vite server will automatically inject the Vue components and Tailwind CSS.
@@ -42,7 +42,7 @@ The Vite server will automatically inject the Vue components and Tailwind CSS.
 ## Testing the Framework Core
 
 ### Test 1: Basic Framework
-1. Visit `http://localhost:8888`
+1. Visit `http://localhost:8000`
 2. You should see the welcome page
 3. Check that Vue is working (look for any Vue components)
 4. Check that Tailwind CSS v4 is applied (inspect element styles)
@@ -375,9 +375,9 @@ server: {
 
 If `php artisan serve` fails:
 
-**Check if port 8888 is in use:**
+**Check if port 8000 is in use:**
 ```bash
-lsof -ti:8888
+lsof -ti:8000
 ```
 
 **Use a different port:**
@@ -428,7 +428,7 @@ Use this checklist to verify everything works:
 
 - [ ] PHP server starts successfully
 - [ ] Vite dev server starts successfully
-- [ ] Welcome page loads at http://localhost:8888
+- [ ] Welcome page loads at http://localhost:8000
 - [ ] Vue components render correctly
 - [ ] Tailwind CSS v4 styles are applied
 - [ ] Challenge 1 (broken-routing) verification works
@@ -459,8 +459,8 @@ If you encounter issues:
 
 1. Check this guide's troubleshooting section
 2. Review the documentation in `docs/`
-3. Check the lesson READMEs in `lessons/`
-4. Review challenge READMEs in `challenges/`
+3. Check the lesson READMEs in `course/lessons/`
+4. Review challenge READMEs in `course/challenges/`
 5. Check the verification system docs: `docs/VERIFICATION_SYSTEM.md`
 
 ---
