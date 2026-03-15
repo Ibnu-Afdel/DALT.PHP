@@ -23,14 +23,19 @@ DALT.PHP is an interactive debugging playground that teaches web framework conce
 
 ```bash
 # Create a new project
-composer create-project ibnuafdel/daltphp my-dalt-project
+composer create-project ibnuafdel/daltphp my-dalt-project --stability=beta
+
+# If prompted "Do you want to remove the existing VCS (.git, .svn..) history?"
+# Answer: Y (yes, remove it - you'll init your own repo)
+
 cd my-dalt-project
 
-# Install frontend dependencies
-npm run install-platform
+# Install frontend dependencies  
+npm install
 
 # Start development
-php artisan serve    # Visit http://localhost:8000
+npm run dev          # Terminal 1: Vite dev server
+php artisan serve    # Terminal 2: Visit http://localhost:8888
 ```
 
 ### For Development/Contributing
