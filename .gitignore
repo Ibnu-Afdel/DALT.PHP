@@ -1,5 +1,6 @@
 # Dependencies
 /node_modules
+/.dalt/node_modules
 /vendor
 
 # Environment variables

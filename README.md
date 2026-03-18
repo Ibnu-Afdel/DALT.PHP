@@ -27,12 +27,13 @@ composer create-project ibnuafdel/daltphp my-dalt-project --stability=beta --rem
 
 cd my-dalt-project
 
-# Install frontend dependencies  
+# Install dependencies
+composer install
 npm install
 
 # Start development
-npm run dev          # Terminal 1: Vite dev server
-php artisan serve    # Terminal 2: Visit http://localhost:8888
+php artisan serve    # Backend: http://localhost:8000
+npm run dev          # Frontend: http://localhost:5173
 ```
 
 ### For Development/Contributing
@@ -44,26 +45,54 @@ cd DALT.PHP
 
 # Install dependencies
 composer install
-npm run install-platform
+npm install
 
 # Setup environment
 cp .env.example .env
 php artisan migrate
 
 # Start servers
-php artisan serve    # Visit http://localhost:8000
+php artisan serve    # Backend: http://localhost:8000
+npm run dev          # Frontend: http://localhost:5173
 ```
+
+## 🎓 Two Ways to Use DALT.PHP
+
+### 1. As a Learning Platform (Default)
+
+Visit `/learn` to browse lessons and challenges with the interactive UI, or use the CLI:
+
+```bash
+# List available challenges
+php artisan verify broken-routing
+
+# View progress
+cat storage/logs/challenges.log
+```
+
+### 2. As a Clean Micro-Framework
+
+Want to use DALT as a standalone framework? Just remove the learning content:
+
+```bash
+# Remove learning platform
+rm -rf .dalt/ course/
+
+# You now have a clean PHP micro-framework!
+# Build your app in app/Http/controllers/
+# Define routes in routes/routes.php
+```
+
+The framework core (`framework/Core/`) works independently—no coupling to `.dalt/` or `course/`.
 
 ## 📚 Learning Path
 
-1. **List challenges** - `php artisan challenge:list` to see what's available
-2. **Start a challenge** - `php artisan challenge:start broken-routing` loads broken code into your app
-3. **Fix the bugs** - Edit the real files in your IDE (`routes/`, `framework/`, `app/Http/controllers/`)
-4. **Verify** - `php artisan challenge:verify` checks your fix
+1. **Visit `/learn`** - Browse all lessons and challenges
+2. **Read a lesson** - Understand the concepts (e.g., routing, middleware)
+3. **Try a challenge** - Debug broken code in your editor
+4. **Run verification** - Click "Run Verification" or use CLI: `php artisan verify broken-routing`
 5. **Get feedback** - See which tests pass/fail with helpful hints
-6. **Reset if stuck** - `php artisan challenge:reset` restores the buggy baseline
-
-Or use the web UI: visit `/learn`, read lessons, start challenges, and run verification from the browser.
+6. **Fix and repeat** - Keep debugging until all tests pass!
 
 ## 🐛 Available Challenges
 
@@ -83,19 +112,14 @@ Or use the web UI: visit `/learn`, read lessons, start challenges, and run verif
 - Run verifications directly from the browser
 - Get instant visual feedback with test results
 
-### Challenge CLI
+### CLI Verification
 ```bash
-# List available challenges
-php artisan challenge:list
+# Verify a challenge
+php artisan verify broken-routing
 
-# Start a challenge (copies broken files into your app)
-php artisan challenge:start broken-routing
-
-# Verify your fix (checks the real app)
-php artisan challenge:verify
-
-# Reset to buggy baseline if you get stuck
-php artisan challenge:reset
+# View progress logs
+cat storage/logs/challenges.log
+```
 
 # Stop challenge and restore clean app
 php artisan challenge:stop
