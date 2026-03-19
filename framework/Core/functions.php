@@ -42,14 +42,17 @@ function view($path, $attributes = [])
 {
     extract($attributes);
     
-    $daltView = base_path('.dalt/resources/views/' . $path);
     $appView = base_path('resources/views/' . $path);
+    $daltView = base_path('.dalt/resources/views/' . $path);
     
-    if (file_exists($daltView)) {
-        return require $daltView;
-    }
+    // Check app views first (user views take priority)
     if (file_exists($appView)) {
         return require $appView;
+    }
+    
+    // Fallback to .dalt views only if .dalt exists
+    if (is_dir(base_path('.dalt')) && file_exists($daltView)) {
+        return require $daltView;
     }
     
     throw new \RuntimeException("View not found: {$path}");

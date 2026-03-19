@@ -64,7 +64,13 @@ Visit `/learn` to browse lessons and challenges with the interactive UI, or use 
 
 ```bash
 # List available challenges
-php artisan verify broken-routing
+php artisan challenge:list
+
+# Start a challenge
+php artisan challenge:start broken-routing
+
+# Verify your fix
+php artisan challenge:verify
 
 # View progress
 cat storage/logs/challenges.log
@@ -72,18 +78,20 @@ cat storage/logs/challenges.log
 
 ### 2. As a Clean Micro-Framework
 
-Want to use DALT as a standalone framework? Just remove the learning content:
+Want to use DALT as a standalone framework after completing the course? Remove the learning platform:
 
 ```bash
-# Remove learning platform
-rm -rf .dalt/ course/
-
-# You now have a clean PHP micro-framework!
-# Build your app in app/Http/controllers/
-# Define routes in routes/routes.php
+# Remove learning platform (converts to clean framework)
+php artisan platform:remove
 ```
 
-The framework core (`framework/Core/`) works independently—no coupling to `.dalt/` or `course/`.
+This command will:
+- Remove the `.dalt/` directory (learning platform)
+- Clean up package.json and composer.json
+- Create a minimal README for framework usage
+- Keep all framework core functionality intact
+
+The framework core (`framework/Core/`) works independently and will continue to function after removal.
 
 ## 📚 Learning Path
 

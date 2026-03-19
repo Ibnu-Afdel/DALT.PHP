@@ -67,6 +67,9 @@ if (count($arguments) < 2 || $arguments[1] === 'help' || $arguments[1] === '--he
     echo "  challenge:verify        Verify your fix (checks active challenge)\n";
     echo "  challenge:reset         Reset to buggy baseline (fresh start)\n";
     echo "  challenge:stop          Stop challenge and restore clean app\n";
+    echo "\nPlatform:\n";
+    echo "  platform:remove         Remove learning platform (convert to clean framework)\n";
+    echo "                          WARNING: This removes .dalt/ permanently!\n";
     echo "\nExamples:\n";
     echo "  example:install auth    Install authentication example\n";
     echo "                          Copies controllers, views, and routes\n";
@@ -531,6 +534,43 @@ SQL;
         }
         
         passthru('vendor/bin/pest');
+        break;
+
+    case 'platform:remove':
+        if (!is_dir(base_path('.dalt'))) {
+            echo "\n✓ Learning platform already removed.\n";
+            echo "DALT.PHP is running as a clean framework.\n\n";
+            exit(0);
+        }
+        
+        echo "\n";
+        echo "╔════════════════════════════════════════════════════════════╗\n";
+        echo "║         Remove DALT Learning Platform                      ║\n";
+        echo "╚════════════════════════════════════════════════════════════╝\n";
+        echo "\n";
+        echo "This will permanently remove the learning platform and convert\n";
+        echo "DALT.PHP into a clean micro-framework.\n";
+        echo "\n";
+        echo "⚠️  WARNING: This action cannot be undone!\n";
+        echo "\n";
+        echo "Do you want to continue? [y/N]: ";
+        
+        $handle = fopen("php://stdin", "r");
+        $line = trim(fgets($handle));
+        fclose($handle);
+        
+        if (strtolower($line) !== 'y' && strtolower($line) !== 'yes') {
+            echo "\nCancelled. No changes made.\n\n";
+            exit(0);
+        }
+        
+        if (file_exists(base_path('.dalt/scripts/cleanup.php'))) {
+            require base_path('.dalt/scripts/cleanup.php');
+        } else {
+            echo "\nError: Cleanup script not found.\n";
+            echo "Please manually remove .dalt/ directory.\n\n";
+            exit(1);
+        }
         break;
 
     case 'help':

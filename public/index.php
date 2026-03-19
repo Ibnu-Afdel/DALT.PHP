@@ -21,16 +21,20 @@ require BASE_PATH . ('framework/Core/functions.php');
 
 require base_path('framework/Core/bootstrap.php');
 
+// Load .dalt platform bootstrap if it exists
+if (is_dir(base_path('.dalt')) && file_exists(base_path('.dalt/bootstrap.php'))) {
+    require base_path('.dalt/bootstrap.php');
+}
 
 $router = new \Core\Router();
 
-// Load core platform routes
-if (file_exists(base_path('.dalt/routes/routes.php'))) {
+// Load user routes first (user routes take priority)
+$routes = require base_path('routes/routes.php');
+
+// Load platform routes only if .dalt exists
+if (is_dir(base_path('.dalt')) && file_exists(base_path('.dalt/routes/routes.php'))) {
     require base_path('.dalt/routes/routes.php');
 }
-
-// Load user routes
-$routes = require base_path('routes/routes.php');
 
 $request = Request::capture();
 

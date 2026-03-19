@@ -1,7 +1,7 @@
 {
     "name": "ibnuafdel/daltphp",
     "description": "An interactive learning platform for backend development. Learn by debugging intentionally broken code in routing, middleware, authentication, database, and sessions. Includes 5 lessons and 5 challenges with automatic verification.",
-    "version": "0.2.0-beta.6",
+    "version": "0.2.0-beta.7",
     "type": "project",
     "license": "MIT",
     "keywords": [

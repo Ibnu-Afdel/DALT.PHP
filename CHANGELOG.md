@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-beta.7] - 2026-03-19
+
+### Added
+- `php artisan platform:remove` command to cleanly convert to standalone framework
+- Automated cleanup script that removes learning platform
+- `.dalt/bootstrap.php` for proper autoloading of platform classes
+- Proper decoupling between framework core and learning platform
+
+### Changed
+- **BREAKING**: Moved learning-specific classes (ChallengeManager, CourseLoader, ChallengeVerifier) from `framework/Core/` to `.dalt/Core/`
+- Fixed Vite configuration to work from project root instead of `.dalt/` directory
+- Updated view resolution priority: app views first, then .dalt views (was reversed)
+- Updated route loading priority: user routes first, then platform routes
+- Router now checks if `.dalt/` exists before falling back to platform controllers
+- Updated README to accurately reflect framework capabilities and removal process
+
+### Fixed
+- Vite styling not working due to incorrect root configuration
+- Node modules path resolution issues
+- Framework coupling to `.dalt/` directory (now properly optional)
+- Misleading documentation about "no coupling" - now honest about dependencies
+
+### Removed
+- False claims about framework independence (replaced with honest documentation)
+- Hardcoded `.dalt/` dependencies from core framework files
+
 ## [0.1.0-beta.2] - 2026-03-15
 
 ### Added

@@ -76,8 +76,14 @@ class Router
             }
 
             $controllerPath = base_path('app/Http/controllers/' . $route['controller']);
-            if (!file_exists($controllerPath)) {
+            
+            // Fallback to .dalt controllers only if .dalt exists and app controller not found
+            if (!file_exists($controllerPath) && is_dir(base_path('.dalt'))) {
                 $controllerPath = base_path('.dalt/Http/controllers/' . $route['controller']);
+            }
+            
+            if (!file_exists($controllerPath)) {
+                throw new \RuntimeException("Controller not found: {$route['controller']}");
             }
 
             return require $controllerPath;

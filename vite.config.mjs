@@ -2,10 +2,13 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import FullReload from 'vite-plugin-full-reload'
-import { resolve } from 'path'
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
-  root: '.dalt',
+  root: __dirname,
   base: '/',
   publicDir: false,
   appType: 'custom',
@@ -32,15 +35,15 @@ export default defineConfig({
     vue(),
     tailwindcss(),
     FullReload([
-      '.dalt/resources/views/**/*.php'
+      resolve(__dirname, '.dalt/resources/views/**/*.php')
     ])
   ],
   build: {
     manifest: true,
-    outDir: 'public/build',
+    outDir: resolve(__dirname, 'public/build'),
     emptyOutDir: true,
     rollupOptions: {
-      input: '.dalt/resources/js/app.js'
+      input: resolve(__dirname, '.dalt/resources/js/app.js')
     }
   }
 }) 
