@@ -15,7 +15,7 @@ if (!file_exists($readmePath)) {
 $content = file_get_contents($readmePath);
 
 // Find related challenge(s) - first one that links to this lesson
-$relatedChallenges = \Core\CourseLoader::getChallengesForLesson($lessonId);
+$relatedChallenges = array_values(\Core\CourseLoader::getChallengesForLesson($lessonId));
 $relatedChallengeId = !empty($relatedChallenges) ? $relatedChallenges[0]['id'] : null;
 
 view('learn/lesson.view.php', [

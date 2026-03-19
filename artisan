@@ -282,7 +282,7 @@ SQL;
         break;
 
     case 'challenge:list':
-        require_once base_path('framework/Core/ChallengeManager.php');
+        require_once base_path('.dalt/Core/ChallengeManager.php');
         $metadata = Core\ChallengeManager::getChallengeMetadata();
         if (empty($metadata)) {
             echo "\nNo challenges found. Make sure .dalt/course/challenges/ exists.\n\n";
@@ -309,7 +309,7 @@ SQL;
             echo "\nRun php artisan challenge:list to see available challenges.\n";
             exit(1);
         }
-        require_once base_path('framework/Core/ChallengeManager.php');
+        require_once base_path('.dalt/Core/ChallengeManager.php');
         $challengeDir = base_path('.dalt/course/challenges/' . $challengeName);
         if (!is_dir($challengeDir)) {
             echo "Error: Challenge '{$challengeName}' not found.\n";
@@ -342,7 +342,7 @@ SQL;
         break;
 
     case 'challenge:reset':
-        require_once base_path('framework/Core/ChallengeManager.php');
+        require_once base_path('.dalt/Core/ChallengeManager.php');
         $active = Core\ChallengeManager::getActiveChallenge();
         if ($active === null) {
             echo "\nNo active challenge. Run php artisan challenge:start <name> first.\n\n";
@@ -353,7 +353,7 @@ SQL;
         break;
 
     case 'challenge:stop':
-        require_once base_path('framework/Core/ChallengeManager.php');
+        require_once base_path('.dalt/Core/ChallengeManager.php');
         $active = Core\ChallengeManager::getActiveChallenge();
         if ($active === null) {
             echo "\nNo active challenge. Nothing to stop.\n\n";
@@ -364,7 +364,7 @@ SQL;
         break;
 
     case 'challenge:verify':
-        require_once base_path('framework/Core/ChallengeManager.php');
+        require_once base_path('.dalt/Core/ChallengeManager.php');
         require_once base_path('framework/Core/ChallengeVerifier.php');
         $active = Core\ChallengeManager::getActiveChallenge();
         if ($active === null) {

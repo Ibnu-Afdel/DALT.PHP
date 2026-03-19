@@ -41,7 +41,10 @@
     },
     "autoload": {
         "psr-4": {
-            "Core\\": "framework/Core/",
+            "Core\\": [
+                "framework/Core/",
+                ".dalt/Core/"
+            ],
             "App\\Http\\": "app/Http/"
         }
     },

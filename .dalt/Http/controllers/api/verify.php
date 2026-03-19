@@ -15,7 +15,7 @@ if (!is_dir($challengePath)) {
 // CRITICAL: Web verification only makes sense when this challenge is loaded in the app.
 // If the user hasn't run "challenge:start {id}", the base app has clean/correct code
 // and tests would falsely PASS (e.g. broken-middleware passes because base Csrf is correct).
-require_once base_path('framework/Core/ChallengeManager.php');
+require_once base_path('.dalt/Core/ChallengeManager.php');
 $activeChallenge = \Core\ChallengeManager::getActiveChallenge();
 
 if ($activeChallenge !== $challengeId) {
