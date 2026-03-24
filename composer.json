@@ -47,6 +47,11 @@
             "App\\Http\\": "app/Http/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
     "config": {
         "allow-plugins": {
             "pestphp/pest-plugin": true

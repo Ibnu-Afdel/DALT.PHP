@@ -13,8 +13,6 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create index for faster email lookups
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 
--- Success message
 SELECT 'Created users table' as message;

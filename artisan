@@ -186,28 +186,49 @@ switch ($command) {
 
     case 'migrate':
         $dbConfig = $dbConfigBoot;
-        $database = new Core\Database($dbConfig['database']);
-        $migration = new Core\Migration($database);
-        $migration->runMigrations();
-        echo "Migration process completed.\n";
+        try {
+            $database = new Core\Database($dbConfig['database']);
+            $migration = new Core\Migration($database);
+            $migration->runMigrations();
+            echo "Migration process completed.\n";
+        } catch (\Throwable $e) {
+            echo "\n" . $e->getMessage() . "\n";
+            exit(1);
+        }
         break;
 
     case 'migrate:fresh':
         $dbConfig = $dbConfigBoot;
         echo "Running migrate:fresh...\n";
-        if (($dbConfig['database']['driver'] ?? 'sqlite') === 'sqlite') {
+        $driver = $dbConfig['database']['driver'] ?? 'sqlite';
+        if ($driver === 'sqlite') {
             $dbPath = $dbConfig['database']['database'];
             if (file_exists($dbPath)) {
                 unlink($dbPath);
                 echo "Dropped existing database file.\n";
             }
+        } elseif ($driver === 'pgsql') {
+            try {
+                $database = new Core\Database($dbConfig['database']);
+                $database->connection->exec('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+                echo "Dropped and recreated public schema.\n";
+            } catch (\Throwable $e) {
+                echo "\nFailed to reset PostgreSQL schema.\n";
+                echo $e->getMessage() . "\n";
+                exit(1);
+            }
         } else {
-            echo "Warning: migrate:fresh for non-SQLite databases not implemented yet.\n";
+            echo "Warning: migrate:fresh for this driver is not implemented.\n";
         }
-        $database = new Core\Database($dbConfig['database']);
-        $migration = new Core\Migration($database);
-        $migration->runMigrations();
-        echo "Fresh migration completed.\n";
+        try {
+            $database = new Core\Database($dbConfig['database']);
+            $migration = new Core\Migration($database);
+            $migration->runMigrations();
+            echo "Fresh migration completed.\n";
+        } catch (\Throwable $e) {
+            echo "\n" . $e->getMessage() . "\n";
+            exit(1);
+        }
         break;
 
     case 'make:migration':
@@ -221,10 +242,17 @@ switch ($command) {
         // Clean the name: remove 'create_' prefix and '_table' suffix if present
         $cleanName = preg_replace('/^create_/', '', $name);
         $cleanName = preg_replace('/_table$/', '', $cleanName);
+
+        $dbConfig = $dbConfigBoot;
+        $driver = $dbConfig['database']['driver'] ?? 'sqlite';
+        if (!in_array($driver, ['sqlite', 'pgsql'], true)) {
+            $driver = 'sqlite';
+        }
         
         // Generate filename with timestamp
         $timestamp = date('YmdHis');
         $filename = "{$timestamp}_{$name}.sql";
+        $relativeDir = 'database/migrations';
         $filepath = base_path("database/migrations/{$filename}");
         
         if (!is_dir(base_path('database/migrations'))) {
@@ -233,7 +261,23 @@ switch ($command) {
         
         // Generate SQL template
         $currentDate = date('Y-m-d H:i:s');
-        $template = <<<SQL
+        if ($driver === 'pgsql') {
+            $template = <<<SQL
+-- Migration: {$name}
+-- Created: {$currentDate}
+
+CREATE TABLE IF NOT EXISTS {$cleanName} (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add indexes here
+-- CREATE INDEX IF NOT EXISTS idx_{$cleanName}_name ON {$cleanName}(name);
+SQL;
+        } else {
+            $template = <<<SQL
 -- Migration: {$name}
 -- Created: {$currentDate}
 
@@ -246,15 +290,11 @@ CREATE TABLE IF NOT EXISTS {$cleanName} (
 
 -- Add indexes here
 -- CREATE INDEX IF NOT EXISTS idx_{$cleanName}_name ON {$cleanName}(name);
-
--- Notes:
--- SQLite: INTEGER PRIMARY KEY AUTOINCREMENT
--- MySQL:  INT AUTO_INCREMENT PRIMARY KEY
--- PostgreSQL: SERIAL PRIMARY KEY
 SQL;
+        }
         
         file_put_contents($filepath, $template);
-        echo "Migration created: database/migrations/{$filename}\n";
+        echo "Migration created: {$relativeDir}/{$filename}\n";
         echo "\n";
         echo "Next steps:\n";
         echo "1. Edit the migration file to define your table structure\n";

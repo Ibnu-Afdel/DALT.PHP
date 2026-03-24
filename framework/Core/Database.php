@@ -2,6 +2,7 @@
 
 namespace Core;
 use PDO;
+use PDOException;
 class Database {
 
     public $connection;
@@ -13,15 +14,25 @@ class Database {
         $username = $config['username'] ?? null;
         $password = $config['password'] ?? null;
 
-        $this->connection = new PDO($dsn, $username, $password, options: [
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        ]);
+        try {
+            $this->connection = new PDO($dsn, $username, $password, options: [
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            ]);
+        } catch (PDOException $e) {
+            $driver = $config['driver'] ?? 'sqlite';
+            $message = "Database connection failed.\n"
+                . "Driver: {$driver}\n"
+                . "DSN: {$dsn}\n"
+                . "Error: " . $e->getMessage();
+
+            throw new \RuntimeException($message, previous: $e);
+        }
     }
     
     private function buildDsn($config)
     {
-        $driver = $config['driver'] ?? 'pgsql';
+        $driver = $config['driver'] ?? 'sqlite';
         
         switch ($driver) {
             case 'pgsql':
@@ -30,15 +41,6 @@ class Database {
                     $config['host'],
                     $config['port'],
                     $config['dbname']
-                );
-                
-            case 'mysql':
-                return sprintf(
-                    'mysql:host=%s;port=%s;dbname=%s;charset=%s',
-                    $config['host'],
-                    $config['port'],
-                    $config['dbname'],
-                    $config['charset'] ?? 'utf8mb4'
                 );
                 
             case 'sqlite':
@@ -51,7 +53,7 @@ class Database {
                 return 'sqlite:' . $databasePath;
                 
             default:
-                throw new \Exception("Unsupported database driver: {$driver}");
+                throw new \RuntimeException("Unsupported database driver: {$driver}");
         }
     }
     public function query($query, $params = []) {

@@ -15,7 +15,7 @@ class DatabaseManager
     
     private function setupDatabase()
     {
-        $driver = $this->config['driver'];
+        $driver = $this->config['driver'] ?? 'sqlite';
         
         switch ($driver) {
             case 'sqlite':
@@ -24,11 +24,8 @@ class DatabaseManager
             case 'pgsql':
                 $this->setupPostgreSQL();
                 break;
-            case 'mysql':
-                $this->setupMySQL();
-                break;
             default:
-                throw new \Exception("Unsupported database driver: {$driver}");
+                throw new \RuntimeException("Unsupported database driver: {$driver}");
         }
         
         $this->database = new Database($this->config);
@@ -61,12 +58,6 @@ class DatabaseManager
         // For PostgreSQL, we assume the database already exists
         // In a real application, you might want to create the database if it doesn't exist
         // This requires connecting to the postgres database first
-    }
-    
-    private function setupMySQL()
-    {
-        // For MySQL, we assume the database already exists
-        // Similar to PostgreSQL
     }
     
     private function ensureTablesExist()
