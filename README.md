@@ -1,17 +1,21 @@
-# DALT.PHP — Interactive Backend Debugging Playground
+# DALT.PHP — Lightweight PHP Framework + Guided Learning
 
 [![Latest Version](https://img.shields.io/packagist/v/ibnuafdel/daltphp.svg?style=flat-square)](https://packagist.org/packages/ibnuafdel/daltphp)
 [![Total Downloads](https://img.shields.io/packagist/dt/ibnuafdel/daltphp.svg?style=flat-square)](https://packagist.org/packages/ibnuafdel/daltphp)
 [![License](https://img.shields.io/packagist/l/ibnuafdel/daltphp.svg?style=flat-square)](https://packagist.org/packages/ibnuafdel/daltphp)
 [![PHP Version](https://img.shields.io/packagist/php-v/ibnuafdel/daltphp.svg?style=flat-square)](https://packagist.org/packages/ibnuafdel/daltphp)
 
-An educational platform where you learn backend development by debugging intentionally broken code.
+DALT.PHP is a lightweight PHP framework with an optional built-in guided learning mode.
 
-**Learn by fixing real bugs** in routing, middleware, authentication, database, and session handling.
+Build with low abstraction by default, then optionally practice with deliberate broken-code challenges.
 
 ## 🎯 What is DALT.PHP?
 
-DALT.PHP is an interactive debugging playground that teaches web framework concepts through hands-on practice:
+DALT.PHP combines:
+- **Core framework experience** (always available)
+- **Guided learning experience** (optional `.dalt` add-on)
+
+Guided learning includes:
 - **5 comprehensive lessons** explaining backend fundamentals
 - **5 broken challenges** with realistic bugs to fix
 - **Automatic verification** with instant feedback
@@ -56,9 +60,22 @@ php artisan serve    # Backend: http://localhost:8000
 npm run dev          # Frontend: http://localhost:5173
 ```
 
-## 🎓 Two Ways to Use DALT.PHP
+## 🎓 Core + Guided Learning
 
-### 1. As a Learning Platform (Default)
+### Core Framework Experience (Default)
+
+Use DALT directly as a micro-framework:
+
+```bash
+php artisan serve
+```
+
+Build in:
+- `routes/routes.php`
+- `app/Http/controllers/`
+- `resources/views/`
+
+### Guided Learning Experience (Optional)
 
 Visit `/learn` to browse lessons and challenges with the interactive UI, or use the CLI:
 
@@ -76,17 +93,15 @@ php artisan challenge:verify
 cat storage/logs/challenges.log
 ```
 
-### 2. As a Clean Micro-Framework
-
-Want to use DALT as a standalone framework after completing the course? Remove the learning platform:
+Want pure framework mode only? Remove guided learning:
 
 ```bash
-# Remove learning platform (converts to clean framework)
+# Remove guided learning (keeps framework core)
 php artisan platform:remove
 ```
 
 This command will:
-- Remove the `.dalt/` directory (learning platform)
+- Remove the `.dalt/` directory (guided learning layer)
 - Clean up package.json and composer.json
 - Create a minimal README for framework usage
 - Keep all framework core functionality intact
