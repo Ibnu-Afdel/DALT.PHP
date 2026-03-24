@@ -1,16 +1,20 @@
- <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="DALT.PHP logo">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#5E936C"/>
-      <stop offset="100%" stop-color="#93DA97"/>
-    </linearGradient>
-  </defs>
-  <!-- Soft rounded background -->
-  <rect x="4" y="4" width="56" height="56" rx="14" fill="#E8FFD7"/>
-  <rect x="7" y="7" width="50" height="50" rx="12" fill="url(#g)"/>
-  <!-- Monogram: abstract D and P using cutouts -->
-  <path d="M22 18 h10 a12 12 0 1 1 0 28 H22 Z" fill="#3E5F44"/>
-  <circle cx="36" cy="32" r="8" fill="#E8FFD7"/>
-  <!-- Small accent dot -->
-  <circle cx="44" cy="22" r="2" fill="#E8FFD7"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="DALT.PHP favicon">
+    <defs>
+        <linearGradient id="bg" x1="20" y1="12" x2="112" y2="120" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#0f172a"/>
+            <stop offset="0.55" stop-color="#111827"/>
+            <stop offset="1" stop-color="#1e293b"/>
+        </linearGradient>
+        <linearGradient id="accent" x1="26" y1="26" x2="98" y2="98" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#fbbf24"/>
+            <stop offset="1" stop-color="#f59e0b"/>
+        </linearGradient>
+    </defs>
+
+    <rect x="8" y="8" width="112" height="112" rx="30" fill="url(#bg)"/>
+    <rect x="9" y="9" width="110" height="110" rx="29" fill="none" stroke="#ffffff" stroke-opacity="0.08"/>
+
+    <path d="M35 30h24c17.673 0 32 14.327 32 32s-14.327 32-32 32H35V30Z" fill="url(#accent)"/>
+    <path d="M34 42h24c11.046 0 20 8.954 20 20s-8.954 20-20 20H34V42Z" fill="#0f172a"/>
+    <path d="M51 52h8.5c5.247 0 9.5 4.253 9.5 9.5S64.747 71 59.5 71H51V52Z" fill="url(#accent)"/>
 </svg>

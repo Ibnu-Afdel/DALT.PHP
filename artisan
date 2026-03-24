@@ -24,6 +24,21 @@ function load_env_and_boot(): array {
     return $dbConfig;
 }
 
+function platform_installed(): bool {
+    return is_dir(base_path('.dalt'));
+}
+
+function require_platform(string $commandName): void {
+    if (platform_installed()) {
+        return;
+    }
+
+    echo "\nLearning platform is not installed (.dalt directory is missing).\n";
+    echo "Command '{$commandName}' is only available in platform mode.\n";
+    echo "This project is currently running as the standalone framework.\n\n";
+    exit(1);
+}
+
 if (count($arguments) < 2 || $arguments[1] === 'help' || $arguments[1] === '--help' || $arguments[1] === '-h') {
     echo "\n";
     echo "╔══════════════════════════════════════════════════════════════╗\n";
@@ -68,7 +83,9 @@ if (count($arguments) < 2 || $arguments[1] === 'help' || $arguments[1] === '--he
     echo "  challenge:reset         Reset to buggy baseline (fresh start)\n";
     echo "  challenge:stop          Stop challenge and restore clean app\n";
     echo "\nPlatform:\n";
-    echo "  platform:remove         Remove learning platform (convert to clean framework)\n";
+    echo "  platform:status         Show whether learning platform is installed\n";
+    echo "  platform:clean          Remove learning platform (convert to clean framework)\n";
+    echo "  platform:remove         Alias of platform:clean\n";
     echo "                          WARNING: This removes .dalt/ permanently!\n";
     echo "\nExamples:\n";
     echo "  example:install auth    Install authentication example\n";
@@ -113,6 +130,7 @@ switch ($command) {
 
     
     case 'dalt:test':
+        require_platform($command);
         $dirs = array_filter(glob(base_path('.dalt/course/challenges/*')), 'is_dir');
         $challenges = array_map('basename', $dirs);
         
@@ -244,6 +262,7 @@ SQL;
         break;
 
     case 'example:install':
+        require_platform($command);
         $which = $arguments[2] ?? '';
         if ($which !== 'auth') {
             echo "Usage: php artisan example:install auth\n";
@@ -282,6 +301,7 @@ SQL;
         break;
 
     case 'challenge:list':
+        require_platform($command);
         require_once base_path('.dalt/Core/ChallengeManager.php');
         $metadata = Core\ChallengeManager::getChallengeMetadata();
         if (empty($metadata)) {
@@ -302,6 +322,7 @@ SQL;
         break;
 
     case 'challenge:start':
+        require_platform($command);
         $challengeName = $arguments[2] ?? '';
         if (empty($challengeName)) {
             echo "Usage: php artisan challenge:start <challenge-name>\n";
@@ -342,6 +363,7 @@ SQL;
         break;
 
     case 'challenge:reset':
+        require_platform($command);
         require_once base_path('.dalt/Core/ChallengeManager.php');
         $active = Core\ChallengeManager::getActiveChallenge();
         if ($active === null) {
@@ -353,6 +375,7 @@ SQL;
         break;
 
     case 'challenge:stop':
+        require_platform($command);
         require_once base_path('.dalt/Core/ChallengeManager.php');
         $active = Core\ChallengeManager::getActiveChallenge();
         if ($active === null) {
@@ -364,6 +387,7 @@ SQL;
         break;
 
     case 'challenge:verify':
+        require_platform($command);
         require_once base_path('.dalt/Core/ChallengeManager.php');
         require_once base_path('framework/Core/ChallengeVerifier.php');
         $active = Core\ChallengeManager::getActiveChallenge();
@@ -414,6 +438,7 @@ SQL;
         exit($result['status'] === 'pass' ? 0 : 1);
 
     case 'verify':
+        require_platform($command);
         $challengeName = $arguments[2] ?? '';
         if (empty($challengeName)) {
             echo "Usage: php artisan verify <challenge-name>\n";
@@ -479,6 +504,7 @@ SQL;
         exit($result['status'] === 'pass' ? 0 : 1);
 
     case 'dev':
+        require_platform($command);
         echo "Starting DALT.PHP development environment...\n";
         echo "\n";
         echo "This will start:\n";
@@ -536,6 +562,19 @@ SQL;
         passthru('vendor/bin/pest');
         break;
 
+    case 'platform:status':
+        echo "\n";
+        if (platform_installed()) {
+            echo "Platform mode: installed (.dalt found)\n";
+            echo "You can use lessons/challenges and platform commands.\n";
+        } else {
+            echo "Framework mode: standalone (.dalt not found)\n";
+            echo "Learning routes/commands are disabled.\n";
+        }
+        echo "\n";
+        break;
+
+    case 'platform:clean':
     case 'platform:remove':
         if (!is_dir(base_path('.dalt'))) {
             echo "\n✓ Learning platform already removed.\n";
