@@ -1,6 +1,6 @@
 {
     "name": "ibnuafdel/daltphp",
-    "description": "An interactive learning platform for backend development. Learn by debugging intentionally broken code in routing, middleware, authentication, database, and sessions. Includes 5 lessons and 5 challenges with automatic verification.",
+    "description": "Lightweight PHP micro-framework with optional built-in guided learning: lessons and broken-code challenges with automatic verification.",
     "type": "project",
     "license": "MIT",
     "keywords": [

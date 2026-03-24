@@ -93,10 +93,10 @@ php artisan challenge:verify
 cat storage/logs/challenges.log
 ```
 
-Want pure framework mode only? Remove guided learning:
+Want the framework core only? Remove guided learning:
 
 ```bash
-# Remove guided learning (keeps framework core)
+# Remove guided learning layer (keeps framework core); same as platform:clean
 php artisan platform:remove
 ```
 
@@ -140,10 +140,6 @@ The framework core (`framework/Core/`) works independently and will continue to 
 # Verify a challenge
 php artisan verify broken-routing
 
-# View progress logs
-cat storage/logs/challenges.log
-```
-
 # Stop challenge and restore clean app
 php artisan challenge:stop
 
@@ -160,8 +156,8 @@ cat storage/logs/challenges.log
 ## 📁 Project Structure
 
 ```
-.dalt/                 # Platform internals (learning UI & assets)
-  course/              # Learning content (lessons + challenges)
+.dalt/                 # Guided learning layer (optional; UI & course)
+  course/              # Lessons + challenges
     lessons/           # 5 lesson markdown files
     challenges/        # 5 broken challenge folders
       broken-routing/
@@ -169,9 +165,9 @@ cat storage/logs/challenges.log
       broken-auth/
       broken-database/
       broken-session/
-  Http/controllers/   # Learning UI controllers
-  resources/           # Platform assets & views
-  routes/              # Platform routes
+  Http/controllers/   # /learn and related controllers
+  resources/           # Guided-learning views & assets
+  routes/              # Guided-learning routes
   scripts/             # Setup scripts
   stubs/               # Code templates
 app/Http/controllers/  # Your controllers (start building here)

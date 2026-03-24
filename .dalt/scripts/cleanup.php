@@ -4,8 +4,8 @@
 /**
  * DALT.PHP Cleanup Script
  * 
- * This script removes the learning platform and converts DALT.PHP
- * into a clean, standalone micro-framework.
+ * This script removes the guided learning layer (.dalt) and leaves
+ * DALT.PHP as the framework core only.
  * 
  * Usage: php .dalt/scripts/cleanup.php
  */
@@ -18,13 +18,13 @@ echo "║         DALT.PHP → Clean Framework Conversion              ║\n";
 echo "╚════════════════════════════════════════════════════════════╝\n";
 echo "\n";
 
-echo "This will remove the learning platform and convert DALT.PHP\n";
-echo "into a clean micro-framework for building your own apps.\n";
+echo "This will remove guided learning (.dalt) and leave DALT.PHP as\n";
+echo "the framework core for building your own apps.\n";
 echo "\n";
 echo "The following will be removed:\n";
-echo "  • .dalt/ directory (learning platform)\n";
-echo "  • Learning-specific npm scripts\n";
-echo "  • Challenge verification commands\n";
+echo "  • .dalt/ directory (guided learning)\n";
+echo "  • Guided-learning npm scripts\n";
+echo "  • Challenge / lesson artisan helpers\n";
 echo "\n";
 echo "The following will be kept:\n";
 echo "  • framework/Core/ (router, database, session, etc.)\n";

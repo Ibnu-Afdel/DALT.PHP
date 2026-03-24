@@ -33,9 +33,9 @@ function require_platform(string $commandName): void {
         return;
     }
 
-    echo "\nLearning platform is not installed (.dalt directory is missing).\n";
-    echo "Command '{$commandName}' is only available in platform mode.\n";
-    echo "This project is currently running as the standalone framework.\n\n";
+    echo "\nGuided learning is not installed (.dalt directory is missing).\n";
+    echo "Command '{$commandName}' is only available when guided learning is present.\n";
+    echo "This project is running as the framework core only.\n\n";
     exit(1);
 }
 
@@ -82,9 +82,9 @@ if (count($arguments) < 2 || $arguments[1] === 'help' || $arguments[1] === '--he
     echo "  challenge:verify        Verify your fix (checks active challenge)\n";
     echo "  challenge:reset         Reset to buggy baseline (fresh start)\n";
     echo "  challenge:stop          Stop challenge and restore clean app\n";
-    echo "\nPlatform:\n";
-    echo "  platform:status         Show whether learning platform is installed\n";
-    echo "  platform:clean          Remove learning platform (convert to clean framework)\n";
+    echo "\nGuided learning:\n";
+    echo "  platform:status         Show whether guided learning is installed (.dalt)\n";
+    echo "  platform:clean          Remove guided learning (framework core only)\n";
     echo "  platform:remove         Alias of platform:clean\n";
     echo "                          WARNING: This removes .dalt/ permanently!\n";
     echo "\nExamples:\n";
@@ -565,11 +565,11 @@ SQL;
     case 'platform:status':
         echo "\n";
         if (platform_installed()) {
-            echo "Platform mode: installed (.dalt found)\n";
-            echo "You can use lessons/challenges and platform commands.\n";
+            echo "Guided learning: installed (.dalt found)\n";
+            echo "Lessons, challenges, and related artisan commands are available.\n";
         } else {
-            echo "Framework mode: standalone (.dalt not found)\n";
-            echo "Learning routes/commands are disabled.\n";
+            echo "Framework core only: guided learning not installed (.dalt not found)\n";
+            echo "Lessons, challenges, and guided-learning artisan commands are disabled.\n";
         }
         echo "\n";
         break;
@@ -577,18 +577,18 @@ SQL;
     case 'platform:clean':
     case 'platform:remove':
         if (!is_dir(base_path('.dalt'))) {
-            echo "\n✓ Learning platform already removed.\n";
-            echo "DALT.PHP is running as a clean framework.\n\n";
+            echo "\n✓ Guided learning layer already removed.\n";
+            echo "DALT.PHP is running as the framework core only.\n\n";
             exit(0);
         }
         
         echo "\n";
         echo "╔════════════════════════════════════════════════════════════╗\n";
-        echo "║         Remove DALT Learning Platform                      ║\n";
+        echo "║         Remove guided learning (.dalt)                     ║\n";
         echo "╚════════════════════════════════════════════════════════════╝\n";
         echo "\n";
-        echo "This will permanently remove the learning platform and convert\n";
-        echo "DALT.PHP into a clean micro-framework.\n";
+        echo "This will permanently remove the guided learning layer and leave\n";
+        echo "DALT.PHP as the framework core only.\n";
         echo "\n";
         echo "⚠️  WARNING: This action cannot be undone!\n";
         echo "\n";
