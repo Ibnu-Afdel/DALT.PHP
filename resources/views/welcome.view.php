@@ -1,72 +1,199 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DALT.PHP</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; margin: 0; padding: 2.5rem 1.25rem; background: #0f1117; color: #d1d5db; min-height: 100vh; }
-    .container { max-width: 56rem; margin: 0 auto; }
-    .header { text-align: left; margin-bottom: 1.5rem; }
-    h1 { font-size: 2rem; line-height: 1.2; color: #fff; margin: 0 0 0.5rem; }
-    .subtitle { color: #9ca3af; margin: 0; max-width: 52rem; }
-    .grid { display: grid; gap: 1rem; grid-template-columns: 1fr; margin-top: 1.5rem; }
-    @media (min-width: 840px) { .grid { grid-template-columns: 1fr 1fr; } }
-    .card { border: 1px solid rgba(148, 163, 184, 0.15); background: rgba(17, 24, 39, 0.55); border-radius: 14px; padding: 1.25rem; }
-    .card h2 { margin: 0 0 0.5rem; color: #fff; font-size: 1.1rem; }
-    .card p { margin: 0.25rem 0 0.75rem; color: #9ca3af; line-height: 1.6; }
-    .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
-    .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.8rem; border-radius: 10px; border: 1px solid rgba(148, 163, 184, 0.2); background: rgba(148, 163, 184, 0.08); color: #e5e7eb; text-decoration: none; font-weight: 600; }
-    .btn:hover { background: rgba(148, 163, 184, 0.14); }
-    .btn.primary { border-color: rgba(147, 218, 151, 0.35); background: rgba(147, 218, 151, 0.12); }
-    .btn.primary:hover { background: rgba(147, 218, 151, 0.18); }
-    .code { margin: 0.75rem 0 0; padding: 0.85rem 1rem; background: rgba(2, 6, 23, 0.6); border: 1px solid rgba(148, 163, 184, 0.16); border-radius: 12px; overflow: auto; }
-    .code code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; color: #e5e7eb; }
-    .footer { margin-top: 1.5rem; color: #6b7280; font-size: 0.95rem; }
-    .footer a { color: #93DA97; text-decoration: none; }
-    .footer a:hover { text-decoration: underline; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DALT.PHP</title>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --surface-color: #111111;
+            --border-color: #333333;
+            --text-main: #f5f5f5;
+            --text-muted: #888888;
+            --accent: #ffffff;
+            --accent-hover: #e0e0e0;
+        }
+        * { box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            margin: 0; 
+            padding: 0;
+            background: var(--bg-color); 
+            color: var(--text-main); 
+            line-height: 1.5;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container { 
+            max-width: 60rem; 
+            margin: 0 auto; 
+            width: 100%;
+            padding: 2rem;
+        }
+        h1 { 
+            font-size: 2.25rem; 
+            font-weight: 700;
+            line-height: 1.1; 
+            letter-spacing: -0.04em;
+            margin: 0 0 0.5rem; 
+        }
+        .subtitle { 
+            color: var(--text-muted); 
+            font-size: 1.05rem;
+            margin: 0 0 1.5rem; 
+            max-width: 44rem; 
+        }
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+        @media (min-width: 768px) {
+            .main-grid { grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        }
+        .panel {
+            padding: 1.5rem;
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+        }
+        h2 { 
+            font-size: 1.15rem; 
+            font-weight: 600;
+            margin: 0 0 0.75rem; 
+            color: var(--accent);
+        }
+        p { 
+            margin: 0 0 1rem; 
+            font-size: 0.95rem;
+            color: var(--text-muted); 
+            flex-grow: 1;
+        }
+        .grid-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+        }
+        .link-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.4rem 0.8rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            text-decoration: none;
+            color: var(--text-main);
+            font-size: 0.85rem;
+            background: transparent;
+            transition: all 0.2s;
+        }
+        .link-pill:hover { 
+            border-color: var(--text-muted); 
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .btn { 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center;
+            padding: 0.5rem 1rem; 
+            border-radius: 6px; 
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-decoration: none; 
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .btn-primary { 
+            background: var(--accent); 
+            color: #000; 
+            border: 1px solid var(--accent);
+        }
+        .btn-primary:hover { 
+            background: var(--accent-hover); 
+        }
+        .btn-outline {
+            background: transparent;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+        }
+        .btn-outline:hover {
+            border-color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .actions { 
+            display: flex; 
+            gap: 0.75rem; 
+            flex-wrap: wrap;
+            margin-top: auto;
+        }
+        .terminal { 
+            margin: 0 0 1rem 0; 
+            padding: 0.75rem 1rem; 
+            background: #000; 
+            border: 1px solid var(--border-color); 
+            border-radius: 6px; 
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; 
+            font-size: 0.85rem;
+            color: #4ade80; 
+        }
+        .terminal::before { content: "$ "; color: var(--text-muted); }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>DALT.PHP is ready</h1>
-      <p class="subtitle">A transparent PHP framework for learning backend development. Routing, sessions, auth, validation, and database access are all there — in readable code you can follow.</p>
-    </div>
+    <div class="container">
+        <h1>DALT.PHP is ready.</h1>
+        <p class="subtitle">A transparent PHP framework designed to teach backend development concepts through readable, focused code.</p>
 
-    <div class="grid">
-      <section class="card">
-        <h2>Start Here</h2>
-        <p>Read the docs and follow a guide to build something real.</p>
-        <div class="actions">
-          <a class="btn primary" href="https://dalt.ibnuafdel.com/docs" target="_blank" rel="noreferrer">Docs</a>
-          <a class="btn" href="https://dalt.ibnuafdel.com/docs/guides/building-a-blog" target="_blank" rel="noreferrer">Build a Blog</a>
-          <a class="btn" href="https://dalt.ibnuafdel.com/docs/guides/building-an-api" target="_blank" rel="noreferrer">Build an API</a>
-          <a class="btn" href="https://t.me/daltphp" target="_blank" rel="noreferrer">Telegram</a>
+        <div class="grid-links">
+            <a href="https://dalt.ibnuafdel.com/docs" class="link-pill" target="_blank">📚 Documentation</a>
+            <a href="https://t.me/daltphp" class="link-pill" target="_blank">💬 Telegram Community</a>
+            <a href="https://github.com/ibnuafdel/dalt" class="link-pill" target="_blank">⭐ GitHub</a>
         </div>
-      </section>
 
-      <section class="card">
-        <h2>Guided Learning (Optional)</h2>
-        <?php $platformInstalled = function_exists('base_path') && is_dir(base_path('.dalt')); ?>
-        <?php if ($platformInstalled): ?>
-          <p>Lessons and debugging challenges are installed. Open the course UI, or remove it if you want the framework core only.</p>
-          <div class="actions">
-            <a class="btn primary" href="/learn/start">Open Guided Learning →</a>
-            <a class="btn" href="/learn">Open Course</a>
-          </div>
-          <div class="code"><code>php artisan platform:remove</code></div>
-        <?php else: ?>
-          <p>Guided learning is not installed. You can start building your app immediately.</p>
-          <div class="code"><code>php artisan platform:status</code></div>
-        <?php endif; ?>
-      </section>
-    </div>
+        <div class="main-grid">
+            <?php $platformInstalled = function_exists('base_path') && is_dir(base_path('.dalt')); ?>
+            <?php if ($platformInstalled): ?>
+            <div class="panel">
+                <h2>Guided Learning</h2>
+                <p>DALT includes built-in interactive lessons. Dive in to grasp backend fundamentals directly within the framework.</p>
+                <div class="actions">
+                    <a class="btn btn-primary" href="/learn/start">Start Learning</a>
+                    <a class="btn btn-outline" href="/learn">Course Dashboard</a>
+                </div>
+            </div>
 
-    <div class="footer">
-      <div>Need help? Join the community on <a href="https://t.me/daltphp" target="_blank" rel="noreferrer">Telegram</a>.</div>
+            <div class="panel">
+                <h2>Start Building</h2>
+                <p>Prefer a clean slate? Remove the learning modules to get a minimal, barebones framework core:</p>
+                <div class="terminal">php artisan platform:remove</div>
+                
+                <p>Then, learn by building! Explore the docs or follow these guides to master the framework flow:</p>
+                <div class="actions">
+                    <a class="btn btn-outline" href="https://dalt.ibnuafdel.com/docs/guides/building-a-blog" target="_blank">Build a Blog</a>
+                    <a class="btn btn-outline" href="https://dalt.ibnuafdel.com/docs/guides/building-an-api" target="_blank">Build an API</a>
+                </div>
+            </div>
+            <?php else: ?>
+            <div class="panel">
+                <h2>Build Your Application</h2>
+                <p>The framework is clean and ready. Learn by building practical applications. Explore the docs or follow our step-by-step guides to master the framework flow:</p>
+                <div class="actions">
+                    <a class="btn btn-outline" href="https://dalt.ibnuafdel.com/docs/guides/building-a-blog" target="_blank">Build a Blog</a>
+                    <a class="btn btn-outline" href="https://dalt.ibnuafdel.com/docs/guides/building-an-api" target="_blank">Build an API</a>
+                </div>
+            </div>
+            <div class="panel">
+                <h2>Guided Learning Removed</h2>
+                <p>The learning modules are not installed in this project.</p>
+                <div class="terminal">php artisan platform:status</div>
+            </div>
+            <?php endif; ?>
+        </div>
     </div>
-  </div>
 </body>
 </html>
