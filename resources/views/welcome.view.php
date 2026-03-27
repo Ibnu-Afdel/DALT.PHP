@@ -53,7 +53,8 @@
         <?php if ($platformInstalled): ?>
           <p>Lessons and debugging challenges are installed. Open the course UI, or remove it if you want the framework core only.</p>
           <div class="actions">
-            <a class="btn primary" href="/learn">Open Guided Learning →</a>
+            <a class="btn primary" href="/learn/start">Open Guided Learning →</a>
+            <a class="btn" href="/learn">Open Course</a>
           </div>
           <div class="code"><code>php artisan platform:remove</code></div>
         <?php else: ?>

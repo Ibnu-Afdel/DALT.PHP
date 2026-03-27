@@ -3,6 +3,7 @@
 global $router;
 
 // Learning routes
+$router->get("/learn/start", "learn/start.php");
 $router->get("/learn", "learn/index.php");
 $router->get("/learn/lessons/{lesson}", "learn/lesson.php");
 $router->get("/learn/challenges/{challenge}", "learn/challenge.php");
