@@ -5,6 +5,7 @@ namespace Core;
 class Container
 {
     protected $bindings = [];
+    protected $instances = [];
 
     public function bind($key, $resolver)
     {
@@ -17,8 +18,10 @@ class Container
             throw new \Exception("No Matching Binding Found For {$key}");
         }
 
-        $resolver = $this->bindings[$key];
-        return call_user_func($resolver);
+        if (!isset($this->instances[$key])) {
+            $this->instances[$key] = call_user_func($this->bindings[$key]);
+        }
 
+        return $this->instances[$key];
     }
 }

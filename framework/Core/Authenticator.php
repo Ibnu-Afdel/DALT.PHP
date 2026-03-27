@@ -12,10 +12,7 @@ class Authenticator
 
         if ($user) {
             if (password_verify($password, $user['password'])) {
-                $this->login([
-                    'email' => $email,
-                ]);
-
+                $this->login($user);
                 return true;
             }
         }
@@ -32,6 +29,6 @@ class Authenticator
 
     public function logout()
     {
-       Session::destroy();
+        Session::destroy();
     }
 }

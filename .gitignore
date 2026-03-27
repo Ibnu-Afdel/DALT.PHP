@@ -41,3 +41,6 @@ Thumbs.db
 /database/*.db
 !/database/.gitkeep
 !/database/migrations/
+
+/docs/CODE_REVIEW_WALKTHROUGH.md
+/docs/NEW_CODE_REVIEW.md
