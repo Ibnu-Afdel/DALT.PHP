@@ -1,18 +1,21 @@
 <?php
 
-function dd($value){
-echo '<pre>';
-    var_dump($value);
-    echo '</pre>';
-
-die();
+function dd(mixed ...$values): never
+{
+    echo '<style>body{background:#1e1e2e;color:#cdd6f4;font:14px/1.6 monospace;padding:2rem}</style>';
+    foreach ($values as $value) {
+        echo '<pre style="background:#313244;padding:1rem;border-radius:6px;overflow:auto;margin-bottom:1rem">';
+        var_export($value);
+        echo '</pre>';
+    }
+    exit(1);
 }
 
 function urlIs($value) {
 return $_SERVER['REQUEST_URI'] === $value;
 }
 
- function abort($code = 404)
+function abort(int $code = 404): never
 {
     http_response_code($code);
     
@@ -24,7 +27,7 @@ return $_SERVER['REQUEST_URI'] === $value;
     
     $message = $messages[$code] ?? 'Error';
     
-    throw new \Exception("HTTP {$code}: {$message}");
+    throw new \Core\HttpException($code, $message);
 }
 
 function authorize($condition, $status = 403){
@@ -41,18 +44,16 @@ function  base_path($path)
 function view($path, $attributes = [])
 {
     extract($attributes);
-    
-    $appView = base_path('resources/views/' . $path);
+
+    $appView  = base_path('resources/views/' . $path);
     $daltView = base_path('.dalt/resources/views/' . $path);
 
-    // Prefer .dalt views when present
-    if (is_dir(base_path('.dalt')) && file_exists($daltView)) {
-        return require $daltView;
-    }
-
-    // Fallback to app views
     if (file_exists($appView)) {
         return require $appView;
+    }
+
+    if (is_dir(base_path('.dalt')) && file_exists($daltView)) {
+        return require $daltView;
     }
 
     throw new \RuntimeException("View not found: {$path}");
@@ -66,12 +67,13 @@ function redirect($path)
 
 function old($key, $default = '')
 {
-    return Core\Session::get('old')[$key] ?? $default;
+    $old = Core\Session::get('old', []);
+    return $old[$key] ?? $default;
 }
 
 function vite(string $entryPath): string
 {
-    $devServerUrl = 'http://localhost:5173';
+    $devServerUrl = $_ENV['VITE_DEV_SERVER_URL'] ?? 'http://localhost:5173';
 
     if (vite_is_dev_server_running($devServerUrl)) {
         $client = '<script type="module" src="' . $devServerUrl . '/@vite/client"></script>';
@@ -84,7 +86,6 @@ function vite(string $entryPath): string
     $manifestPath = file_exists($manifestPathPrimary) ? $manifestPathPrimary : $manifestPathFallback;
 
     if (!file_exists($manifestPath)) {
-        // Static fallback if manifest is missing
         $fallback = [];
         $cssCandidates = [
             'public/app.css',
@@ -164,10 +165,6 @@ function csrf_field(): string
 
 function app_log(string $message): void
 {
-    $debug = (bool) (($_ENV['APP_DEBUG'] ?? true));
-    if ($debug) {
-        return;
-    }
     $dir = base_path('storage/logs');
     if (!is_dir($dir)) {
         @mkdir($dir, 0755, true);

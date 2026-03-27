@@ -5,8 +5,13 @@ use PDO;
 use PDOException;
 class Database {
 
-    public $connection;
-    public $statement;
+    protected $connection;
+    protected $statement;
+
+    public function getConnection(): PDO 
+    {
+        return $this->connection;
+    }
     
     public function __construct($config)
     {
@@ -80,5 +85,3 @@ class Database {
         return $this->statement->fetchAll();
     }
 }
-
-// scope resolution operator ? -> ::

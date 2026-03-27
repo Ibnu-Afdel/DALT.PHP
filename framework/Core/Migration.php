@@ -21,7 +21,7 @@ class Migration
 
     private function driver(): string
     {
-        return (string) $this->database->connection->getAttribute(PDO::ATTR_DRIVER_NAME);
+        return (string) $this->database->getConnection()->getAttribute(PDO::ATTR_DRIVER_NAME);
     }
 
     private function hasSQLiteOnlySql(string $sql): bool
@@ -103,7 +103,7 @@ class Migration
             throw new \RuntimeException("Unsupported database driver: {$driver}");
         }
         
-        $this->database->connection->exec($sql);
+        $this->database->getConnection()->exec($sql);
     }
     
     /**
@@ -195,7 +195,7 @@ class Migration
                 }
                 
                 try {
-                    $this->database->connection->exec($sql);
+                    $this->database->getConnection()->exec($sql);
                     $this->markAsRun($migration, $batch);
                     $ranMigrations++;
                     echo "✓ Success\n";

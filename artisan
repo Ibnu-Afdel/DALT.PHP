@@ -210,7 +210,7 @@ switch ($command) {
         } elseif ($driver === 'pgsql') {
             try {
                 $database = new Core\Database($dbConfig['database']);
-                $database->connection->exec('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+                $database->getConnection()->exec('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
                 echo "Dropped and recreated public schema.\n";
             } catch (\Throwable $e) {
                 echo "\nFailed to reset PostgreSQL schema.\n";

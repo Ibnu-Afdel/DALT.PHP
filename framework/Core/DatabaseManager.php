@@ -34,12 +34,10 @@ class DatabaseManager
     
     private function setupSQLite()
     {
-        // Ensure absolute path for SQLite
         if (isset($this->config['database']) && !str_starts_with($this->config['database'], '/')) {
             $this->config['database'] = BASE_PATH . $this->config['database'];
         }
         
-        // Create database directory if it doesn't exist
         $dbPath = $this->config['database'];
         $dbDir = dirname($dbPath);
         
@@ -47,7 +45,6 @@ class DatabaseManager
             mkdir($dbDir, 0755, true);
         }
         
-        // Create empty database file if it doesn't exist
         if (!file_exists($dbPath)) {
             touch($dbPath);
         }
@@ -55,19 +52,19 @@ class DatabaseManager
     
     private function setupPostgreSQL()
     {
-        // For PostgreSQL, we assume the database already exists
-        // In a real application, you might want to create the database if it doesn't exist
-        // This requires connecting to the postgres database first
     }
     
     private function ensureTablesExist()
     {
         try {
-            // Check if users table exists
             $this->database->query("SELECT 1 FROM users LIMIT 1");
         } catch (\Exception $e) {
-            // Table doesn't exist, run migrations
-            $this->runMigrations();
+            $msg = strtolower($e->getMessage());
+            if (str_contains($msg, 'no such table') || str_contains($msg, 'does not exist')) {
+                $this->runMigrations();
+            } else {
+                throw $e;
+            }
         }
     }
     

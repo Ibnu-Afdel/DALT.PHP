@@ -69,8 +69,6 @@ class Router
 
             Middleware::resolve($route['middleware']);
 
-            // Inject parameters into $_GET so controllers can access via 
-            // $_GET['id'] or similar without extra abstractions
             foreach ($params as $key => $value) {
                 $_GET[$key] = $value;
             }
@@ -88,7 +86,7 @@ class Router
 
             return require $controllerPath;
         }
-        $this->abort();
+        abort(404);
     }
 
     protected function matchUri(string $pattern, string $actual)
@@ -120,22 +118,4 @@ class Router
         return $this->request?->server('HTTP_REFERER') ?? $_SERVER['HTTP_REFERER'] ?? '/';
     }
 
-    protected function abort($code = 404)
-    {
-        http_response_code($code);
-        
-        $messages = [
-            403 => 'Forbidden',
-            404 => 'Not Found',
-            500 => 'Internal Server Error',
-        ];
-        
-        $message = $messages[$code] ?? 'Error';
-        
-        throw new \Exception("HTTP {$code}: {$message}");
-    }
-
 }
-
-
-
