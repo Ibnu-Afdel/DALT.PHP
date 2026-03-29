@@ -3,6 +3,10 @@
 /.dalt/node_modules
 /vendor
 
+# Lock files (dev only, users generate their own)
+composer.lock
+package-lock.json
+
 # Environment variables
 .env
 

@@ -3,7 +3,10 @@
 /.github export-ignore
 /.gitignore export-ignore
 /.gitattributes export-ignore
-/tests export-ignore
 /.editorconfig export-ignore
 /phpunit.xml export-ignore
 /phpunit.xml.dist export-ignore
+/LICENSE export-ignore
+/SECURITY.md export-ignore
+/composer.lock export-ignore
+/package-lock.json export-ignore

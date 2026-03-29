@@ -83,10 +83,13 @@
             ".github",
             ".gitignore",
             ".gitattributes",
-            "tests",
             ".editorconfig",
             "phpunit.xml",
-            "phpunit.xml.dist"
+            "phpunit.xml.dist",
+            "LICENSE",
+            "SECURITY.md",
+            "composer.lock",
+            "package-lock.json"
         ]
     },
     "minimum-stability": "beta",
