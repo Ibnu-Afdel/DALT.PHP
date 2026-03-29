@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0-beta.1] - 2026-03-29
+
+### Changed
+- Cleaned up distribution structure for end users
+- Removed `CONTRIBUTING.md` and `TESTING_GUIDE.md` from distribution (dev-only files)
+- Removed `composer.lock` and `package-lock.json` from tracking (users generate their own)
+- `LICENSE` and `SECURITY.md` kept in repo but excluded from distribution archives
+- Updated GitHub link to correct URL: `https://github.com/ibnu-Afdel/dALT.PHP`
+
+### Fixed
+- Users now get a clean project structure without unnecessary dev files
+
 ## [0.2.0-beta.7] - 2026-03-19
 
 ### Added
@@ -98,12 +110,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History
 
+- **0.3.0-beta.1** - Clean distribution structure for end users
+- **0.2.0-beta.7** - Platform removal and decoupling
+- **0.1.0-beta.2** - Challenge system improvements
 - **0.1.0-beta.1** - First beta release with complete learning platform
 - **0.1.0-alpha.3** - Last alpha release
 - **0.1.0-alpha.2** - Early alpha
 - **0.1.0-alpha.1** - Initial alpha release
 
-[Unreleased]: https://github.com/Ibnu-Afdel/DALT.PHP/compare/v0.1.0-beta.2...HEAD
+[Unreleased]: https://github.com/Ibnu-Afdel/DALT.PHP/compare/v0.3.0-beta.1...HEAD
+[0.3.0-beta.1]: https://github.com/Ibnu-Afdel/DALT.PHP/compare/v0.2.0-beta.7...v0.3.0-beta.1
+[0.2.0-beta.7]: https://github.com/Ibnu-Afdel/DALT.PHP/compare/v0.1.0-beta.2...v0.2.0-beta.7
 [0.1.0-beta.2]: https://github.com/Ibnu-Afdel/DALT.PHP/compare/v0.1.0-beta.1...v0.1.0-beta.2
 [0.1.0-beta.1]: https://github.com/Ibnu-Afdel/DALT.PHP/releases/tag/v0.1.0-beta.1
 [0.1.0-alpha.3]: https://github.com/Ibnu-Afdel/DALT.PHP/releases/tag/v0.1.0-alpha.3

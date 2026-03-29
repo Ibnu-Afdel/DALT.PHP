@@ -152,7 +152,7 @@
         <div class="grid-links">
             <a href="https://dalt.ibnuafdel.com/docs" class="link-pill" target="_blank">📚 Documentation</a>
             <a href="https://t.me/daltphp" class="link-pill" target="_blank">💬 Telegram Community</a>
-            <a href="https://github.com/ibnuafdel/dalt" class="link-pill" target="_blank">⭐ GitHub</a>
+            <a href="https://github.com/ibnu-Afdel/dALT.PHP" class="link-pill" target="_blank">⭐ GitHub</a>
         </div>
 
         <div class="main-grid">
