@@ -33,14 +33,16 @@
     <!-- Quick Actions -->
     <div class="mb-8 flex flex-wrap gap-4">
       <a href="/learn" class="px-4 py-2 bg-[#161b22] border border-gray-700 text-gray-300 rounded-lg hover:bg-[#1e293b] hover:border-gray-600 transition-colors text-sm font-medium flex items-center gap-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+        </svg>
         Back to Learn
       </a>
-      
+
       <?php if (!empty($relatedChallengeId)): ?>
-      <a href="/learn/challenges/<?= $relatedChallengeId ?>" class="px-4 py-2 bg-[#93DA97]/10 border border-[#93DA97]/20 text-[#93DA97] rounded-lg hover:bg-[#93DA97]/20 transition-colors text-sm font-bold flex items-center gap-2">
-        Test Your Knowledge →
-      </a>
+        <a href="/learn/challenges/<?= $relatedChallengeId ?>" class="px-4 py-2 bg-[#93DA97]/10 border border-[#93DA97]/20 text-[#93DA97] rounded-lg hover:bg-[#93DA97]/20 transition-colors text-sm font-bold flex items-center gap-2">
+          Test Your Knowledge →
+        </a>
       <?php endif; ?>
     </div>
 
@@ -51,6 +53,8 @@
         <lesson-content></lesson-content>
       </div>
     </div>
-    
+
   </div>
 </main>
+
+<?php require base_path('.dalt/resources/views/layouts/footer.php') ?>

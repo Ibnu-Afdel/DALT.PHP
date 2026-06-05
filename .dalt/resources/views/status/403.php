@@ -1,5 +1,5 @@
-<?php require('partials/head.php') ?>
-<?php require('partials/nav.php') ?>
+<?php require base_path('.dalt/resources/views/layouts/head.php') ?>
+<?php require base_path('.dalt/resources/views/layouts/nav.php') ?>
 
 <main class="bg-gradient-to-br from-gray-900 to-gray-800 min-h-screen">
     <div class="max-w-4xl mx-auto px-6 py-20 text-center">
@@ -16,7 +16,7 @@
             <div class="space-y-3">
                 <h2 class="text-2xl lg:text-3xl font-bold text-white">Access Denied</h2>
                 <p class="text-gray-300 max-w-md mx-auto">
-                    You don't have permission to access this resource. 
+                    You don't have permission to access this resource.
                     This area is restricted and requires proper authorization.
                 </p>
             </div>
@@ -55,4 +55,4 @@
     </div>
 </main>
 
-<?php require('partials/footer.php') ?>
+<?php require base_path('.dalt/resources/views/layouts/footer.php') ?>
