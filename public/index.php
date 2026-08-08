@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 use Core\App;
 use Core\Request;
+use Core\Response;
 use Core\Session;
 use Core\ValidationException;
 
@@ -42,19 +45,22 @@ $uri = $request->path();
 $method = $request->method();
 
 try {
-    $router->route($uri, $method, $request);
+    $response = $router->route($uri, $method, $request);
 } catch (ValidationException $exception) {
     Session::flash('errors', $exception->errors);
     Session::flash('old', $exception->old);
     redirect($router->previousUrl());
 } catch (\Core\HttpException $exception) {
     app_log('HttpException ' . $exception->statusCode . ': ' . $exception->getMessage());
-    http_response_code($exception->statusCode);
-    echo "<h1>" . htmlspecialchars((string) $exception->statusCode) . "</h1>";
-    echo "<p>" . htmlspecialchars($exception->getMessage()) . "</p>";
+    $response = Response::html(
+        "<h1>" . htmlspecialchars((string) $exception->statusCode) . "</h1>"
+        . "<p>" . htmlspecialchars($exception->getMessage()) . "</p>",
+        $exception->statusCode,
+    );
 } catch (\Throwable $e) {
     app_log(get_class($e) . ': ' . $e->getMessage());
     throw $e;
 }
 
+$response->send();
 Session::unflash();

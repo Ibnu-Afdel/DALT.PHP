@@ -169,11 +169,11 @@ function csrf_field(): string
 
 function app_log(string $message): void
 {
-    $dir = base_path('storage/logs');
+    $file = $_ENV['APP_LOG_PATH'] ?? base_path('storage/logs/app.log');
+    $dir = dirname($file);
     if (!is_dir($dir)) {
         @mkdir($dir, 0755, true);
     }
-    $file = $dir . '/app.log';
     $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
     @file_put_contents($file, $line, FILE_APPEND);
 }

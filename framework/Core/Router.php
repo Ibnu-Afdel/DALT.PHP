@@ -1,121 +1,216 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Core;
 
-use Core\Middleware\Auth;
-use Core\Middleware\Guest;
-use Core\Middleware\Middleware;
+use Closure;
+use LogicException;
+use ReflectionFunction;
+use ReflectionNamedType;
+use RuntimeException;
 
 class Router
 {
+    /** @var list<Route> */
+    protected array $routes = [];
 
-    protected $routes = [];
     protected ?Request $request = null;
 
-    public function add($method, $uri, $controller)
+    public function add(string $method, string $uri, Closure|string $handler): self
     {
-        $this->routes[] = [
-            'uri' => $uri,
-            'controller' => $controller,
-            'method' => $method,
-            'middleware' => null,
-        ];
-        return $this;
-    }
-    public function get($uri, $controller)
-    {
-        return $this->add('GET', $uri, $controller);
-    }
+        $this->routes[] = new Route(strtoupper($method), $uri, $handler);
 
-    public function post($uri, $controller)
-    {
-        return $this->add('POST', $uri, $controller);
-    }
-
-    public function patch($uri, $controller)
-    {
-        return $this->add('PATCH', $uri, $controller);
-    }
-
-    public function put($uri, $controller)
-    {
-        return $this->add('PUT', $uri, $controller);
-    }
-
-    public function delete($uri, $controller)
-    {
-        return $this->add('DELETE', $uri, $controller);
-    }
-
-    public function only($key)
-    {
-        $this->routes[array_key_last($this->routes)]['middleware'] = $key;
         return $this;
     }
 
-    public function route($uri, $method, ?Request $request = null)
+    public function get(string $uri, Closure|string $handler): self
+    {
+        return $this->add('GET', $uri, $handler);
+    }
+
+    public function post(string $uri, Closure|string $handler): self
+    {
+        return $this->add('POST', $uri, $handler);
+    }
+
+    public function patch(string $uri, Closure|string $handler): self
+    {
+        return $this->add('PATCH', $uri, $handler);
+    }
+
+    public function put(string $uri, Closure|string $handler): self
+    {
+        return $this->add('PUT', $uri, $handler);
+    }
+
+    public function delete(string $uri, Closure|string $handler): self
+    {
+        return $this->add('DELETE', $uri, $handler);
+    }
+
+    /** @param string|list<string> $keys */
+    public function only(string|array $keys): self
+    {
+        $route = $this->routes[array_key_last($this->routes)] ?? null;
+
+        if ($route === null) {
+            throw new LogicException('Register a route before attaching middleware.');
+        }
+
+        $route->setMiddleware($keys);
+
+        return $this;
+    }
+
+    public function route(string $uri, string $method, ?Request $request = null): Response
     {
         $this->request = $request;
 
         foreach ($this->routes as $route) {
-            if (strtoupper($method) !== $route['method']) {
+            if (strtoupper($method) !== $route->method()) {
                 continue;
             }
 
-            $params = $this->matchUri($route['uri'], $uri);
-            if ($params === false) {
+            $parameters = $this->matchUri($route->uri(), $uri);
+            if ($parameters === false) {
                 continue;
             }
 
-            Middleware::resolve($route['middleware']);
+            $request?->setRouteParameters($parameters);
 
-            foreach ($params as $key => $value) {
+            // Existing controller lessons read route parameters from $_GET.
+            // Keep that bridge while Request::route() becomes the real API.
+            foreach ($parameters as $key => $value) {
                 $_GET[$key] = $value;
             }
 
-            $controllerPath = base_path('app/Http/controllers/' . $route['controller']);
-            
-            // Fallback to .dalt controllers only if .dalt exists and app controller not found
-            if (!file_exists($controllerPath) && is_dir(base_path('.dalt'))) {
-                $controllerPath = base_path('.dalt/Http/controllers/' . $route['controller']);
-            }
-            
-            if (!file_exists($controllerPath)) {
-                throw new \RuntimeException("Controller not found: {$route['controller']}");
-            }
+            Middleware\Middleware::resolve($route->middleware());
 
-            return require $controllerPath;
+            return Response::fromHandler(
+                fn () => $this->dispatch($route, $parameters, $request),
+            );
         }
+
         abort(404);
     }
 
-    protected function matchUri(string $pattern, string $actual)
+    /** @param array<string, string> $parameters */
+    private function dispatch(Route $route, array $parameters, ?Request $request): mixed
     {
-        // Exact match fast-path
+        $handler = $route->handler();
+
+        if ($handler instanceof Closure) {
+            return $this->dispatchClosure($handler, $parameters, $request);
+        }
+
+        return require $this->resolveControllerPath($handler);
+    }
+
+    /** @param array<string, string> $parameters */
+    private function dispatchClosure(Closure $handler, array $parameters, ?Request $request): mixed
+    {
+        $arguments = [];
+
+        foreach ((new ReflectionFunction($handler))->getParameters() as $parameter) {
+            $type = $parameter->getType();
+
+            if ($type instanceof ReflectionNamedType && $type->getName() === Request::class) {
+                if ($request === null && !$type->allowsNull()) {
+                    throw new RuntimeException(
+                        "Cannot inject Request into route closure parameter \${$parameter->getName()} without a captured request.",
+                    );
+                }
+
+                $arguments[] = $request;
+                continue;
+            }
+
+            if (array_key_exists($parameter->getName(), $parameters)) {
+                $arguments[] = $parameters[$parameter->getName()];
+                continue;
+            }
+
+            if ($parameter->isDefaultValueAvailable()) {
+                $arguments[] = $parameter->getDefaultValue();
+                continue;
+            }
+
+            if ($parameter->allowsNull()) {
+                $arguments[] = null;
+                continue;
+            }
+
+            throw new RuntimeException(
+                "Cannot resolve route closure parameter \${$parameter->getName()}.",
+            );
+        }
+
+        return $handler(...$arguments);
+    }
+
+    private function resolveControllerPath(string $controller): string
+    {
+        $roots = [base_path('app/Http/controllers')];
+
+        if (is_dir(base_path('.dalt'))) {
+            $roots[] = base_path('.dalt/Http/controllers');
+        }
+
+        foreach ($roots as $root) {
+            $rootPath = realpath($root);
+            $controllerPath = realpath($root . '/' . $controller);
+
+            if ($rootPath === false || $controllerPath === false || !is_file($controllerPath)) {
+                continue;
+            }
+
+            if (str_starts_with($controllerPath, $rootPath . DIRECTORY_SEPARATOR)) {
+                return $controllerPath;
+            }
+        }
+
+        throw new RuntimeException("Controller not found: {$controller}");
+    }
+
+    /** @return array<string, string>|false */
+    protected function matchUri(string $pattern, string $actual): array|false
+    {
         if ($pattern === $actual) {
             return [];
         }
 
-        // Convert /path/{id}/edit to regex ^/path/([^/]+)/edit$
-        $paramNames = [];
-        $regex = preg_replace_callback('/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/', function ($matches) use (&$paramNames) {
-            $paramNames[] = $matches[1];
-            return '([^/]+)';
-        }, $pattern);
+        preg_match_all(
+            '/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/',
+            $pattern,
+            $placeholders,
+            PREG_OFFSET_CAPTURE,
+        );
 
-        $regex = '#^' . $regex . '$#';
+        $parameterNames = [];
+        $regex = '';
+        $offset = 0;
 
-        if (preg_match($regex, $actual, $matches)) {
-            array_shift($matches); // remove full match
-            return array_combine($paramNames, $matches) ?: [];
+        foreach ($placeholders[0] as $index => [$placeholder, $position]) {
+            $regex .= preg_quote(substr($pattern, $offset, $position - $offset), '#');
+            $regex .= '([^/]+)';
+            $parameterNames[] = $placeholders[1][$index][0];
+            $offset = $position + strlen($placeholder);
         }
 
-        return false;
+        $regex .= preg_quote(substr($pattern, $offset), '#');
+
+        if (preg_match('#^' . $regex . '$#', $actual, $matches) !== 1) {
+            return false;
+        }
+
+        array_shift($matches);
+
+        return array_combine($parameterNames, $matches) ?: [];
     }
 
-    public function previousUrl()
+    public function previousUrl(): string
     {
         return $this->request?->server('HTTP_REFERER') ?? $_SERVER['HTTP_REFERER'] ?? '/';
     }
-
 }
