@@ -3,9 +3,28 @@
 declare(strict_types=1);
 
 use Core\HttpException;
+use Core\Middleware\MiddlewareInterface;
 use Core\Request;
 use Core\Response;
 use Core\Router;
+
+final class RouterMiddlewareTrace
+{
+    /** @var list<string> */
+    public static array $events = [];
+}
+
+final class RouterResponseMiddleware implements MiddlewareInterface
+{
+    public function handle(Request $request, \Closure $next): Response
+    {
+        RouterMiddlewareTrace::$events[] = 'middleware:before';
+        $response = $next($request);
+        RouterMiddlewareTrace::$events[] = 'middleware:after';
+
+        return $response->withHeader('X-Route-Middleware', 'visited');
+    }
+}
 
 test('it dispatches closure handlers for every supported http verb', function (string $method) {
     $router = new Router();
@@ -125,7 +144,56 @@ test('it resolves middleware attached to the most recently registered route', fu
     $router->get('/guarded', fn () => 'guarded')->only('missing-alias');
 
     $router->route('/guarded', 'GET');
-})->throws(Exception::class, "No Matching Middleware found for key 'missing-alias'");
+})->throws(RuntimeException::class, "No middleware found for 'missing-alias'.");
+
+test('route middleware wraps closure dispatch and receives its response', function () {
+    RouterMiddlewareTrace::$events = [];
+    $router = new Router();
+    $router->get('/guarded', function (Request $request): string {
+        RouterMiddlewareTrace::$events[] = 'handler';
+
+        return 'guarded';
+    })->only(RouterResponseMiddleware::class);
+
+    $response = $router->route('/guarded', 'GET');
+
+    expect(RouterMiddlewareTrace::$events)->toBe([
+        'middleware:before',
+        'handler',
+        'middleware:after',
+    ])
+        ->and($response->content())->toBe('guarded')
+        ->and($response->headers()['X-Route-Middleware'])->toBe('visited');
+});
+
+test('route middleware wraps legacy controller output', function () {
+    RouterMiddlewareTrace::$events = [];
+    $router = new Router();
+    $router->get('/', 'welcome.php')->only(RouterResponseMiddleware::class);
+
+    $response = $router->route('/', 'GET');
+
+    expect(RouterMiddlewareTrace::$events)->toBe([
+        'middleware:before',
+        'middleware:after',
+    ])->and($response->content())->toContain('<title>DALT.PHP</title>')
+        ->and($response->headers()['X-Route-Middleware'])->toBe('visited');
+});
+
+test('router always provides a request to typed closure handlers', function () {
+    $router = new Router();
+    $router->post('/capture', fn (Request $request) => [
+        'method' => $request->method(),
+        'path' => $request->path(),
+    ]);
+
+    $response = $router->route('/capture', 'POST');
+
+    expect(json_decode($response->content(), true, flags: JSON_THROW_ON_ERROR))->toBe([
+        'method' => 'POST',
+        'path' => '/capture',
+    ]);
+});
 
 test('it fails clearly when a required closure argument cannot be resolved', function () {
     $router = new Router();

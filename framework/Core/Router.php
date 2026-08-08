@@ -65,6 +65,15 @@ class Router
 
     public function route(string $uri, string $method, ?Request $request = null): Response
     {
+        $request ??= new Request(
+            query: $_GET,
+            input: $_POST,
+            server: [
+                ...$_SERVER,
+                'REQUEST_METHOD' => strtoupper($method),
+                'REQUEST_URI' => $uri,
+            ],
+        );
         $this->request = $request;
 
         foreach ($this->routes as $route) {
@@ -77,7 +86,7 @@ class Router
                 continue;
             }
 
-            $request?->setRouteParameters($parameters);
+            $request->setRouteParameters($parameters);
 
             // Existing controller lessons read route parameters from $_GET.
             // Keep that bridge while Request::route() becomes the real API.
@@ -85,10 +94,12 @@ class Router
                 $_GET[$key] = $value;
             }
 
-            Middleware\Middleware::resolve($route->middleware());
-
-            return Response::fromHandler(
-                fn () => $this->dispatch($route, $parameters, $request),
+            return (new Middleware\Middleware())->run(
+                $route->middleware(),
+                $request,
+                fn (Request $request): Response => Response::fromHandler(
+                    fn () => $this->dispatch($route, $parameters, $request),
+                ),
             );
         }
 
@@ -96,7 +107,7 @@ class Router
     }
 
     /** @param array<string, string> $parameters */
-    private function dispatch(Route $route, array $parameters, ?Request $request): mixed
+    private function dispatch(Route $route, array $parameters, Request $request): mixed
     {
         $handler = $route->handler();
 
@@ -108,7 +119,7 @@ class Router
     }
 
     /** @param array<string, string> $parameters */
-    private function dispatchClosure(Closure $handler, array $parameters, ?Request $request): mixed
+    private function dispatchClosure(Closure $handler, array $parameters, Request $request): mixed
     {
         $arguments = [];
 
@@ -116,12 +127,6 @@ class Router
             $type = $parameter->getType();
 
             if ($type instanceof ReflectionNamedType && $type->getName() === Request::class) {
-                if ($request === null && !$type->allowsNull()) {
-                    throw new RuntimeException(
-                        "Cannot inject Request into route closure parameter \${$parameter->getName()} without a captured request.",
-                    );
-                }
-
                 $arguments[] = $request;
                 continue;
             }

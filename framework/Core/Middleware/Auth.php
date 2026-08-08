@@ -1,12 +1,22 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Core\Middleware;
 
-class Auth
+use Closure;
+use Core\Request;
+use Core\Response;
+
+final class Auth implements MiddlewareInterface
 {
-    public function handle(): void
+    /** @param Closure(Request): Response $next */
+    public function handle(Request $request, Closure $next): Response
     {
         if (!($_SESSION['user'] ?? false)) {
-            redirect('/login');
+            return Response::redirect('/login');
         }
+
+        return $next($request);
     }
 }

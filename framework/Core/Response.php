@@ -49,6 +49,16 @@ final readonly class Response
         );
     }
 
+    /** @param array<string, string> $headers */
+    public static function text(string $content, int $status = 200, array $headers = []): self
+    {
+        return new self(
+            $content,
+            $status,
+            ['Content-Type' => 'text/plain; charset=UTF-8', ...$headers],
+        );
+    }
+
     /**
      * @param array<array-key, mixed> $data
      * @param array<string, string> $headers
@@ -125,6 +135,16 @@ final readonly class Response
     public function headers(): array
     {
         return $this->headers;
+    }
+
+    public function withContent(string $content): self
+    {
+        return new self($content, $this->status, $this->headers);
+    }
+
+    public function withHeader(string $name, string $value): self
+    {
+        return new self($this->content, $this->status, [...$this->headers, $name => $value]);
     }
 
     public function send(): void
