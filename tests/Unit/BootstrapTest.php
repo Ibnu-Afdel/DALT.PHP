@@ -15,4 +15,9 @@ test('framework bootstrap installs configuration and keeps database lazy', funct
         ->and(config('app.name'))->toBe('DALT.PHP Framework')
         ->and($container->has(Database::class))->toBeTrue()
         ->and($container->resolved(Database::class))->toBeFalse();
+
+    $database = $container->resolve(Database::class);
+
+    expect($database)->toBe($container->resolve(Database::class))
+        ->and($database->query("SELECT name FROM sqlite_master WHERE type = 'table'")->get())->toBe([]);
 });
