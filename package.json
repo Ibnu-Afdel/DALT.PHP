@@ -1,6 +1,5 @@
 {
   "name": "dalt-php",
-  "version": "1.0.0",
   "description": "DALT.PHP - Interactive Backend Debugging Playground",
   "private": true,
   "scripts": {

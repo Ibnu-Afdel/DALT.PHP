@@ -1,12 +1,10 @@
-# Exclude files from composer archive
+# Keep Git-generated source archives consistent with Composer distributions.
 /.git export-ignore
 /.github export-ignore
-/.gitignore export-ignore
-/.gitattributes export-ignore
+/.agents export-ignore
+/.codex export-ignore
+/docs export-ignore
+/tests export-ignore
 /.editorconfig export-ignore
 /phpunit.xml export-ignore
 /phpunit.xml.dist export-ignore
-/LICENSE export-ignore
-/SECURITY.md export-ignore
-/composer.lock export-ignore
-/package-lock.json export-ignore

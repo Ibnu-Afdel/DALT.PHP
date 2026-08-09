@@ -10,7 +10,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 export default defineConfig({
   root: __dirname,
   base: '/',
-  publicDir: 'public',
+  publicDir: false,
   server: {
     strictPort: true,
     port: 5173,
@@ -45,4 +45,4 @@ export default defineConfig({
       input: resolve(__dirname, '.dalt/resources/js/app.js')
     }
   }
-}) 
+})

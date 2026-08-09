@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0-beta.3] - 2026-05-11
+
+### Added
+- Prebuilt Vue and Tailwind assets so a new PHP project runs without Node.js
+
+### Changed
+- Updated the frontend toolchain and dependency constraints
+
+## [0.3.0-beta.2] - 2026-05-11
+
+### Added
+- Docker, PostgreSQL, database-layer, and observability learning modules and challenges
+
 ## [0.3.0-beta.1] - 2026-03-29
 
 ### Changed
@@ -108,17 +121,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## Version History
-
-- **0.3.0-beta.1** - Clean distribution structure for end users
-- **0.2.0-beta.7** - Platform removal and decoupling
-- **0.1.0-beta.2** - Challenge system improvements
-- **0.1.0-beta.1** - First beta release with complete learning platform
-- **0.1.0-alpha.3** - Last alpha release
-- **0.1.0-alpha.2** - Early alpha
-- **0.1.0-alpha.1** - Initial alpha release
-
-[Unreleased]: https://github.com/Ibnu-Afdel/DALT.PHP/compare/v0.3.0-beta.1...HEAD
+[Unreleased]: https://github.com/Ibnu-Afdel/DALT.PHP/compare/v0.3.0-beta.3...HEAD
+[0.3.0-beta.3]: https://github.com/Ibnu-Afdel/DALT.PHP/compare/v0.3.0-beta.2...v0.3.0-beta.3
+[0.3.0-beta.2]: https://github.com/Ibnu-Afdel/DALT.PHP/compare/v0.3.0-beta.1...v0.3.0-beta.2
 [0.3.0-beta.1]: https://github.com/Ibnu-Afdel/DALT.PHP/compare/v0.2.0-beta.7...v0.3.0-beta.1
 [0.2.0-beta.7]: https://github.com/Ibnu-Afdel/DALT.PHP/compare/v0.1.0-beta.2...v0.2.0-beta.7
 [0.1.0-beta.2]: https://github.com/Ibnu-Afdel/DALT.PHP/compare/v0.1.0-beta.1...v0.1.0-beta.2

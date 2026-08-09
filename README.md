@@ -29,15 +29,17 @@ The framework includes optional lessons and debugging challenges to help you get
 composer create-project ibnuafdel/daltphp my-project --stability=beta --remove-vcs
 cd my-project
 
-# Install Node dependencies
-npm install
-
-# Start development
-php artisan serve    # Backend: http://localhost:8000
-npm run dev          # Frontend: http://localhost:5173
+# Start the application
+php artisan serve    # http://localhost:8000
 ```
 
 Visit `http://localhost:8000` to see your app. Visit `http://localhost:8000/learn` for optional lessons and challenges.
+
+Production-ready frontend assets are included, so Node.js is not required to start a new project. If you change the learning-platform CSS, JavaScript, or Vue components, run `npm ci` and `npm run dev`; use `npm run build` before distributing those changes.
+
+### Deployment boundary
+
+DALT is an educational framework, not a production-hardened runtime. If you adapt a project for deployment, serve only the `public/` directory, install PHP dependencies with `composer install --no-dev --optimize-autoloader`, set `APP_ENV=production` and `APP_DEBUG=false`, configure HTTPS and secure session cookies, and review [SECURITY.md](SECURITY.md). The built-in `php artisan serve` command is for local development only.
 
 ---
 
@@ -68,7 +70,7 @@ After learning with PHP, these concepts transfer to any backend language. You'll
 Full documentation at: **[daltphp.com/docs](https://dalt.ibnuafdel.com/docs)**
 
 - [What is DALT?](https://dalt.ibnuafdel.com/docs/introduction/what-is-dalt) - Understanding the learning framework
-- [Why DALT?](https://dalt.ibnuafdel.com/)docs/introduction/why-dalt) - When DALT is right for you
+- [Why DALT?](https://dalt.ibnuafdel.com/docs/introduction/why-dalt) - When DALT is right for you
 - [Why PHP?](https://dalt.ibnuafdel.com/docs/introduction/why-php) - Why PHP is ideal for learning
 - [Quick Start](https://dalt.ibnuafdel.com/docs/introduction/quick-start) - Get started in 5 minutes
 - [Building a Blog](https://dalt.ibnuafdel.com/docs/guides/building-a-blog) - Your first project
@@ -77,7 +79,7 @@ Full documentation at: **[daltphp.com/docs](https://dalt.ibnuafdel.com/docs)**
 
 ## 🤝 Contributing
 
-DALT is open source and welcomes contributions. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+DALT is open source and welcomes contributions through the [GitHub repository](https://github.com/Ibnu-Afdel/DALT.PHP).
 
 Join the community: [Telegram](https://t.me/daltphp)
 
