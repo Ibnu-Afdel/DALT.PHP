@@ -1,6 +1,8 @@
 {
   "title": "Authentication",
   "description": "Implement secure user login and registration",
+  "order": 4,
   "icon": "auth",
-  "color": "red"
+  "color": "red",
+  "prerequisites": ["03-middleware"]
 }

@@ -1,7 +1,9 @@
 {
   "title": "Missing Multi-Stage Build",
+  "order": 13,
   "description": "Convert the single-stage Dockerfile to a multi-stage build and add a HEALTHCHECK.",
   "difficulty": "Medium",
   "bugs": 3,
-  "lesson": "12-docker-intermediate"
+  "lesson": "12-docker-intermediate",
+  "color": "orange"
 }

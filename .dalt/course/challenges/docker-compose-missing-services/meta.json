@@ -1,5 +1,6 @@
 {
   "title": "Missing Compose Services",
+  "order": 8,
   "difficulty": "Easy",
   "bugs": 2,
   "lesson": "08-docker-compose",

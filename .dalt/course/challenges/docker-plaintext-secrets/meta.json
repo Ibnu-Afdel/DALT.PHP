@@ -1,7 +1,9 @@
 {
   "title": "Plaintext Secrets",
+  "order": 17,
   "description": "The Postgres password is hardcoded in the compose file — move it to a Docker secret.",
   "difficulty": "Medium",
   "bugs": 2,
-  "lesson": "14-docker-production"
+  "lesson": "14-docker-production",
+  "color": "red"
 }

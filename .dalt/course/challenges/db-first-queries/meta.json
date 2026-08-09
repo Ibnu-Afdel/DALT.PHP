@@ -1,5 +1,6 @@
 {
   "title": "Broken First Queries",
+  "order": 9,
   "difficulty": "Easy",
   "bugs": 3,
   "lesson": "09-postgres-first-contact",

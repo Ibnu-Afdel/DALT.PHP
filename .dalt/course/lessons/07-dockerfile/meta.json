@@ -1,6 +1,8 @@
 {
   "title": "Writing Dockerfiles",
   "description": "Write a production-style Dockerfile for DALT.PHP step by step",
-  "icon": "routing",
-  "color": "orange"
+  "order": 7,
+  "icon": "docker",
+  "color": "orange",
+  "prerequisites": ["06-docker-basics"]
 }

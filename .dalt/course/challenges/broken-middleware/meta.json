@@ -1,5 +1,6 @@
 {
   "title": "Broken Middleware",
+  "order": 3,
   "difficulty": "Medium",
   "bugs": 2,
   "lesson": "03-middleware",

@@ -1,7 +1,9 @@
 {
   "title": "Missing Pagination",
+  "order": 12,
   "description": "The users list endpoint dumps every row — add LIMIT and OFFSET to paginate it.",
   "difficulty": "Easy",
   "bugs": 1,
-  "lesson": "11-dalt-db-layer"
+  "lesson": "11-dalt-db-layer",
+  "color": "blue"
 }

@@ -1,6 +1,8 @@
 {
   "title": "Docker Production Patterns",
   "description": "Moving passwords out of compose files with Docker secrets, using restart policies, setting resource limits, and configuring PgBouncer.",
+  "order": 14,
   "icon": "shield",
-  "color": "red"
+  "color": "red",
+  "prerequisites": ["12-docker-intermediate"]
 }

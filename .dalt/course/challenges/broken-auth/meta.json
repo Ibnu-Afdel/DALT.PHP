@@ -1,5 +1,6 @@
 {
   "title": "Broken Authentication",
+  "order": 4,
   "difficulty": "Easy",
   "bugs": 1,
   "lesson": "04-authentication",

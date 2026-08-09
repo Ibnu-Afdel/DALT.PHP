@@ -1,6 +1,8 @@
 {
   "title": "Docker Intermediate",
   "description": "Multi-stage builds, health checks, service-healthy depends_on, volume backups, and .dockerignore — shrink your image and make your stack reliable.",
+  "order": 12,
   "icon": "docker",
-  "color": "orange"
+  "color": "orange",
+  "prerequisites": ["08-docker-compose"]
 }

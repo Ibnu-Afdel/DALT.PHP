@@ -1,6 +1,8 @@
 {
   "title": "PostgreSQL First Contact",
   "description": "Connect to a real Postgres instance, write raw SQL, and understand DALT's database layer",
+  "order": 9,
   "icon": "database",
-  "color": "green"
+  "color": "green",
+  "prerequisites": ["08-docker-compose"]
 }

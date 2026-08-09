@@ -7,7 +7,7 @@ Each lesson explains a specific concept in the DALT.PHP framework and prepares l
 ## Structure
 
 Each lesson is a self-contained directory with:
-- `meta.json` - **Required.** Metadata (title, description, icon, color)
+- `meta.json` - **Required.** Validated metadata (title, description, order, icon, color, prerequisites)
 - `README.md` - Lesson content in Markdown
 
 ### Adding a New Lesson
@@ -18,21 +18,22 @@ Each lesson is a self-contained directory with:
    {
      "title": "Validation",
      "description": "Learn how to validate user input",
+     "order": 18,
      "icon": "middleware",
-     "color": "blue"
+     "color": "blue",
+     "prerequisites": ["03-middleware"]
    }
    ```
-   Icon keys: `lifecycle`, `routing`, `middleware`, `auth`, `database`, `session`
+   Icon keys: `lifecycle`, `routing`, `middleware`, `auth`, `database`, `session`, `docker`, `shield`, `eye`
 3. Add `README.md`. The platform auto-discovers it.
+
+`order` must be a unique positive integer. Every prerequisite must name an existing lesson with an earlier order. Invalid metadata stops catalog loading with an error that identifies the item and field; it is never silently skipped.
 
 ## Lesson Flow
 
-Lessons should be completed in order:
-1. **lesson-01-request-lifecycle** - How HTTP requests flow through the framework
-2. **lesson-02-routing** - How URLs map to controllers
-3. **lesson-03-middleware** - How middleware protects routes
-4. **lesson-04-authentication** - How login/logout works
-5. **lesson-05-database** - How database queries execute
+Catalog display and previous/next navigation follow explicit `order`, not directory enumeration. Learning dependencies follow each lesson's `prerequisites`; this supports the framework, Docker, and PostgreSQL paths without pretending they form one strictly linear track.
+
+The current catalog contains 17 lessons. `meta.json` is the authoritative sequence and dependency model, so this contributor guide does not duplicate a list that can become stale.
 
 ## Learning Approach
 
@@ -42,4 +43,4 @@ Each lesson:
 3. Demonstrates with examples
 4. Prepares you for debugging challenges
 
-After completing a lesson, you'll be ready to tackle the corresponding challenge.
+After completing a lesson, use the challenges whose `lesson` field links to it. A lesson may have zero, one, or several related challenges.

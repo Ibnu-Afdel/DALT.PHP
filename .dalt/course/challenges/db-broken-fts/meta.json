@@ -1,7 +1,9 @@
 {
   "title": "Broken Full-Text Search",
+  "order": 14,
   "description": "The search endpoint uses ILIKE — replace it with a tsvector full-text search.",
   "difficulty": "Medium",
   "bugs": 3,
-  "lesson": "13-postgres-advanced"
+  "lesson": "13-postgres-advanced",
+  "color": "purple"
 }

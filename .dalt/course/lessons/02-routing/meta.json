@@ -1,6 +1,8 @@
 {
   "title": "Routing",
   "description": "Understand how URLs map to controllers",
+  "order": 2,
   "icon": "routing",
-  "color": "green"
+  "color": "green",
+  "prerequisites": ["01-request-lifecycle"]
 }

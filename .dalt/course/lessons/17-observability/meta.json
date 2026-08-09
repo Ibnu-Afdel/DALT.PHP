@@ -1,6 +1,8 @@
 {
   "title": "Observability",
   "description": "If you can't see it, you can't fix it. Learn how to use pg_stat_statements to find slow queries and add indexes where they are needed.",
+  "order": 17,
   "icon": "eye",
-  "color": "orange"
+  "color": "orange",
+  "prerequisites": ["15-postgres-reliability"]
 }

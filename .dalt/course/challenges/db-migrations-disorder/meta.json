@@ -1,7 +1,9 @@
 {
   "title": "Migration Disorder",
+  "order": 18,
   "description": "The posts migration runs before the users migration, and uses SQLite syntax. Fix both.",
   "difficulty": "Medium",
   "bugs": 2,
-  "lesson": "15-postgres-reliability"
+  "lesson": "15-postgres-reliability",
+  "color": "green"
 }

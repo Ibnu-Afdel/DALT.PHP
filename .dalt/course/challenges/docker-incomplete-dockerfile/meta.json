@@ -1,5 +1,6 @@
 {
   "title": "Incomplete Dockerfile",
+  "order": 6,
   "difficulty": "Easy",
   "bugs": 3,
   "lesson": "07-dockerfile",

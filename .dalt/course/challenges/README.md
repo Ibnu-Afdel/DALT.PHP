@@ -7,7 +7,7 @@ Each challenge presents a bug in the DALT.PHP framework that you must identify a
 ## Structure
 
 Each challenge is a self-contained directory with:
-- `meta.json` - **Required.** Metadata (title, difficulty, bugs, lesson link)
+- `meta.json` - **Required.** Validated metadata (title, description, order, difficulty, bugs, lesson, color)
 - `README.md` - Bug description, learning objective, and hints
 - `tests.php` - Test specification for verification
 - Broken code files (framework/, routes/, Http/controllers/)
@@ -19,32 +19,21 @@ Each challenge is a self-contained directory with:
    ```json
    {
      "title": "Broken Something",
+     "description": "Short description",
+     "order": 21,
      "difficulty": "Easy",
      "bugs": 1,
      "lesson": "02-routing",
-     "description": "Short description"
+     "color": "green"
    }
    ```
 3. Add `README.md`, `tests.php`, and broken code. The platform auto-discovers it.
 
+`order` must be a unique positive integer, `difficulty` is `Easy`, `Medium`, or `Hard`, `bugs` is positive, and `lesson` must name a discovered lesson. The challenge inherits that lesson's icon. Invalid metadata stops catalog loading with an actionable error instead of hiding the challenge.
+
 ## Challenge Types
 
-Challenges are organized by difficulty and concept:
-
-### Routing Challenges
-- **broken-routing** - Routes not matching correctly
-
-### Authentication Challenges
-- **broken-auth** - Login system not working
-
-### Middleware Challenges
-- **broken-middleware** - Middleware not executing properly
-
-### Database Challenges
-- **broken-database** - Query execution issues
-
-### Session Challenges
-- **broken-session** - Session data not persisting
+The current catalog contains 20 challenges across framework, Docker, and PostgreSQL concepts. Catalog display and numbering follow explicit `order`; lesson pages find related challenges through the validated `lesson` relationship. The metadata files are authoritative, so this guide does not duplicate an inventory that can become stale.
 
 ## How to Approach Challenges
 

@@ -1,5 +1,6 @@
 {
   "title": "Broken Routing",
+  "order": 2,
   "difficulty": "Easy",
   "bugs": 2,
   "lesson": "02-routing",

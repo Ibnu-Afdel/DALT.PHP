@@ -49,6 +49,23 @@ test('the real front controller serves guided learning when the platform is inst
         ->and($response->body)->toContain('Interactive Learning');
 });
 
+test('the real front controller serves catalog lessons and their validated challenge relationship', function () {
+    $client = new ApplicationTestClient();
+    $lesson = $client->request('GET', '/learn/lessons/11-dalt-db-layer');
+    $challenge = $client->request('GET', '/learn/challenges/db-missing-pagination');
+
+    expect($lesson->exitCode)->toBe(0)
+        ->and($lesson->statusCode)->toBe(200)
+        ->and($lesson->error)->toBeNull()
+        ->and($lesson->body)->toContain('DALT Database Layer')
+        ->and($lesson->body)->toContain('/learn/challenges/db-missing-pagination')
+        ->and($challenge->exitCode)->toBe(0)
+        ->and($challenge->statusCode)->toBe(200)
+        ->and($challenge->error)->toBeNull()
+        ->and($challenge->body)->toContain('Missing Pagination')
+        ->and($challenge->body)->toContain('/learn/lessons/11-dalt-db-layer');
+});
+
 test('the packaged application boots and serves app routes without the platform directory', function () {
     $root = sys_get_temp_dir() . '/dalt-p01-app-' . bin2hex(random_bytes(6));
 

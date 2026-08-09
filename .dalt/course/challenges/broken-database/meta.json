@@ -1,5 +1,6 @@
 {
   "title": "Broken Database",
+  "order": 5,
   "difficulty": "Medium",
   "bugs": 2,
   "lesson": "05-database",

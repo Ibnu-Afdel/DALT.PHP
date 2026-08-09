@@ -1,6 +1,8 @@
 {
   "title": "Advanced PostgreSQL",
   "description": "Row-Level Security (RLS) for multi-tenancy, range partitioning for massive tables, and pg_cron for scheduled tasks inside the database.",
+  "order": 16,
   "icon": "database",
-  "color": "purple"
+  "color": "purple",
+  "prerequisites": ["13-postgres-advanced", "15-postgres-reliability"]
 }

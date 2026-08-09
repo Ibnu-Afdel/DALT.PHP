@@ -1,7 +1,9 @@
 {
   "title": "Missing RLS Policy",
+  "order": 19,
   "description": "A multi-tenant controller relies on PHP to filter data. Add Row-Level Security to enforce isolation at the database level.",
   "difficulty": "Hard",
   "bugs": 3,
-  "lesson": "16-postgres-advanced-patterns"
+  "lesson": "16-postgres-advanced-patterns",
+  "color": "purple"
 }

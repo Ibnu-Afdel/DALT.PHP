@@ -1,6 +1,8 @@
 {
   "title": "Middleware",
   "description": "Master request filtering and authentication",
+  "order": 3,
   "icon": "middleware",
-  "color": "purple"
+  "color": "purple",
+  "prerequisites": ["02-routing"]
 }

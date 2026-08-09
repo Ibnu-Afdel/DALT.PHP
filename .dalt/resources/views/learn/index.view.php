@@ -135,8 +135,8 @@
         <div>
           <h3 class="text-xl font-bold text-gray-100 mb-2">New to DALT?</h3>
           <p class="text-gray-400 mb-5 max-w-3xl">
-            Start with Lesson 1 to understand the request lifecycle, then work through challenges in order.
-            Each challenge has hints and automatic verification to guide you directly in your terminal and browser.
+            Start with Lesson 1 to understand the request lifecycle, then follow each lesson's prerequisites and linked challenges.
+            Each challenge has hints and automatic verification to guide you in your terminal and browser.
           </p>
           <div class="flex flex-wrap gap-3">
             <a href="/learn/lessons/01-request-lifecycle" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-bold shadow-sm">

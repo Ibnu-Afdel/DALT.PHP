@@ -1,7 +1,9 @@
 {
   "title": "Missing Health Check",
+  "order": 16,
   "description": "The app container boots before Postgres is ready. Add a healthcheck so depends_on can use condition: service_healthy.",
   "difficulty": "Easy",
   "bugs": 2,
-  "lesson": "14-docker-production"
+  "lesson": "14-docker-production",
+  "color": "red"
 }

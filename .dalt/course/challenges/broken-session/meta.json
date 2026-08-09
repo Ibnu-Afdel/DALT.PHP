@@ -1,5 +1,6 @@
 {
   "title": "Broken Session",
+  "order": 1,
   "difficulty": "Medium",
   "bugs": 2,
   "lesson": "01-request-lifecycle",

@@ -1,7 +1,9 @@
 {
   "title": "Broken JOIN",
+  "order": 10,
   "description": "The posts endpoint uses the wrong JOIN type and wrong ON clause — fix both.",
   "difficulty": "Medium",
   "bugs": 2,
-  "lesson": "10-postgres-intermediate"
+  "lesson": "10-postgres-intermediate",
+  "color": "green"
 }
