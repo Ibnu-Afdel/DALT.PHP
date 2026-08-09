@@ -30,6 +30,9 @@ Thumbs.db
 
 # Challenge runtime state (from php artisan challenge:start)
 .dalt/active_challenge.txt
+.dalt/challenge-backup/
+.dalt/challenge-state.json
+.dalt/challenge.lock
 .dalt/progress.json
 .dalt/baseline/
 

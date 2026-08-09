@@ -507,8 +507,7 @@ SQL;
             exit(1);
         }
         require_once base_path('.dalt/Core/ChallengeManager.php');
-        $challengeDir = base_path('.dalt/course/challenges/' . $challengeName);
-        if (!is_dir($challengeDir)) {
+        if (Core\CourseLoader::getChallenge($challengeName) === null) {
             echo "Error: Challenge '{$challengeName}' not found.\n";
             echo "Run php artisan challenge:list to see available challenges.\n";
             exit(1);
@@ -525,8 +524,14 @@ SQL;
                 exit(0);
             }
         }
-        if (!Core\ChallengeManager::start($challengeName)) {
-            echo "Error: Failed to start challenge.\n";
+        try {
+            $started = Core\ChallengeManager::start($challengeName);
+        } catch (Core\ChallengeStateException $exception) {
+            fwrite(STDERR, "Error: {$exception->getMessage()}\n");
+            exit(1);
+        }
+        if (!$started) {
+            echo "Error: Challenge '{$challengeName}' not found.\n";
             exit(1);
         }
         echo "\n🎯 Challenge '{$challengeName}' loaded!\n\n";
@@ -546,7 +551,12 @@ SQL;
             echo "\nNo active challenge. Run php artisan challenge:start <name> first.\n\n";
             exit(0);
         }
-        Core\ChallengeManager::reset();
+        try {
+            Core\ChallengeManager::reset();
+        } catch (Core\ChallengeStateException $exception) {
+            fwrite(STDERR, "Error: {$exception->getMessage()}\n");
+            exit(1);
+        }
         echo "\n🔄 Challenge '{$active}' reset to buggy baseline. Ready for another try!\n\n";
         break;
 
@@ -558,7 +568,12 @@ SQL;
             echo "\nNo active challenge. Nothing to stop.\n\n";
             exit(0);
         }
-        Core\ChallengeManager::stop();
+        try {
+            Core\ChallengeManager::stop();
+        } catch (Core\ChallengeStateException $exception) {
+            fwrite(STDERR, "Error: {$exception->getMessage()}\n");
+            exit(1);
+        }
         echo "\n✅ Challenge stopped. App restored to clean state.\n\n";
         break;
 

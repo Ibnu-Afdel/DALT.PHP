@@ -31,6 +31,10 @@ Each challenge is a self-contained directory with:
 
 `order` must be a unique positive integer, `difficulty` is `Easy`, `Medium`, or `Hard`, `bugs` is positive, and `lesson` must name a discovered lesson. The challenge inherits that lesson's icon. Invalid metadata stops catalog loading with an actionable error instead of hiding the challenge.
 
+Broken files must map to the challenge mutation allowlist: `framework/Core/**/*.php`, `routes/routes.php`, `Http/controllers/**/*.php`, `database/migrations/*.sql`, `Dockerfile`, `docker-compose.yml`, or `nginx/*.conf`. Symbolic links, hard-linked files, traversal segments, and any other destination are rejected before learner files change.
+
+`challenge:start` snapshots only that challenge's destination files in a per-run recovery manifest before copying broken code. `challenge:reset` reapplies the broken files without replacing the snapshot. `challenge:stop` restores files that existed, removes files/directories created by the run, and leaves unrelated learner files alone. Only one challenge transaction may be active at a time.
+
 ## Challenge Types
 
 The current catalog contains 20 challenges across framework, Docker, and PostgreSQL concepts. Catalog display and numbering follow explicit `order`; lesson pages find related challenges through the validated `lesson` relationship. The metadata files are authoritative, so this guide does not duplicate an inventory that can become stale.
