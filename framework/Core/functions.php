@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 function dd(mixed ...$values): never
 {
     echo '<style>body{background:#1e1e2e;color:#cdd6f4;font:14px/1.6 monospace;padding:2rem}</style>';
@@ -11,8 +13,17 @@ function dd(mixed ...$values): never
     exit(1);
 }
 
-function urlIs($value) {
-return $_SERVER['REQUEST_URI'] === $value;
+function urlIs(string $value): bool
+{
+    $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+
+    if (!is_string($requestUri)) {
+        return false;
+    }
+
+    $path = parse_url($requestUri, PHP_URL_PATH);
+
+    return is_string($path) && $path === $value;
 }
 
 function abort(int $code = 404, string $message = ''): never
@@ -43,9 +54,9 @@ function authorize(bool $condition, int $status = 403, string $message = ''): vo
     }
 }
 
-function  base_path($path)
+function base_path(string $path = ''): string
 {
-    return BASE_PATH . $path;
+    return rtrim(BASE_PATH, '/\\') . ($path === '' ? '' : DIRECTORY_SEPARATOR . ltrim($path, '/\\'));
 }
 
 function env(string $key, mixed $default = null): mixed
@@ -77,22 +88,17 @@ function config(?string $key = null, mixed $default = null): mixed
     return Core\App::resolve(Core\Config::class)->get($key, $default);
 }
 
-function view($path, $attributes = [])
+/** @param array<string, mixed> $attributes */
+function view(string $path, array $attributes = []): string
 {
-    extract($attributes);
+    $container = Core\App::containerOrNull();
+    $renderer = $container !== null
+        ? $container->resolve(Core\View::class)
+        : new Core\View();
+    $content = $renderer->render($path, $attributes);
+    echo $content;
 
-    $appView  = base_path('resources/views/' . $path);
-    $daltView = base_path('.dalt/resources/views/' . $path);
-
-    if (file_exists($appView)) {
-        return require $appView;
-    }
-
-    if (is_dir(base_path('.dalt')) && file_exists($daltView)) {
-        return require $daltView;
-    }
-
-    throw new \RuntimeException("View not found: {$path}");
+    return $content;
 }
 
 function redirect(string $path, int $status = 302): Core\Response

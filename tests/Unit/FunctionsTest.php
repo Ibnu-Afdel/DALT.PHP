@@ -53,6 +53,18 @@ test('redirect creates a response without terminating execution', function () {
         ->and($response->headers()['Location'])->toBe('/next');
 });
 
+test('url matching compares only the request path', function () {
+    $_SERVER['REQUEST_URI'] = '/posts?page=2';
+
+    expect(urlIs('/posts'))->toBeTrue()
+        ->and(urlIs('/posts?page=2'))->toBeFalse();
+});
+
+test('base paths join root-relative and ordinary paths consistently', function () {
+    expect(base_path())->toBe(rtrim(BASE_PATH, '/\\'))
+        ->and(base_path('/config/app.php'))->toBe(rtrim(BASE_PATH, '/\\') . '/config/app.php');
+});
+
 test('old input preserves null and falls back when the flash value is malformed', function () {
     Core\Session::flash('old', ['name' => null]);
 
