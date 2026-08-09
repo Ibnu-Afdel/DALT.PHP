@@ -7,12 +7,8 @@ function load_env_and_boot(): array {
     if (!defined('BASE_PATH')) {
         define('BASE_PATH', __DIR__ . '/');
     }
-    if (!function_exists('base_path')) {
-        function base_path(string $path = ''): string {
-            return BASE_PATH . $path;
-        }
-    }
-    require base_path('vendor/autoload.php');
+    require BASE_PATH . 'vendor/autoload.php';
+    require_once BASE_PATH . 'framework/Core/functions.php';
     // Load env if present, otherwise continue silently
     $dotenv = Dotenv\Dotenv::createImmutable(base_path(''));
     if (method_exists($dotenv, 'safeLoad')) {
@@ -239,6 +235,11 @@ switch ($command) {
         }
         
         $name = $arguments[2];
+        if (preg_match('/\A[a-z][a-z0-9_]*\z/', $name) !== 1) {
+            echo "Migration names must start with a lowercase letter and contain only lowercase letters, numbers, and underscores.\n";
+            exit(1);
+        }
+
         // Clean the name: remove 'create_' prefix and '_table' suffix if present
         $cleanName = preg_replace('/^create_/', '', $name);
         $cleanName = preg_replace('/_table$/', '', $cleanName);
@@ -293,7 +294,20 @@ CREATE TABLE IF NOT EXISTS {$cleanName} (
 SQL;
         }
         
-        file_put_contents($filepath, $template);
+        $migrationFile = @fopen($filepath, 'x');
+        if (!is_resource($migrationFile)) {
+            echo "Migration already exists or cannot be created: {$relativeDir}/{$filename}\n";
+            exit(1);
+        }
+
+        try {
+            if (fwrite($migrationFile, $template) === false) {
+                throw new RuntimeException("Unable to write migration: {$relativeDir}/{$filename}");
+            }
+        } finally {
+            fclose($migrationFile);
+        }
+
         echo "Migration created: {$relativeDir}/{$filename}\n";
         echo "\n";
         echo "Next steps:\n";
