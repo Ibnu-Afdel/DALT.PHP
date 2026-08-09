@@ -18,7 +18,7 @@ final readonly class View
     {
         $roots ??= [
             base_path('resources/views'),
-            base_path('.dalt/resources/views'),
+            ...Platform::discover(base_path())->viewRoots(),
         ];
 
         if ($roots === []) {

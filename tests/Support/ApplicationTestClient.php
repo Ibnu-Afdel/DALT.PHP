@@ -11,6 +11,10 @@ final class ApplicationTestClient
 {
     private const RESULT_MARKER = '__DALT_TEST_RESULT__';
 
+    public function __construct(private readonly string $projectRoot = BASE_PATH)
+    {
+    }
+
     /**
      * Run the real front controller in a child process so constants, sessions,
      * headers, and fatal errors cannot leak into the PHPUnit process.
@@ -32,6 +36,7 @@ final class ApplicationTestClient
             'query' => $query,
             'input' => $input,
             'server' => $server,
+            'project_root' => $this->projectRoot,
         ], JSON_THROW_ON_ERROR));
 
         $process = proc_open(

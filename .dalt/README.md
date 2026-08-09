@@ -12,36 +12,23 @@ This directory contains the DALT learning platform UI and assets. It's completel
 
 ## Removing the Learning Platform
 
-Want to use DALT as a clean micro-framework? Just delete this directory:
+Want to use DALT as a clean micro-framework? Run the supported cleanup command:
 
 ```bash
-rm -rf .dalt/ course/
+php artisan platform:remove
 ```
 
-The framework core (`framework/Core/`) has no dependencies on `.dalt/` or `course/`. The fallback logic in `Router.php` and `functions.php` gracefully handles missing `.dalt/` files.
+The framework core (`framework/Core/`) remains runnable when `.dalt/` is absent. `Core\Platform` discovers the optional directory once during bootstrap and owns its boot file, routes, controller roots, and view roots. A partially removed platform fails with a focused error instead of being loaded unpredictably.
 
 ## How the Fallback Works
 
 The framework checks user code first, then falls back to `.dalt/`:
 
-```php
-// In Router.php
-$controllerPath = base_path('app/Http/controllers/' . $route['controller']);
-if (!file_exists($controllerPath)) {
-    $controllerPath = base_path('.dalt/Http/controllers/' . $route['controller']);
-}
-
-// In functions.php
-$viewPath = base_path('resources/views/' . $path);
-if (!file_exists($viewPath)) {
-    $viewPath = base_path('.dalt/resources/views/' . $path);
-}
-```
-
 This means:
 - Your code in `app/` always takes priority
 - Platform code in `.dalt/` is a fallback
-- Deleting `.dalt/` doesn't break your app
+- Application routes are registered before platform routes
+- Removing `.dalt/` with the supported command doesn't break your app
 
 ## For Contributors
 

@@ -17,9 +17,14 @@ class Router
 
     private Container $container;
 
+    private Platform $platform;
+
     public function __construct(?Container $container = null)
     {
         $this->container = $container ?? App::containerOrNull() ?? new Container();
+        $this->platform = $this->container->resolved(Platform::class)
+            ? $this->container->resolve(Platform::class)
+            : Platform::discover(base_path());
     }
 
     public function add(string $method, string $uri, Closure|string $handler): self
@@ -132,11 +137,10 @@ class Router
 
     private function resolveControllerPath(string $controller): string
     {
-        $roots = [base_path('app/Http/controllers')];
-
-        if (is_dir(base_path('.dalt'))) {
-            $roots[] = base_path('.dalt/Http/controllers');
-        }
+        $roots = [
+            base_path('app/Http/controllers'),
+            ...$this->platform->controllerRoots(),
+        ];
 
         foreach ($roots as $root) {
             $rootPath = realpath($root);

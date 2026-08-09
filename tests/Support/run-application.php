@@ -76,4 +76,10 @@ register_shutdown_function(static function () use ($sessionDirectory): void {
     echo RESULT_MARKER . base64_encode(json_encode($result, JSON_THROW_ON_ERROR));
 });
 
-require dirname(__DIR__, 2) . '/public/index.php';
+$projectRoot = $payload['project_root'] ?? dirname(__DIR__, 2);
+
+if (!is_string($projectRoot) || !is_file($projectRoot . '/public/index.php')) {
+    throw new RuntimeException('Application test project root is invalid.');
+}
+
+require $projectRoot . '/public/index.php';

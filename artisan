@@ -64,7 +64,12 @@ function run_foreground(array $command, ?string $workingDirectory = null): int
 
 function platform_installed(): bool
 {
-    return is_dir(base_path('.dalt'));
+    try {
+        return Core\Platform::discover(base_path())->isInstalled();
+    } catch (RuntimeException $exception) {
+        fwrite(STDERR, $exception->getMessage() . "\n");
+        exit(1);
+    }
 }
 
 function require_platform(string $commandName): void
