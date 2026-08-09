@@ -1,30 +1,74 @@
 #!/usr/bin/env php
 <?php
 
+declare(strict_types=1);
+
 $arguments = $argv;
 
-function load_env_and_boot(): array {
+function boot_core(): void
+{
     if (!defined('BASE_PATH')) {
         define('BASE_PATH', __DIR__ . '/');
     }
-    require BASE_PATH . 'vendor/autoload.php';
+
+    require_once BASE_PATH . 'vendor/autoload.php';
     require_once BASE_PATH . 'framework/Core/functions.php';
-    // Load env if present, otherwise continue silently
+}
+
+/** @return array{database: array<string, mixed>} */
+function load_database_config(): array
+{
+    boot_core();
+
     $dotenv = Dotenv\Dotenv::createImmutable(base_path(''));
     if (method_exists($dotenv, 'safeLoad')) {
         $dotenv->safeLoad();
     } else {
-        try { $dotenv->load(); } catch (\Throwable $e) { /* ignore missing .env */ }
+        try {
+            $dotenv->load();
+        } catch (Dotenv\Exception\InvalidPathException) {
+            // A missing .env is valid; config files provide their own defaults.
+        }
     }
-    $dbConfig = require base_path('config/database.php');
-    return $dbConfig;
+
+    $config = require base_path('config/database.php');
+    if (!is_array($config) || !isset($config['database']) || !is_array($config['database'])) {
+        throw new RuntimeException('config/database.php must return a database configuration array.');
+    }
+
+    return $config;
 }
 
-function platform_installed(): bool {
+/** @param list<string> $command */
+function run_foreground(array $command, ?string $workingDirectory = null): int
+{
+    $process = proc_open(
+        $command,
+        [STDIN, STDOUT, STDERR],
+        $pipes,
+        $workingDirectory,
+        null,
+        ['bypass_shell' => true],
+    );
+
+    if (!is_resource($process)) {
+        fwrite(STDERR, "Unable to start command: {$command[0]}\n");
+
+        return 1;
+    }
+
+    $exitCode = proc_close($process);
+
+    return $exitCode === -1 ? 1 : $exitCode;
+}
+
+function platform_installed(): bool
+{
     return is_dir(base_path('.dalt'));
 }
 
-function require_platform(string $commandName): void {
+function require_platform(string $commandName): void
+{
     if (platform_installed()) {
         return;
     }
@@ -61,8 +105,8 @@ if (count($arguments) < 2 || $arguments[1] === 'help' || $arguments[1] === '--he
     echo "  migrate                 Run pending database migrations\n";
     echo "                          Executes .sql files from database/migrations/\n";
     echo "\n";
-    echo "  migrate:fresh           Drop database and run all migrations\n";
-    echo "                          WARNING: Deletes all data! (SQLite only)\n";
+    echo "  migrate:fresh [--force] Drop database and run all migrations\n";
+    echo "                          Requires confirmation; --force skips the prompt\n";
     echo "\n";
     echo "  make:migration <name>   Create a new SQL migration file\n";
     echo "                          Example: php artisan make:migration create_posts_table\n";
@@ -97,15 +141,32 @@ if (count($arguments) < 2 || $arguments[1] === 'help' || $arguments[1] === '--he
     exit(0);
 }
 
-// Bootstrap core for all commands so helpers like base_path() exist
-$dbConfigBoot = load_env_and_boot();
+// CLI commands share autoloading and path helpers, but database configuration is
+// intentionally loaded only by commands that use the database.
+boot_core();
 
 $command = $arguments[1];
 
 switch ($command) {
     case 'serve':
         $host = $arguments[2] ?? '127.0.0.1';
-        $port = (int) ($arguments[3] ?? 8000);
+        $portArgument = $arguments[3] ?? '8000';
+        if (
+            preg_match('/\A(?:localhost|(?:[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?))\z/i', $host) !== 1
+            && filter_var($host, FILTER_VALIDATE_IP) === false
+        ) {
+            fwrite(STDERR, "Invalid host. Use a hostname or IP address.\n");
+            exit(1);
+        }
+        if (preg_match('/\A[0-9]+\z/', $portArgument) !== 1) {
+            fwrite(STDERR, "Invalid port. Use a number from 1 to 65535.\n");
+            exit(1);
+        }
+        $port = (int) $portArgument;
+        if ($port < 1 || $port > 65535) {
+            fwrite(STDERR, "Invalid port. Use a number from 1 to 65535.\n");
+            exit(1);
+        }
         $maxTries = 50;
         $chosenPort = $port;
         $isFree = function(string $h, int $p): bool {
@@ -115,14 +176,27 @@ switch ($command) {
         };
         while ($maxTries-- > 0 && !$isFree($host, $chosenPort)) {
             $chosenPort++;
+            if ($chosenPort > 65535) {
+                break;
+            }
+        }
+        if ($chosenPort > 65535 || !$isFree($host, $chosenPort)) {
+            fwrite(STDERR, "No free port found from {$port} through " . min(65535, $port + 50) . ".\n");
+            exit(1);
         }
         if ($chosenPort !== $port) {
             echo "Port {$port} in use. Using {$chosenPort} instead.\n";
         }
-        echo "Starting development server: http://{$host}:{$chosenPort}\n";
-        // Use router script for static files + front-controller routing
-        passthru("php -S {$host}:{$chosenPort} -t public public/router.php");
-        break;
+        $serverHost = filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false ? "[{$host}]" : $host;
+        echo "Starting development server: http://{$serverHost}:{$chosenPort}\n";
+        exit(run_foreground([
+            PHP_BINARY,
+            '-S',
+            "{$serverHost}:{$chosenPort}",
+            '-t',
+            base_path('public'),
+            base_path('public/router.php'),
+        ], BASE_PATH));
 
     
     case 'dalt:test':
@@ -178,12 +252,12 @@ switch ($command) {
         echo "=================================================\n";
         echo " Total Progress: $totalPassed / $totalTests tests passed.\n";
         echo "=================================================\n\n";
-        break;
+        exit($totalTests > 0 && $totalPassed === $totalTests ? 0 : 1);
 
     case 'migrate':
-        $dbConfig = $dbConfigBoot;
         try {
-            $database = new Core\Database($dbConfig['database']);
+            $dbConfig = load_database_config();
+            $database = Core\DatabaseManager::create($dbConfig['database']);
             $migration = new Core\Migration($database);
             $migration->runMigrations();
             echo "Migration process completed.\n";
@@ -194,13 +268,43 @@ switch ($command) {
         break;
 
     case 'migrate:fresh':
-        $dbConfig = $dbConfigBoot;
         echo "Running migrate:fresh...\n";
+        try {
+            $dbConfig = load_database_config();
+        } catch (\Throwable $e) {
+            echo "\n" . $e->getMessage() . "\n";
+            exit(1);
+        }
+        if (!in_array('--force', array_slice($arguments, 2), true)) {
+            echo "This command permanently deletes all data in the configured database.\n";
+            echo "Continue? [y/N]: ";
+            $confirmation = fgets(STDIN);
+            if (!is_string($confirmation) || !in_array(strtolower(trim($confirmation)), ['y', 'yes'], true)) {
+                echo "Cancelled. No changes made.\n";
+                exit(1);
+            }
+        }
         $driver = $dbConfig['database']['driver'] ?? 'sqlite';
         if ($driver === 'sqlite') {
             $dbPath = $dbConfig['database']['database'];
-            if (file_exists($dbPath)) {
-                unlink($dbPath);
+            if (!is_string($dbPath)) {
+                echo "\nSQLite database path must be a string.\n";
+                exit(1);
+            }
+            if (
+                $dbPath !== ''
+                && $dbPath !== ':memory:'
+                && !str_starts_with($dbPath, '/')
+                && !str_starts_with($dbPath, '\\')
+                && preg_match('/\A[A-Za-z]:[\\\\\/]/', $dbPath) !== 1
+            ) {
+                $dbPath = base_path($dbPath);
+            }
+            if ($dbPath !== '' && $dbPath !== ':memory:' && file_exists($dbPath)) {
+                if (!is_file($dbPath) || !unlink($dbPath)) {
+                    echo "\nUnable to remove SQLite database file.\n";
+                    exit(1);
+                }
                 echo "Dropped existing database file.\n";
             }
         } elseif ($driver === 'pgsql') {
@@ -214,10 +318,11 @@ switch ($command) {
                 exit(1);
             }
         } else {
-            echo "Warning: migrate:fresh for this driver is not implemented.\n";
+            echo "Unsupported database driver: " . (is_scalar($driver) ? (string) $driver : get_debug_type($driver)) . "\n";
+            exit(1);
         }
         try {
-            $database = new Core\Database($dbConfig['database']);
+            $database = Core\DatabaseManager::create($dbConfig['database']);
             $migration = new Core\Migration($database);
             $migration->runMigrations();
             echo "Fresh migration completed.\n";
@@ -243,11 +348,21 @@ switch ($command) {
         // Clean the name: remove 'create_' prefix and '_table' suffix if present
         $cleanName = preg_replace('/^create_/', '', $name);
         $cleanName = preg_replace('/_table$/', '', $cleanName);
+        if (!is_string($cleanName) || preg_match('/\A[a-z][a-z0-9_]*\z/', $cleanName) !== 1) {
+            echo "Migration name must produce a valid table identifier after removing create_ and _table.\n";
+            exit(1);
+        }
 
-        $dbConfig = $dbConfigBoot;
+        try {
+            $dbConfig = load_database_config();
+        } catch (\Throwable $e) {
+            echo $e->getMessage() . "\n";
+            exit(1);
+        }
         $driver = $dbConfig['database']['driver'] ?? 'sqlite';
         if (!in_array($driver, ['sqlite', 'pgsql'], true)) {
-            $driver = 'sqlite';
+            echo "Unsupported database driver: " . (is_scalar($driver) ? (string) $driver : get_debug_type($driver)) . "\n";
+            exit(1);
         }
         
         // Generate filename with timestamp
@@ -256,8 +371,10 @@ switch ($command) {
         $relativeDir = 'database/migrations';
         $filepath = base_path("database/migrations/{$filename}");
         
-        if (!is_dir(base_path('database/migrations'))) {
-            mkdir(base_path('database/migrations'), 0755, true);
+        $migrationDirectory = base_path('database/migrations');
+        if (!is_dir($migrationDirectory) && !mkdir($migrationDirectory, 0755, true) && !is_dir($migrationDirectory)) {
+            fwrite(STDERR, "Unable to create migration directory: database/migrations\n");
+            exit(1);
         }
         
         // Generate SQL template
@@ -267,7 +384,7 @@ switch ($command) {
 -- Migration: {$name}
 -- Created: {$currentDate}
 
-CREATE TABLE IF NOT EXISTS {$cleanName} (
+CREATE TABLE IF NOT EXISTS "{$cleanName}" (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -275,14 +392,14 @@ CREATE TABLE IF NOT EXISTS {$cleanName} (
 );
 
 -- Add indexes here
--- CREATE INDEX IF NOT EXISTS idx_{$cleanName}_name ON {$cleanName}(name);
+-- CREATE INDEX IF NOT EXISTS idx_{$cleanName}_name ON "{$cleanName}"(name);
 SQL;
         } else {
             $template = <<<SQL
 -- Migration: {$name}
 -- Created: {$currentDate}
 
-CREATE TABLE IF NOT EXISTS {$cleanName} (
+CREATE TABLE IF NOT EXISTS "{$cleanName}" (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name VARCHAR(255) NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -290,7 +407,7 @@ CREATE TABLE IF NOT EXISTS {$cleanName} (
 );
 
 -- Add indexes here
--- CREATE INDEX IF NOT EXISTS idx_{$cleanName}_name ON {$cleanName}(name);
+-- CREATE INDEX IF NOT EXISTS idx_{$cleanName}_name ON "{$cleanName}"(name);
 SQL;
         }
         
@@ -569,36 +686,53 @@ SQL;
         echo "\n";
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
         
-        // Check if npm is available
-        exec('which npm', $output, $npmCheck);
-        if ($npmCheck !== 0) {
-            echo "⚠️  Warning: npm not found. Vite server will not start.\n";
-            echo "   Install Node.js to enable the frontend: https://nodejs.org/\n";
-            echo "\n";
-            echo "Starting PHP server only...\n";
-            passthru("php artisan serve");
-            exit(0);
+        $npm = PHP_OS_FAMILY === 'Windows' ? 'npm.cmd' : 'npm';
+        $npmCheck = proc_open([$npm, '--version'], [['file', PHP_OS_FAMILY === 'Windows' ? 'NUL' : '/dev/null', 'r'], ['file', PHP_OS_FAMILY === 'Windows' ? 'NUL' : '/dev/null', 'w'], ['file', PHP_OS_FAMILY === 'Windows' ? 'NUL' : '/dev/null', 'w']], $npmPipes, BASE_PATH, null, ['bypass_shell' => true]);
+        if (!is_resource($npmCheck) || proc_close($npmCheck) !== 0) {
+            fwrite(STDERR, "npm is required for the dev command. Install Node.js and try again.\n");
+            exit(1);
         }
-        
-        // Start both servers using concurrently if available, otherwise use background processes
-        if (file_exists(base_path('.dalt/node_modules/.bin/concurrently'))) {
-            passthru('cd ' . base_path('.dalt') . ' && npm run dev & php artisan serve');
-        } else {
-            echo "Starting servers...\n";
-            echo "  → PHP server: http://localhost:8000\n";
-            echo "  → Vite server: http://localhost:5173\n";
-            echo "\n";
-            
-            // Start Vite in background
-            $viteCmd = 'cd ' . base_path('.dalt') . ' && npm run dev > /dev/null 2>&1 &';
-            exec($viteCmd);
-            
-            sleep(2); // Give Vite time to start
-            
-            // Start PHP server in foreground
-            passthru("php artisan serve");
+
+        $descriptors = [STDIN, STDOUT, STDERR];
+        $viteServer = proc_open([$npm, 'run', 'dev'], $descriptors, $vitePipes, BASE_PATH, null, ['bypass_shell' => true]);
+        if (!is_resource($viteServer)) {
+            fwrite(STDERR, "Unable to start the Vite development server.\n");
+            exit(1);
         }
-        break;
+        usleep(100_000);
+        $viteStatus = proc_get_status($viteServer);
+        if (!$viteStatus['running']) {
+            proc_close($viteServer);
+            exit($viteStatus['exitcode'] < 0 ? 1 : $viteStatus['exitcode']);
+        }
+
+        $phpServer = proc_open([PHP_BINARY, base_path('artisan'), 'serve'], $descriptors, $phpPipes, BASE_PATH, null, ['bypass_shell' => true]);
+        if (!is_resource($phpServer)) {
+            proc_terminate($viteServer);
+            proc_close($viteServer);
+            fwrite(STDERR, "Unable to start the PHP development server.\n");
+            exit(1);
+        }
+
+        $exitCode = 0;
+        while (true) {
+            $phpStatus = proc_get_status($phpServer);
+            $viteStatus = proc_get_status($viteServer);
+            if (!$phpStatus['running'] || !$viteStatus['running']) {
+                $exitCode = !$phpStatus['running'] ? $phpStatus['exitcode'] : $viteStatus['exitcode'];
+                break;
+            }
+            usleep(100_000);
+        }
+        if ($phpStatus['running']) {
+            proc_terminate($phpServer);
+        }
+        if ($viteStatus['running']) {
+            proc_terminate($viteServer);
+        }
+        proc_close($phpServer);
+        proc_close($viteServer);
+        exit($exitCode < 0 ? 1 : $exitCode);
 
     case 'test':
         echo "Running Pest test suite...\n";
@@ -613,8 +747,7 @@ SQL;
             exit(1);
         }
         
-        passthru('vendor/bin/pest');
-        break;
+        exit(run_foreground(array_merge([PHP_BINARY, base_path('vendor/bin/pest')], array_slice($arguments, 2)), BASE_PATH));
 
     case 'platform:status':
         echo "\n";

@@ -1,22 +1,42 @@
 <?php
 
+declare(strict_types=1);
+
 // Post-create script for Composer create-project
 // - Copies .env with SQLite defaults by default
 // - If an existing .env.example is present and explicitly uses sqlite, it will be copied instead
 // - Attempts to install JS deps and build assets if npm is available
 // - Prints next steps for the user
 
-$base = realpath(__DIR__ . '/../../') . '/';
+$resolvedBase = realpath(__DIR__ . '/../../');
+if ($resolvedBase === false) {
+    throw new RuntimeException('Unable to resolve the new project directory.');
+}
+$base = $resolvedBase . DIRECTORY_SEPARATOR;
 
-function info($msg) { echo $msg . "\n"; }
-function run($cmd) {
+function info(string $message): void
+{
+    echo $message . "\n";
+}
+
+/**
+ * @param list<string> $command
+ * @return array{int, string, string}
+ */
+function run(array $command, string $workingDirectory): array
+{
     $descriptor = [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
-    $proc = proc_open($cmd, $descriptor, $pipes, null, null, ['bypass_shell' => true]);
-    if (!is_resource($proc)) return [127, '', ''];
+    $proc = proc_open($command, $descriptor, $pipes, $workingDirectory, null, ['bypass_shell' => true]);
+    if (!is_resource($proc)) {
+        return [127, '', 'Unable to start process.'];
+    }
     fclose($pipes[0]);
-    $out = stream_get_contents($pipes[1]); fclose($pipes[1]);
-    $err = stream_get_contents($pipes[2]); fclose($pipes[2]);
+    $out = stream_get_contents($pipes[1]);
+    fclose($pipes[1]);
+    $err = stream_get_contents($pipes[2]);
+    fclose($pipes[2]);
     $code = proc_close($proc);
+
     return [$code, $out, $err];
 }
 
@@ -25,8 +45,13 @@ function sqliteEnvTemplate(): string {
 }
 
 // Ensure storage/logs exists
-@mkdir($base . 'storage/logs', 0755, true);
-@touch($base . 'storage/logs/.gitkeep');
+$logsDirectory = $base . 'storage/logs';
+if (!is_dir($logsDirectory) && !mkdir($logsDirectory, 0755, true) && !is_dir($logsDirectory)) {
+    throw new RuntimeException('Unable to create storage/logs.');
+}
+if (!file_exists($logsDirectory . '/.gitkeep') && !touch($logsDirectory . '/.gitkeep')) {
+    throw new RuntimeException('Unable to initialize storage/logs/.gitkeep.');
+}
 
 // Copy/create env (prefer SQLite defaults)
 $envExample = $base . '.env.example';
@@ -41,27 +66,35 @@ if (!file_exists($envFile)) {
         }
     }
     if ($shouldCopyExample) {
-        copy($envExample, $envFile);
+        if (!copy($envExample, $envFile)) {
+            throw new RuntimeException('Unable to create .env from .env.example.');
+        }
         info('Created .env from .env.example (sqlite)');
     } else {
-        file_put_contents($envFile, sqliteEnvTemplate());
+        if (file_put_contents($envFile, sqliteEnvTemplate(), LOCK_EX) === false) {
+            throw new RuntimeException('Unable to create .env.');
+        }
         info('Created .env with default SQLite config');
     }
 }
 
 // Ensure we have an .env.example with SQLite defaults for future reference
 if (!file_exists($envExample)) {
-    file_put_contents($envExample, "APP_NAME=DALT_PHP\nAPP_ENV=local\nAPP_DEBUG=true\n\nDB_DRIVER=sqlite\nDB_DATABASE=database/app.sqlite\n\n# PostgreSQL example\n# DB_DRIVER=pgsql\n# DB_HOST=127.0.0.1\n# DB_PORT=5432\n# DB_NAME=dalt_php_app\n# DB_USERNAME=postgres\n# DB_PASSWORD=\n\n# MySQL example\n# DB_DRIVER=mysql\n# DB_HOST=127.0.0.1\n# DB_PORT=3306\n# DB_NAME=dalt_php_app\n# DB_USERNAME=root\n# DB_PASSWORD=\n");
+    $example = "APP_NAME=DALT_PHP\nAPP_ENV=local\nAPP_DEBUG=true\n\nDB_DRIVER=sqlite\nDB_DATABASE=database/app.sqlite\n\n# PostgreSQL example\n# DB_DRIVER=pgsql\n# DB_HOST=127.0.0.1\n# DB_PORT=5432\n# DB_NAME=dalt_php_app\n# DB_USERNAME=postgres\n# DB_PASSWORD=\n";
+    if (file_put_contents($envExample, $example, LOCK_EX) === false) {
+        throw new RuntimeException('Unable to create .env.example.');
+    }
 }
 
 // Try to install and build frontend if npm exists
-[$whichCode] = run('which npm');
-if ($whichCode === 0) {
+$npm = PHP_OS_FAMILY === 'Windows' ? 'npm.cmd' : 'npm';
+[$npmCode] = run([$npm, '--version'], $base);
+if ($npmCode === 0) {
     info('Installing frontend dependencies (npm ci)...');
-    [$ciCode] = run('npm ci --silent');
+    [$ciCode] = run([$npm, 'ci', '--silent'], $base);
     if ($ciCode === 0) {
         info('Building frontend assets (npm run build)...');
-        [$buildCode] = run('npm run build --silent');
+        [$buildCode] = run([$npm, 'run', 'build', '--silent'], $base);
         if ($buildCode === 0) {
             info('Assets built successfully.');
         } else {
@@ -74,12 +107,8 @@ if ($whichCode === 0) {
     info('Node not detected; skipping frontend install/build.');
 }
 
-$pkg = json_decode(file_get_contents($base . 'composer.json'), true);
-$project = $pkg['name'] ?? 'project';
-$cwd = getcwd();
-
 info("\nYou're ready! Next steps:");
-info("  1) cd {$cwd}");
+info("  1) cd {$resolvedBase}");
 info("  2) php artisan serve   # starts dev server on a free port");
 info("  3) npm run dev         # optional: start Vite dev server");
-info("\nDocumentation: https://github.com/Ibnu-Afdel/DALT.PHP"); 
+info("\nDocumentation: https://github.com/Ibnu-Afdel/DALT.PHP");
