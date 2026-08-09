@@ -60,7 +60,7 @@ test('native startup applies security cookie lifetime regeneration and destructi
         ->and($result['save_handler'])->toBe('files')
         ->and($result['gc_lifetime'])->toBe('7200')
         ->and($result['id_changed'])->toBeTrue()
-        ->and($result['user'])->toBe(['email' => 'learner@example.com'])
+        ->and($result['user'])->toBe(['id' => 42, 'email' => 'learner@example.com'])
         ->and($result['already_active'])->toBe('The session has already been started.')
         ->and($result['destroyed_status'])->toBe(PHP_SESSION_NONE)
         ->and($result['destroyed_data'])->toBe([])

@@ -14,7 +14,7 @@ This isn't a framework for production apps. It's a framework for understanding h
 
 ## 🎯 What You Get
 
-A working web application with routing, database access, authentication, and validation already set up. But unlike production frameworks, you can read and understand every line of code.
+A working web application with routing, database access, and validation, plus an optional authentication example installed with `php artisan example:install auth`. Unlike production frameworks, you can read and understand every line of code.
 
 You write real SQL with prepared statements - no ORM hiding the queries. You see `$_SESSION` arrays directly - no magic session handling. You add CSRF tokens to forms yourself - no automatic protection. This is intentional. You learn by doing it yourself.
 

@@ -214,8 +214,34 @@ test('auth middleware redirects guests and does not call the destination', funct
         ->and($response->headers()['Location'])->toBe('/login');
 });
 
+test('auth middleware remembers a safe get destination for login', function () {
+    $response = (new Middleware())->run(
+        'auth',
+        new Request(server: [
+            'REQUEST_METHOD' => 'GET',
+            'REQUEST_URI' => '/account?tab=security',
+        ]),
+        fn (Request $request): Response => Response::text('unreachable'),
+    );
+
+    expect($response->headers()['Location'])->toBe('/login')
+        ->and($_SESSION['auth.intended'])->toBe('/account?tab=security');
+});
+
+test('auth middleware rejects malformed truthy session state', function () {
+    $_SESSION['user'] = 'forged';
+
+    $response = (new Middleware())->run(
+        'auth',
+        new Request(),
+        fn (Request $request): Response => Response::text('private'),
+    );
+
+    expect($response->headers()['Location'])->toBe('/login');
+});
+
 test('auth middleware passes authenticated requests onward', function () {
-    $_SESSION['user'] = ['id' => 1];
+    $_SESSION['user'] = ['id' => 1, 'email' => 'learner@example.com'];
 
     $response = (new Middleware())->run(
         'auth',
@@ -227,7 +253,7 @@ test('auth middleware passes authenticated requests onward', function () {
 });
 
 test('guest middleware redirects authenticated users', function () {
-    $_SESSION['user'] = ['id' => 1];
+    $_SESSION['user'] = ['id' => 1, 'email' => 'learner@example.com'];
 
     $response = (new Middleware())->run(
         'guest',

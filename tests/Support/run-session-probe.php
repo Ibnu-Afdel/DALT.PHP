@@ -40,7 +40,7 @@ try {
     Session::start($config);
     $cookie = session_get_cookie_params();
     $beforeLogin = session_id();
-    (new Authenticator())->login(['email' => 'learner@example.com']);
+    (new Authenticator())->login(['id' => 42, 'email' => 'learner@example.com']);
     $afterLogin = session_id();
     $_COOKIE[session_name()] = $afterLogin;
 

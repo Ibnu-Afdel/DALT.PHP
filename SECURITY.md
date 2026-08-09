@@ -53,7 +53,7 @@ Please include the following information:
 
 ## Security Best Practices for Users
 
-When using DALT.PHP in production:
+If you adapt DALT.PHP for a deployed project, treat the following as a starting checklist rather than a production guarantee:
 
 ### 1. Environment Configuration
 
@@ -72,8 +72,9 @@ APP_DEBUG=false
 
 ### 3. Authentication
 
-- Use strong password hashing (DALT.PHP uses `password_hash()`)
-- Implement rate limiting on login attempts
+- Use an adaptive password hash (the auth example uses `PASSWORD_DEFAULT`)
+- Keep the example's 8–72 byte password boundary or choose and document a policy appropriate to your hash algorithm
+- Add rate limiting to login attempts; DALT's educational auth example does not provide it
 - Use HTTPS in production
 - Set secure session cookies
 
@@ -81,7 +82,7 @@ APP_DEBUG=false
 
 - Validate all user input
 - Sanitize output to prevent XSS
-- Use CSRF protection (enabled by default in DALT.PHP)
+- Attach DALT's CSRF middleware to every state-changing browser route
 
 ### 5. File Permissions
 
@@ -105,9 +106,9 @@ npm update
 
 DALT.PHP is designed as a **learning platform** with intentionally broken code in challenges. The challenges demonstrate common security vulnerabilities for educational purposes.
 
-**Important**: 
+**Important**:
 - Challenge code is isolated and not used in the main application
-- The framework itself implements security best practices
+- The framework demonstrates selected security mechanisms but is not production-hardened
 - Always review and understand code before using in production
 
 ### Production Use
@@ -122,14 +123,17 @@ While DALT.PHP can be used as a foundation for real projects:
 
 ## Security Features
 
-DALT.PHP includes:
+DALT.PHP includes these small, inspectable mechanisms:
 
-- ✅ Prepared statements for SQL queries
-- ✅ Password hashing with `password_hash()`
-- ✅ CSRF protection middleware
-- ✅ Session security with httponly cookies
-- ✅ Input validation helpers
-- ✅ XSS prevention in views
+- Parameterized credential lookup in the authentication example
+- Password hashing with `PASSWORD_DEFAULT` and timing-safe verification through `password_verify()`
+- Session-ID rotation before authenticated state is recorded
+- Strict, cookie-only sessions with HttpOnly and SameSite cookie configuration
+- Auth/guest and CSRF middleware that applications attach explicitly
+- A local-only, single-use intended redirect after login
+- Strict input-validation helpers
+
+These mechanisms do not include login throttling, password reset, email verification, multi-device logout, roles/policies, an account lockout strategy, or a complete output-escaping system.
 
 ## Disclosure Policy
 
