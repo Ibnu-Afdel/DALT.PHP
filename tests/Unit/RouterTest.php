@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Core\HttpException;
+use Core\Container;
 use Core\Middleware\MiddlewareInterface;
 use Core\Request;
 use Core\Response;
@@ -24,6 +25,10 @@ final class RouterResponseMiddleware implements MiddlewareInterface
 
         return $response->withHeader('X-Route-Middleware', 'visited');
     }
+}
+
+final class RouterInjectedService
+{
 }
 
 test('it dispatches closure handlers for every supported http verb', function (string $method) {
@@ -195,12 +200,33 @@ test('router always provides a request to typed closure handlers', function () {
     ]);
 });
 
+test('router combines route parameters with container-injected services', function () {
+    $container = new Container();
+    $service = new RouterInjectedService();
+    $container->instance(RouterInjectedService::class, $service);
+    $router = new Router($container);
+    $router->get('/services/{id}', fn (RouterInjectedService $resolved, string $id) => [
+        'same' => $resolved === $service,
+        'id' => $id,
+    ]);
+
+    $response = $router->route('/services/42', 'GET');
+
+    expect(json_decode($response->content(), true, flags: JSON_THROW_ON_ERROR))->toBe([
+        'same' => true,
+        'id' => '42',
+    ]);
+});
+
 test('it fails clearly when a required closure argument cannot be resolved', function () {
     $router = new Router();
     $router->get('/hello', fn (string $missing) => $missing);
 
     $router->route('/hello', 'GET');
-})->throws(RuntimeException::class, 'Cannot resolve route closure parameter $missing.');
+})->throws(
+    RuntimeException::class,
+    'Cannot resolve required parameter $missing while building callable.',
+);
 
 test('it throws an http 404 when no uri and method combination matches', function () {
     $router = new Router();

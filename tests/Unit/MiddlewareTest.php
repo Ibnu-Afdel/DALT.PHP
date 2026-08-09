@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Core\Middleware\Middleware;
 use Core\Middleware\MiddlewareInterface;
+use Core\Container;
 use Core\Request;
 use Core\Response;
 
@@ -56,6 +57,25 @@ final class ConstructorMiddleware implements MiddlewareInterface
     public function handle(Request $request, \Closure $next): Response
     {
         return $next($request)->withContent($this->value);
+    }
+}
+
+final class MiddlewareDependency
+{
+}
+
+final class InjectedMiddleware implements MiddlewareInterface
+{
+    public function __construct(private readonly MiddlewareDependency $dependency)
+    {
+    }
+
+    public function handle(Request $request, \Closure $next): Response
+    {
+        return $next($request)->withHeader(
+            'X-Dependency',
+            $this->dependency::class,
+        );
     }
 }
 
@@ -151,13 +171,30 @@ test('a resolved class must implement the middleware contract', function () {
     );
 })->throws(RuntimeException::class, 'must implement Core\\Middleware\\MiddlewareInterface');
 
-test('middleware construction failures explain the current no-argument boundary', function () {
+test('middleware construction failures preserve their container cause', function () {
     (new Middleware(['constructor' => ConstructorMiddleware::class]))->run(
         'constructor',
         new Request(),
         fn (Request $request): Response => Response::text('unreachable'),
     );
-})->throws(RuntimeException::class, 'must be constructible without arguments');
+})->throws(
+    RuntimeException::class,
+    "Unable to construct middleware 'ConstructorMiddleware': Cannot resolve required parameter \$value",
+);
+
+test('middleware constructor dependencies are built by the shared container', function () {
+    $response = (new Middleware(
+        aliases: ['injected' => InjectedMiddleware::class],
+        container: new Container(),
+    ))->run(
+        'injected',
+        new Request(),
+        fn (Request $request): Response => Response::text('handled'),
+    );
+
+    expect($response->content())->toBe('handled')
+        ->and($response->headers()['X-Dependency'])->toBe(MiddlewareDependency::class);
+});
 
 test('auth middleware redirects guests and does not call the destination', function () {
     $called = false;

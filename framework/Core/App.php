@@ -1,28 +1,55 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Core;
 
-class App
+use Closure;
+use LogicException;
+
+final class App
 {
-    protected static $container;
+    private static ?Container $container = null;
 
-    public static function setContainer($container)
+    public static function setContainer(Container $container): void
     {
-            static::$container = $container;
+        self::$container = $container;
     }
 
-    public static function container()
+    public static function container(): Container
     {
-        return static::$container;
+        return self::$container ?? throw new LogicException(
+            'The application container has not been bootstrapped.',
+        );
     }
 
-    public static function bind($key, $resolver)
+    public static function containerOrNull(): ?Container
     {
-        static::container()->bind($key, $resolver);
+        return self::$container;
     }
 
-    public static function resolve($key)
+    public static function forgetContainer(): void
     {
-        return static::container()->resolve($key);
+        self::$container = null;
+    }
+
+    public static function bind(string $abstract, Closure|string|null $concrete = null): void
+    {
+        self::container()->bind($abstract, $concrete);
+    }
+
+    public static function singleton(string $abstract, Closure|string|null $concrete = null): void
+    {
+        self::container()->singleton($abstract, $concrete);
+    }
+
+    public static function instance(string $abstract, mixed $instance): void
+    {
+        self::container()->instance($abstract, $instance);
+    }
+
+    public static function resolve(string $abstract): mixed
+    {
+        return self::container()->resolve($abstract);
     }
 }

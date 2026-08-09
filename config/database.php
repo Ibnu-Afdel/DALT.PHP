@@ -1,15 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 return [
     'database' => [
-        'driver' => $_ENV['DB_DRIVER'] ?? 'sqlite',
-        'host' => $_ENV['DB_HOST'] ?? '127.0.0.1',
-        'port' => $_ENV['DB_PORT'] ?? 5432,
-        'dbname' => $_ENV['DB_NAME'] ?? 'dalt_php_app',
-        'username' => $_ENV['DB_USERNAME'] ?? 'postgres',
-        'password' => $_ENV['DB_PASSWORD'] ?? '',
-        'charset' => $_ENV['DB_CHARSET'] ?? 'utf8',
+        'driver' => env('DB_DRIVER', 'sqlite'),
+        'host' => env('DB_HOST', '127.0.0.1'),
+        'port' => (int) env('DB_PORT', 5432),
+        'dbname' => env('DB_NAME', 'dalt_php_app'),
+        'username' => env('DB_USERNAME', 'postgres'),
+        'password' => env('DB_PASSWORD', ''),
+        'charset' => env('DB_CHARSET', 'utf8'),
         // SQLite specific
-        'database' => $_ENV['DB_DATABASE'] ?? base_path('database/app.sqlite'),
+        'database' => env('DB_DATABASE', base_path('database/app.sqlite')),
     ]
 ];

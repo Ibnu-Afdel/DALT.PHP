@@ -6,8 +6,6 @@ namespace Core;
 
 use Closure;
 use LogicException;
-use ReflectionFunction;
-use ReflectionNamedType;
 use RuntimeException;
 
 class Router
@@ -16,6 +14,13 @@ class Router
     protected array $routes = [];
 
     protected ?Request $request = null;
+
+    private Container $container;
+
+    public function __construct(?Container $container = null)
+    {
+        $this->container = $container ?? App::containerOrNull() ?? new Container();
+    }
 
     public function add(string $method, string $uri, Closure|string $handler): self
     {
@@ -75,6 +80,7 @@ class Router
             ],
         );
         $this->request = $request;
+        $this->container->instance(Request::class, $request);
 
         foreach ($this->routes as $route) {
             if (strtoupper($method) !== $route->method()) {
@@ -94,7 +100,7 @@ class Router
                 $_GET[$key] = $value;
             }
 
-            return (new Middleware\Middleware())->run(
+            return (new Middleware\Middleware(container: $this->container))->run(
                 $route->middleware(),
                 $request,
                 fn (Request $request): Response => Response::fromHandler(
@@ -121,37 +127,7 @@ class Router
     /** @param array<string, string> $parameters */
     private function dispatchClosure(Closure $handler, array $parameters, Request $request): mixed
     {
-        $arguments = [];
-
-        foreach ((new ReflectionFunction($handler))->getParameters() as $parameter) {
-            $type = $parameter->getType();
-
-            if ($type instanceof ReflectionNamedType && $type->getName() === Request::class) {
-                $arguments[] = $request;
-                continue;
-            }
-
-            if (array_key_exists($parameter->getName(), $parameters)) {
-                $arguments[] = $parameters[$parameter->getName()];
-                continue;
-            }
-
-            if ($parameter->isDefaultValueAvailable()) {
-                $arguments[] = $parameter->getDefaultValue();
-                continue;
-            }
-
-            if ($parameter->allowsNull()) {
-                $arguments[] = null;
-                continue;
-            }
-
-            throw new RuntimeException(
-                "Cannot resolve route closure parameter \${$parameter->getName()}.",
-            );
-        }
-
-        return $handler(...$arguments);
+        return $this->container->call($handler, $parameters);
     }
 
     private function resolveControllerPath(string $controller): string

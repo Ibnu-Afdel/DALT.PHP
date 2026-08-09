@@ -49,7 +49,7 @@ abstract class TestCase extends BaseTestCase
         $this->requestBeforeTest = $_REQUEST;
         $this->environmentBeforeTest = $_ENV;
         $this->sessionBeforeTest = $_SESSION ?? [];
-        $this->containerBeforeTest = App::container();
+        $this->containerBeforeTest = App::containerOrNull();
         $this->statusBeforeTest = http_response_code();
 
         $_GET = [];
@@ -72,7 +72,11 @@ abstract class TestCase extends BaseTestCase
         $_REQUEST = $this->requestBeforeTest;
         $_ENV = $this->environmentBeforeTest;
         $_SESSION = $this->sessionBeforeTest;
-        App::setContainer($this->containerBeforeTest);
+        if ($this->containerBeforeTest instanceof \Core\Container) {
+            App::setContainer($this->containerBeforeTest);
+        } else {
+            App::forgetContainer();
+        }
         header_remove();
         http_response_code(is_int($this->statusBeforeTest) ? $this->statusBeforeTest : 200);
 

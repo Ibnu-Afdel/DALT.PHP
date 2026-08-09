@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Core\Middleware;
 
 use Closure;
+use Core\App;
+use Core\Container;
 use Core\Request;
 use Core\Response;
 use RuntimeException;
@@ -22,10 +24,13 @@ final class Middleware
     /** @var array<string, class-string<MiddlewareInterface>> */
     private array $aliases;
 
+    private Container $container;
+
     /** @param array<string, class-string<MiddlewareInterface>> $aliases */
-    public function __construct(array $aliases = self::MAP)
+    public function __construct(array $aliases = self::MAP, ?Container $container = null)
     {
         $this->aliases = $aliases;
+        $this->container = $container ?? App::containerOrNull() ?? new Container();
     }
 
     /**
@@ -63,10 +68,10 @@ final class Middleware
         }
 
         try {
-            return new $class();
+            return $this->container->resolve($class);
         } catch (Throwable $exception) {
             throw new RuntimeException(
-                "Middleware '{$class}' must be constructible without arguments.",
+                "Unable to construct middleware '{$class}': {$exception->getMessage()}",
                 previous: $exception,
             );
         }

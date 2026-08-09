@@ -41,6 +41,35 @@ function  base_path($path)
     return BASE_PATH . $path;
 }
 
+function env(string $key, mixed $default = null): mixed
+{
+    if (array_key_exists($key, $_ENV)) {
+        $value = $_ENV[$key];
+    } elseif (array_key_exists($key, $_SERVER)) {
+        $value = $_SERVER[$key];
+    } else {
+        $systemValue = getenv($key);
+        $value = $systemValue === false ? $default : $systemValue;
+    }
+
+    if (!is_string($value)) {
+        return $value;
+    }
+
+    return match (strtolower($value)) {
+        'true', '(true)' => true,
+        'false', '(false)' => false,
+        'empty', '(empty)' => '',
+        'null', '(null)' => null,
+        default => $value,
+    };
+}
+
+function config(?string $key = null, mixed $default = null): mixed
+{
+    return Core\App::resolve(Core\Config::class)->get($key, $default);
+}
+
 function view($path, $attributes = [])
 {
     extract($attributes);

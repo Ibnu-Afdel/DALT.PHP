@@ -30,7 +30,7 @@ if (is_dir(base_path('.dalt')) && file_exists(base_path('.dalt/bootstrap.php')))
     require base_path('.dalt/bootstrap.php');
 }
 
-$router = new \Core\Router();
+$router = new \Core\Router(App::container());
 
 require base_path('routes/routes.php');
 
@@ -39,7 +39,7 @@ if (is_dir(base_path('.dalt')) && file_exists(base_path('.dalt/routes/routes.php
 }
 
 $request = Request::capture();
-App::bind(Request::class, fn () => $request);
+App::instance(Request::class, $request);
 
 $uri = $request->path();
 $method = $request->method();

@@ -1,26 +1,27 @@
 <?php
 
+declare(strict_types=1);
+
 use Core\App;
+use Core\Config;
 use Core\Container;
 use Core\Database;
 use Core\DatabaseManager;
+use Dotenv\Dotenv;
 
-$dotenv = Dotenv\Dotenv::createImmutable(base_path(''));
-if (method_exists($dotenv, 'safeLoad')) {
-    $dotenv->safeLoad();
-} else {
-    try {
-        $dotenv->load();
-    } catch (\Throwable $e) {
-    }
-}
+Dotenv::createImmutable(base_path(''))->safeLoad();
 
-$dbConfig  = require base_path('config/database.php');
-
+$config = Config::load(base_path('config'));
 $container = new Container();
+$container->instance(Config::class, $config);
 
-$container->bind('Core\Database', function () use ($dbConfig) {
-    return DatabaseManager::create($dbConfig['database']);
-});
+// Registration is cheap; the database connection is created only when a
+// handler first resolves Database from the container.
+$container->singleton(
+    Database::class,
+    fn (Container $container): Database => DatabaseManager::create(
+        $container->resolve(Config::class)->array('database.database'),
+    ),
+);
 
 App::setContainer($container);

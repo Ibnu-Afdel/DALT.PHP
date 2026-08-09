@@ -1,7 +1,9 @@
 <?php
 
+declare(strict_types=1);
+
 return [
     'name' => 'DALT.PHP Framework',
-    'env' => $_ENV['APP_ENV'] ?? 'local',
-    'debug' => $_ENV['APP_DEBUG'] ?? true,
+    'env' => env('APP_ENV', 'local'),
+    'debug' => env('APP_DEBUG', true),
 ];
