@@ -88,16 +88,16 @@ function view($path, $attributes = [])
     throw new \RuntimeException("View not found: {$path}");
 }
 
-function redirect($path)
+function redirect(string $path, int $status = 302): Core\Response
 {
-    header("Location: {$path}");
-    exit();
+    return Core\Response::redirect($path, $status);
 }
 
-function old($key, $default = '')
+function old(string $key, mixed $default = ''): mixed
 {
     $old = Core\Session::get('old', []);
-    return $old[$key] ?? $default;
+
+    return is_array($old) && array_key_exists($key, $old) ? $old[$key] : $default;
 }
 
 function vite(string $entryPath): string

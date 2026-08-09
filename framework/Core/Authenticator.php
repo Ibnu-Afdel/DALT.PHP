@@ -21,10 +21,10 @@ class Authenticator
 
     public function login($user)
     {
-        $_SESSION['user'] = [
+        Session::regenerate();
+        Session::put('user', [
             'email' => $user['email'],
-        ];
-        session_regenerate_id(true);
+        ]);
     }
 
     public function logout()

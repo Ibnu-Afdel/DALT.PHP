@@ -77,6 +77,10 @@ final readonly class Response
     /** @param array<string, string> $headers */
     public static function redirect(string $location, int $status = 302, array $headers = []): self
     {
+        if (!in_array($status, [301, 302, 303, 307, 308], true)) {
+            throw new InvalidArgumentException("Invalid redirect status code: {$status}");
+        }
+
         return new self('', $status, ['Location' => $location, ...$headers]);
     }
 

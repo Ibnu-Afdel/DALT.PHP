@@ -17,7 +17,7 @@ if (!empty($errors)) {
 
 $auth = new Authenticator();
 if ($auth->attempt($email, $password)) {
-    redirect('/');
+    return redirect('/');
 }
 
-ValidationException::throw(['email' => 'Invalid credentials'], ['email' => $email]); 
+ValidationException::throw(['email' => 'Invalid credentials'], ['email' => $email]);

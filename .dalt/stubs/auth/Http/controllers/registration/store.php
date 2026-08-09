@@ -39,4 +39,4 @@ $db->query('INSERT INTO users (name, email, password, created_at, updated_at) VA
 ]);
 
 Session::flash('success', 'Registration successful. You can now log in.');
-redirect('/login'); 
+return redirect('/login');

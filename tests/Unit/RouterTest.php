@@ -185,6 +185,26 @@ test('route middleware wraps legacy controller output', function () {
         ->and($response->headers()['X-Route-Middleware'])->toBe('visited');
 });
 
+test('redirect responses still travel outward through route middleware', function () {
+    RouterMiddlewareTrace::$events = [];
+    $router = new Router();
+    $router->get('/leave', function (): Response {
+        RouterMiddlewareTrace::$events[] = 'handler';
+
+        return redirect('/next');
+    })->only(RouterResponseMiddleware::class);
+
+    $response = $router->route('/leave', 'GET');
+
+    expect(RouterMiddlewareTrace::$events)->toBe([
+        'middleware:before',
+        'handler',
+        'middleware:after',
+    ])->and($response->status())->toBe(302)
+        ->and($response->headers()['Location'])->toBe('/next')
+        ->and($response->headers()['X-Route-Middleware'])->toBe('visited');
+});
+
 test('router always provides a request to typed closure handlers', function () {
     $router = new Router();
     $router->post('/capture', fn (Request $request) => [
@@ -243,3 +263,68 @@ test('it throws an http 404 when no uri and method combination matches', functio
 
     $this->fail('Expected an HttpException for the unmatched route.');
 });
+
+test('previous url keeps only relative or same-origin path and query', function (
+    array $server,
+    string $expected,
+) {
+    $router = new Router();
+    $router->get('/current', fn () => 'current');
+    $router->route('/current', 'GET', new Request(server: $server));
+
+    expect($router->previousUrl())->toBe($expected);
+})->with([
+    'relative path' => [[
+        'HTTP_HOST' => 'example.test',
+        'HTTP_REFERER' => '/form?step=2#ignored',
+    ], '/form?step=2'],
+    'same http origin' => [[
+        'HTTP_HOST' => 'example.test',
+        'HTTP_REFERER' => 'http://example.test/form?step=2',
+    ], '/form?step=2'],
+    'same https origin and port' => [[
+        'HTTPS' => 'on',
+        'HTTP_HOST' => 'example.test:8443',
+        'HTTP_REFERER' => 'https://example.test:8443/form',
+    ], '/form'],
+    'external host' => [[
+        'HTTP_HOST' => 'example.test',
+        'HTTP_REFERER' => 'https://attacker.test/leave',
+    ], '/'],
+    'scheme mismatch' => [[
+        'HTTPS' => 'on',
+        'HTTP_HOST' => 'example.test',
+        'HTTP_REFERER' => 'http://example.test/form',
+    ], '/'],
+    'port mismatch' => [[
+        'HTTP_HOST' => 'example.test:8000',
+        'HTTP_REFERER' => 'http://example.test:9000/form',
+    ], '/'],
+    'protocol relative' => [[
+        'HTTP_HOST' => 'example.test',
+        'HTTP_REFERER' => '//example.test/form',
+    ], '/'],
+    'same origin double slash path' => [[
+        'HTTP_HOST' => 'example.test',
+        'HTTP_REFERER' => 'http://example.test//attacker.test/path',
+    ], '/'],
+    'encoded double slash path' => [[
+        'HTTP_HOST' => 'example.test',
+        'HTTP_REFERER' => 'http://example.test/%2Fattacker.test/path',
+    ], '/'],
+    'backslash path' => [[
+        'HTTP_HOST' => 'example.test',
+        'HTTP_REFERER' => 'http://example.test/\\attacker.test/path',
+    ], '/'],
+    'control character' => [[
+        'HTTP_HOST' => 'example.test',
+        'HTTP_REFERER' => "/form\nLocation: https://attacker.test",
+    ], '/'],
+    'non-path relative' => [[
+        'HTTP_HOST' => 'example.test',
+        'HTTP_REFERER' => 'form',
+    ], '/'],
+    'missing referer' => [[
+        'HTTP_HOST' => 'example.test',
+    ], '/'],
+]);

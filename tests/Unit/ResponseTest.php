@@ -25,6 +25,17 @@ test('it creates html json and redirect responses', function () {
         ->and($redirect->headers())->toBe(['Location' => '/login']);
 });
 
+test('redirects accept only common redirect status codes', function (int $status) {
+    expect(Response::redirect('/next', $status)->status())->toBe($status);
+})->with([301, 302, 303, 307, 308]);
+
+test('redirects reject non-redirect statuses', function (int $status) {
+    Response::redirect('/next', $status);
+})->with([200, 304, 404])->throws(
+    InvalidArgumentException::class,
+    'Invalid redirect status code:',
+);
+
 test('it normalizes supported handler results', function () {
     $existing = new Response('Existing', 202, ['X-DALT' => 'yes']);
 

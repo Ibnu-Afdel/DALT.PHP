@@ -42,3 +42,23 @@ test('environment values use their default only when absent', function () {
 
     expect(env('DALT_MISSING_ENV', 'fallback'))->toBe('fallback');
 });
+
+test('redirect creates a response without terminating execution', function () {
+    $response = redirect('/next', 303);
+    $continued = true;
+
+    expect($continued)->toBeTrue()
+        ->and($response)->toBeInstanceOf(Core\Response::class)
+        ->and($response->status())->toBe(303)
+        ->and($response->headers()['Location'])->toBe('/next');
+});
+
+test('old input preserves null and falls back when the flash value is malformed', function () {
+    Core\Session::flash('old', ['name' => null]);
+
+    expect(old('name', 'fallback'))->toBeNull()
+        ->and(old('missing', 'fallback'))->toBe('fallback');
+
+    Core\Session::flash('old', 'invalid');
+    expect(old('name', 'fallback'))->toBe('fallback');
+});

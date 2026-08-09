@@ -6,7 +6,7 @@ $password = $_POST['password'] ?? '';
 $auth = new \Core\Authenticator();
 
 if ($auth->attempt($email, $password)) {
-    redirect('/dashboard');
+    return redirect('/dashboard');
 } else {
-    redirect('/auth/login?error=1');
+    return redirect('/auth/login?error=1');
 }

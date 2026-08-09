@@ -192,6 +192,78 @@ class Router
 
     public function previousUrl(): string
     {
-        return $this->request?->server('HTTP_REFERER') ?? $_SERVER['HTTP_REFERER'] ?? '/';
+        $referer = $this->request?->server('HTTP_REFERER') ?? $_SERVER['HTTP_REFERER'] ?? null;
+
+        if (
+            !is_string($referer)
+            || $referer === ''
+            || str_starts_with($referer, '//')
+            || preg_match('/[\x00-\x1F\x7F]/', $referer) === 1
+        ) {
+            return '/';
+        }
+
+        $parts = parse_url($referer);
+
+        if ($parts === false) {
+            return '/';
+        }
+
+        $path = $parts['path'] ?? '/';
+        $browserPath = is_string($path)
+            ? str_replace('\\', '/', rawurldecode($path))
+            : '';
+
+        if (
+            !is_string($path)
+            || !str_starts_with($path, '/')
+            || str_starts_with($browserPath, '//')
+            || preg_match('/[\x00-\x1F\x7F]/', $browserPath) === 1
+        ) {
+            return '/';
+        }
+
+        if (isset($parts['host'])) {
+            $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+
+            if (!in_array($scheme, ['http', 'https'], true) || !$this->isCurrentOrigin($parts, $scheme)) {
+                return '/';
+            }
+        } elseif (isset($parts['scheme'])) {
+            return '/';
+        }
+
+        $query = isset($parts['query']) && is_string($parts['query'])
+            ? '?' . $parts['query']
+            : '';
+
+        return $path . $query;
+    }
+
+    /** @param array<string, mixed> $referer */
+    private function isCurrentOrigin(array $referer, string $scheme): bool
+    {
+        $httpHost = $this->request?->server('HTTP_HOST') ?? $_SERVER['HTTP_HOST'] ?? null;
+
+        if (!is_string($httpHost) || $httpHost === '') {
+            return false;
+        }
+
+        $current = parse_url('http://' . $httpHost);
+
+        if ($current === false || !isset($current['host'])) {
+            return false;
+        }
+
+        $https = $this->request?->server('HTTPS') ?? $_SERVER['HTTPS'] ?? null;
+        $currentScheme = is_string($https) && $https !== '' && strtolower($https) !== 'off'
+            ? 'https'
+            : 'http';
+        $refererPort = $referer['port'] ?? ($scheme === 'https' ? 443 : 80);
+        $currentPort = $current['port'] ?? ($currentScheme === 'https' ? 443 : 80);
+
+        return strtolower((string) $referer['host']) === strtolower((string) $current['host'])
+            && $scheme === $currentScheme
+            && $refererPort === $currentPort;
     }
 }

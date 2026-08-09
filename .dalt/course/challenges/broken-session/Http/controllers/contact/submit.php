@@ -21,9 +21,9 @@ if (!empty($errors)) {
     \Core\Session::flash('errors', $errors);
     \Core\Session::flash('old', $_POST);
     
-    redirect('/contact');
+    return redirect('/contact');
 }
 
 // Success
 \Core\Session::flash('success', 'Message sent successfully!');
-redirect('/contact/success');
+return redirect('/contact/success');

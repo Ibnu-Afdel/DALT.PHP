@@ -39,7 +39,7 @@ test('project configuration files load in deterministic order with normalized va
 
     $config = Config::load(base_path('config'));
 
-    expect(array_keys($config->get()))->toBe(['app', 'database'])
+    expect(array_keys($config->get()))->toBe(['app', 'database', 'session'])
         ->and($config->string('app.env'))->toBe('testing')
         ->and($config->boolean('app.debug'))->toBeFalse()
         ->and($config->integer('database.database.port'))->toBe(5433);
