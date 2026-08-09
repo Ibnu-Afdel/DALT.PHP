@@ -23,3 +23,18 @@ test('the front controller renders an http exception as a response', function ()
         ->and($response->stderr)->toBe('')
         ->and($response->body)->toBe('<h1>404</h1><p>Not Found</p>');
 });
+
+test('the production front controller contains unexpected failures behind a safe response', function () {
+    $response = (new ApplicationTestClient())->request(
+        'GET',
+        '/',
+        server: ['REQUEST_URI' => ['invalid']],
+    );
+
+    expect($response->exitCode)->toBe(0)
+        ->and($response->statusCode)->toBe(500)
+        ->and($response->error)->toBeNull()
+        ->and($response->stderr)->toBe('')
+        ->and($response->body)->toBe('<h1>500</h1><p>Internal Server Error</p>')
+        ->and($response->body)->not->toContain('TypeError');
+});

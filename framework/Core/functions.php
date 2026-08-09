@@ -15,24 +15,31 @@ function urlIs($value) {
 return $_SERVER['REQUEST_URI'] === $value;
 }
 
-function abort(int $code = 404): never
+function abort(int $code = 404, string $message = ''): never
 {
-    http_response_code($code);
-    
-    $messages = [
+    $defaultMessages = [
+        400 => 'Bad Request',
+        401 => 'Unauthorized',
         403 => 'Forbidden',
         404 => 'Not Found',
+        405 => 'Method Not Allowed',
+        419 => 'Page Expired',
+        422 => 'Unprocessable Entity',
+        429 => 'Too Many Requests',
         500 => 'Internal Server Error',
+        503 => 'Service Unavailable',
     ];
-    
-    $message = $messages[$code] ?? 'Error';
-    
-    throw new \Core\HttpException($code, $message);
+
+    throw new \Core\HttpException(
+        $code,
+        $message !== '' ? $message : ($defaultMessages[$code] ?? "HTTP {$code}"),
+    );
 }
 
-function authorize($condition, $status = 403){
+function authorize(bool $condition, int $status = 403, string $message = ''): void
+{
     if (!$condition) {
-        abort($status);
+        abort($status, $message);
     }
 }
 
