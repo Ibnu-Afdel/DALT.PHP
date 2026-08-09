@@ -52,6 +52,15 @@ test('non-database commands do not load database configuration', function () {
         ->and($result['stdout'])->toContain('Guided learning: installed');
 });
 
+test('legacy named verification cannot inspect a clean app without an active challenge', function () {
+    $result = runF11Artisan(['verify', 'broken-auth']);
+
+    expect($result['exitCode'])->toBe(1)
+        ->and($result['stderr'])->toBe('')
+        ->and($result['stdout'])->toContain("Challenge 'broken-auth' is not active")
+        ->and($result['stdout'])->toContain('challenge:start broken-auth');
+});
+
 test('the test command forwards arguments and returns the child exit code', function () {
     $result = runF11Artisan(['test', '--definitely-invalid-option']);
 

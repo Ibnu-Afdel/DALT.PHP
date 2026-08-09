@@ -48,6 +48,7 @@ return [
         'type' => 'file_not_contains',
         'file' => 'docker-compose.yml',
         'search' => '# TODO',
+        'include_comments' => true,
         'hint' => 'Remove all # TODO comments once you have added both services',
     ],
 ];

@@ -35,6 +35,10 @@ Broken files must map to the challenge mutation allowlist: `framework/Core/**/*.
 
 `challenge:start` snapshots only that challenge's destination files in a per-run recovery manifest before copying broken code. `challenge:reset` reapplies the broken files without replacing the snapshot. `challenge:stop` restores files that existed, removes files/directories created by the run, and leaves unrelated learner files alone. Only one challenge transaction may be active at a time.
 
+`tests.php` must return a non-empty array keyed by unique `snake_case` check names. Supported types are `route_exists`, `route_order`, `file_contains`, `file_not_contains`, `function_call`, and `session_key`. Every referenced file must be one of that challenge's mutable source files. Required fields must be non-empty strings; `hint` is optional. File-content checks ignore comments by default, so use `include_comments => true` only when the comment itself (such as a remaining `# TODO`) is the defect.
+
+Prefer checks that identify one meaningful structural property, and combine them so a plausible incomplete fix still fails. PHP route, function-call, and session checks use lexical tokens and do not accept commented examples or string literals as code. These checks do not execute learner PHP, SQL, containers, or database behavior; content audits must not describe a static check as proof of runtime behavior.
+
 ## Challenge Types
 
 The current catalog contains 20 challenges across framework, Docker, and PostgreSQL concepts. Catalog display and numbering follow explicit `order`; lesson pages find related challenges through the validated `lesson` relationship. The metadata files are authoritative, so this guide does not duplicate an inventory that can become stale.

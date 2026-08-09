@@ -1,5 +1,5 @@
+-- BUG: this first migration contains the posts table, which depends on users.
 CREATE TABLE IF NOT EXISTS posts (
-    -- BUG: SQLite syntax used instead of Postgres
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
     body TEXT NOT NULL,

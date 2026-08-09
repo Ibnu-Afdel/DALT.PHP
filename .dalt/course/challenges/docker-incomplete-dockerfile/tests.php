@@ -40,6 +40,7 @@ return [
         'type' => 'file_not_contains',
         'file' => 'Dockerfile',
         'search' => '# TODO',
+        'include_comments' => true,
         'hint' => 'Remove all # TODO comments after completing each part',
     ],
 ];

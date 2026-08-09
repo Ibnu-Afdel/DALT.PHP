@@ -51,7 +51,7 @@ DALT includes 17 lessons and 20 debugging challenges across framework internals,
 
 **Challenges:** Diagnose deliberately broken framework code, container configuration, SQL, migrations, reliability, and database performance
 
-Run `php artisan challenge:start broken-routing` to try a challenge. Run `php artisan verify broken-routing` to check your solution.
+Run `php artisan challenge:start broken-routing` to try a challenge. Run `php artisan challenge:verify` to check your solution.
 
 These are completely optional - you can remove them with `php artisan platform:remove` and just use DALT as a learning framework.
 

@@ -26,6 +26,7 @@ return [
         'type' => 'file_not_contains',
         'file' => 'nginx/default.conf',
         'search' => '# TODO',
+        'include_comments' => true,
         'hint' => 'Remove all # TODO comments after completing each directive',
     ],
 ];

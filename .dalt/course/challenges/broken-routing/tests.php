@@ -32,6 +32,7 @@ return [
         'type' => 'file_not_contains',
         'file' => 'routes/routes.php',
         'search' => "// \$router->get('/posts/{id}/edit'",
+        'include_comments' => true,
         'hint' => 'Remove the // comment from the edit route'
     ]
 ];

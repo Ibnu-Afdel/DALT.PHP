@@ -4,8 +4,8 @@
  * Migration Disorder — Test Specification
  *
  * Verifies three fixes:
- *   1. 001_create_users_table.sql creates users
- *   2. 002_create_posts_table.sql creates posts
+ *   1. 001_create_users_table.sql contains the users migration
+ *   2. 002_create_posts_table.sql contains the posts migration
  *   3. 002_create_posts_table.sql uses BIGSERIAL, not AUTOINCREMENT
  */
 
@@ -14,14 +14,14 @@ return [
         'type'   => 'file_contains',
         'file'   => 'database/migrations/001_create_users_table.sql',
         'search' => 'CREATE TABLE IF NOT EXISTS users',
-        'hint'   => 'Rename the files so 001_ is the users table. The tests specifically look for 001_create_users_table.sql',
+        'hint'   => 'Move the users CREATE TABLE statement into 001_create_users_table.sql so it runs first.',
     ],
 
     '002_is_posts' => [
         'type'   => 'file_contains',
         'file'   => 'database/migrations/002_create_posts_table.sql',
         'search' => 'CREATE TABLE IF NOT EXISTS posts',
-        'hint'   => 'Rename the files so 002_ is the posts table. The tests specifically look for 002_create_posts_table.sql',
+        'hint'   => 'Move the posts CREATE TABLE statement into 002_create_posts_table.sql so it runs after users.',
     ],
 
     'uses_bigserial' => [

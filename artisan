@@ -617,6 +617,8 @@ SQL;
             echo "🎉 {$result['message']}\n\n";
             echo "Great job! You've successfully fixed this challenge.\n";
             echo "Run php artisan challenge:list to pick the next one.\n\n";
+        } elseif ($result['status'] === 'error') {
+            fwrite(STDERR, "Verification error: {$result['message']}\n");
         } else {
             echo "❌ {$result['message']}\n\n";
             if (!empty($result['hint'])) {
@@ -644,6 +646,13 @@ SQL;
         if (!is_dir(base_path($challengePath))) {
             echo "Error: Challenge '{$challengeName}' not found.\n";
             echo "Make sure the challenge exists in .dalt/course/challenges/ directory.\n";
+            exit(1);
+        }
+
+        $active = Core\ChallengeManager::getActiveChallenge();
+        if ($active !== $challengeName) {
+            echo "Error: Challenge '{$challengeName}' is not active.\n";
+            echo "Run: php artisan challenge:start {$challengeName}\n";
             exit(1);
         }
 
@@ -679,6 +688,8 @@ SQL;
             echo "🎉 {$result['message']}\n\n";
             echo "Great job! You've successfully fixed this challenge.\n";
             echo "Check storage/logs/challenges.log for your progress.\n";
+        } elseif ($result['status'] === 'error') {
+            fwrite(STDERR, "Verification error: {$result['message']}\n");
         } else {
             echo "❌ {$result['message']}\n\n";
             if (!empty($result['hint'])) {
