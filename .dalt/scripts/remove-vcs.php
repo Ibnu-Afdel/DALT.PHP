@@ -1,27 +1,59 @@
 <?php
 
-// Removes .git so Composer's VCS prompt (which fires AFTER this but BEFORE
-// post-create-project-cmd) finds nothing to show even if user answers "Y".
-// Uses pure PHP — no exec/system calls that may silently fail.
+declare(strict_types=1);
 
-$dir = getcwd() . '/.git';
-if (!is_dir($dir)) {
-    return;
-}
+/** @throws RuntimeException */
+function removeVcsTree(string $directory): void
+{
+    try {
+        $items = new FilesystemIterator($directory, FilesystemIterator::SKIP_DOTS);
+    } catch (Throwable $exception) {
+        throw new RuntimeException("Unable to inspect VCS metadata at {$directory}.", 0, $exception);
+    }
 
-$it = new RecursiveIteratorIterator(
-    new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS),
-    RecursiveIteratorIterator::CHILD_FIRST
-);
+    foreach ($items as $item) {
+        $path = $item->getPathname();
+        if ($item->isDir() && !$item->isLink()) {
+            removeVcsTree($path);
+        } elseif (!unlink($path)) {
+            throw new RuntimeException("Unable to remove VCS entry {$path}.");
+        }
+    }
 
-foreach ($it as $entry) {
-    if ($entry->isDir()) {
-        @chmod((string) $entry, 0755);
-        @rmdir((string) $entry);
-    } else {
-        @chmod((string) $entry, 0644);
-        @unlink((string) $entry);
+    if (!rmdir($directory)) {
+        throw new RuntimeException("Unable to remove VCS directory {$directory}.");
     }
 }
 
-@rmdir($dir);
+try {
+    $resolvedRoot = realpath(dirname(__DIR__, 2));
+    if ($resolvedRoot === false) {
+        throw new RuntimeException('Unable to resolve the new project directory.');
+    }
+
+    $git = $resolvedRoot . DIRECTORY_SEPARATOR . '.git';
+    if (!file_exists($git) && !is_link($git)) {
+        return;
+    }
+    if (is_link($git)) {
+        throw new RuntimeException('Refusing to remove symbolic-link VCS metadata.');
+    }
+
+    $quarantine = $resolvedRoot . DIRECTORY_SEPARATOR . '.git-removing-' . bin2hex(random_bytes(6));
+    if (!rename($git, $quarantine)) {
+        throw new RuntimeException('Unable to move VCS metadata into removal quarantine.');
+    }
+
+    if (is_dir($quarantine)) {
+        removeVcsTree($quarantine);
+    } elseif (is_file($quarantine)) {
+        if (!unlink($quarantine)) {
+            throw new RuntimeException('Unable to remove file-form VCS metadata.');
+        }
+    } else {
+        throw new RuntimeException('VCS metadata has an unsupported filesystem type.');
+    }
+} catch (Throwable $exception) {
+    fwrite(STDERR, $exception->getMessage() . "\n");
+    exit(1);
+}

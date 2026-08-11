@@ -31,6 +31,8 @@ Want to use DALT as a clean micro-framework? Run the supported cleanup command:
 php artisan platform:remove
 ```
 
+The command asks once before removing `.dalt` and never rewrites application routes, views, package metadata, Vite configuration, or the README. An installed auth example is preserved and becomes learner-owned application code because its update/uninstall manager leaves with the platform. Pass `--force` only for an intentional non-interactive removal.
+
 The framework core (`framework/Core/`) remains runnable when `.dalt/` is absent. `Core\Platform` discovers the optional directory once during bootstrap and owns its boot file, routes, controller roots, and view roots. A partially removed platform fails with a focused error instead of being loaded unpredictably.
 
 ## How the Fallback Works

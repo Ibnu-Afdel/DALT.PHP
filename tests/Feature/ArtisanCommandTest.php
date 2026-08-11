@@ -194,7 +194,9 @@ test('the post create hook initializes a project without relying on a shell or c
             ->and(file_get_contents($project . '/.env'))->toContain('DB_DRIVER=sqlite')
             ->and(file_exists($project . '/.env.example'))->toBeTrue()
             ->and(file_exists($project . '/storage/logs/.gitkeep'))->toBeTrue()
-            ->and($stdout)->toContain('cd ' . $project);
+            ->and($stdout)->toContain('cd ' . $project)
+            ->and($stdout)->toContain('Prebuilt frontend assets are ready; Node.js is optional.')
+            ->and($stdout)->not->toContain('Installing frontend dependencies');
     } finally {
         foreach ([$project . '/storage/logs/.gitkeep', $project . '/.env.example', $project . '/.env', $scripts . '/post-create.php'] as $file) {
             if (file_exists($file)) {

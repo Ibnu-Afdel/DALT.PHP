@@ -55,7 +55,7 @@ DALT includes 17 lessons and 20 debugging challenges across framework internals,
 
 Run `php artisan challenge:start broken-routing` to try a challenge. Run `php artisan challenge:verify` to check your solution.
 
-These are completely optional - you can remove them with `php artisan platform:remove` and just use DALT as a learning framework.
+These are completely optional. Remove them with `php artisan platform:remove` to keep only the framework core. The command preserves application files, including an installed auth example; generated auth files become learner-owned after the platform is gone. Use `--force` only when intentionally running the removal non-interactively.
 
 ---
 

@@ -44,6 +44,11 @@ test('release metadata is derived from vcs and both dependency locks are distrib
 
     expect($composer)->not->toHaveKey('version')
         ->and($package)->not->toHaveKey('version')
+        ->and($composer['archive']['exclude'])->toContain(
+            '/.dalt-removing-*',
+            '/.git-removing-*',
+            '/storage/framework/platform-removal.lock',
+        )
         ->and(file_exists(base_path('composer.lock')))->toBeTrue()
         ->and(file_exists(base_path('package-lock.json')))->toBeTrue()
         ->and(file_get_contents(base_path('CHANGELOG.md')))->toContain('## [0.3.0-beta.2]')

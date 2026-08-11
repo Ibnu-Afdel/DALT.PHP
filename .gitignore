@@ -36,6 +36,10 @@ Thumbs.db
 .dalt/challenge.lock
 .dalt/progress.json
 .dalt/baseline/
+.dalt-removing-*/
+.git-removing-*/
+/storage/framework/platform-removal.lock
+/storage/framework/examples/.auth.json.detaching-*
 
 # Database files
 /database/*.sqlite

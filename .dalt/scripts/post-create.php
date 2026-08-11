@@ -5,7 +5,7 @@ declare(strict_types=1);
 // Post-create script for Composer create-project
 // - Copies .env with SQLite defaults by default
 // - If an existing .env.example is present and explicitly uses sqlite, it will be copied instead
-// - Attempts to install JS deps and build assets if npm is available
+// - Leaves the prebuilt frontend assets in place without requiring Node.js
 // - Prints next steps for the user
 
 $resolvedBase = realpath(__DIR__ . '/../../');
@@ -17,27 +17,6 @@ $base = $resolvedBase . DIRECTORY_SEPARATOR;
 function info(string $message): void
 {
     echo $message . "\n";
-}
-
-/**
- * @param list<string> $command
- * @return array{int, string, string}
- */
-function run(array $command, string $workingDirectory): array
-{
-    $descriptor = [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
-    $proc = proc_open($command, $descriptor, $pipes, $workingDirectory, null, ['bypass_shell' => true]);
-    if (!is_resource($proc)) {
-        return [127, '', 'Unable to start process.'];
-    }
-    fclose($pipes[0]);
-    $out = stream_get_contents($pipes[1]);
-    fclose($pipes[1]);
-    $err = stream_get_contents($pipes[2]);
-    fclose($pipes[2]);
-    $code = proc_close($proc);
-
-    return [$code, $out, $err];
 }
 
 function sqliteEnvTemplate(): string {
@@ -86,29 +65,10 @@ if (!file_exists($envExample)) {
     }
 }
 
-// Try to install and build frontend if npm exists
-$npm = PHP_OS_FAMILY === 'Windows' ? 'npm.cmd' : 'npm';
-[$npmCode] = run([$npm, '--version'], $base);
-if ($npmCode === 0) {
-    info('Installing frontend dependencies (npm ci)...');
-    [$ciCode] = run([$npm, 'ci', '--silent'], $base);
-    if ($ciCode === 0) {
-        info('Building frontend assets (npm run build)...');
-        [$buildCode] = run([$npm, 'run', 'build', '--silent'], $base);
-        if ($buildCode === 0) {
-            info('Assets built successfully.');
-        } else {
-            info('Skipped asset build (vite not available or build failed).');
-        }
-    } else {
-        info('Skipped npm install (package manager not available or failed).');
-    }
-} else {
-    info('Node not detected; skipping frontend install/build.');
-}
+info('Prebuilt frontend assets are ready; Node.js is optional.');
 
 info("\nYou're ready! Next steps:");
 info("  1) cd {$resolvedBase}");
 info("  2) php artisan serve   # starts dev server on a free port");
-info("  3) npm run dev         # optional: start Vite dev server");
+info("  3) npm ci && npm run dev  # optional: change frontend source");
 info("\nDocumentation: https://github.com/Ibnu-Afdel/DALT.PHP");

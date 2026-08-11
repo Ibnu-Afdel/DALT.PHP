@@ -129,8 +129,8 @@ if (count($arguments) < 2 || $arguments[1] === 'help' || $arguments[1] === '--he
     echo "  challenge:stop          Stop challenge and restore clean app\n";
     echo "\nGuided learning:\n";
     echo "  platform:status         Show whether guided learning is installed (.dalt)\n";
-    echo "  platform:clean          Remove guided learning (framework core only)\n";
-    echo "  platform:remove         Alias of platform:clean\n";
+    echo "  platform:clean [--force] Remove guided learning (framework core only)\n";
+    echo "  platform:remove [--force] Alias of platform:clean\n";
     echo "                          WARNING: This removes .dalt/ permanently!\n";
     echo "\nExamples:\n";
     echo "  example:install auth    Install authentication example safely\n";
@@ -785,6 +785,16 @@ SQL;
 
     case 'platform:clean':
     case 'platform:remove':
+        $platformArguments = array_slice($arguments, 2);
+        $force = $platformArguments === ['--force'];
+        if ($platformArguments !== [] && !$force) {
+            echo "Usage: php artisan {$command} [--force]\n";
+            exit(1);
+        }
+        if (is_link(base_path('.dalt'))) {
+            fwrite(STDERR, "Refusing to remove an unsafe symbolic-link .dalt path.\n");
+            exit(1);
+        }
         if (!is_dir(base_path('.dalt'))) {
             echo "\n✓ Guided learning layer already removed.\n";
             echo "DALT.PHP is running as the framework core only.\n\n";
@@ -799,17 +809,17 @@ SQL;
         echo "This will permanently remove the guided learning layer and leave\n";
         echo "DALT.PHP as the framework core only.\n";
         echo "\n";
-        echo "⚠️  WARNING: This action cannot be undone!\n";
+        echo "Application files, including an installed auth example, will be kept.\n";
         echo "\n";
-        echo "Do you want to continue? [y/N]: ";
-        
-        $handle = fopen("php://stdin", "r");
-        $line = trim(fgets($handle));
-        fclose($handle);
-        
-        if (strtolower($line) !== 'y' && strtolower($line) !== 'yes') {
-            echo "\nCancelled. No changes made.\n\n";
-            exit(0);
+
+        if (!$force) {
+            echo "Do you want to continue? [y/N]: ";
+            $line = trim((string) fgets(STDIN));
+
+            if (strtolower($line) !== 'y' && strtolower($line) !== 'yes') {
+                echo "\nCancelled. No changes made.\n\n";
+                exit(1);
+            }
         }
         
         if (file_exists(base_path('.dalt/scripts/cleanup.php'))) {
