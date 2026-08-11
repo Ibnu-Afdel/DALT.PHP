@@ -1,5 +1,7 @@
 # Lesson 17: Observability
 
+> **Status: Completed** — The slow-query indexing challenge has been fixed and verified.
+
 ## You Can't Fix What You Can't See
 
 Your application is running in production. Suddenly, page loads take 5 seconds. Users are complaining. CPU usage on the database server is at 100%.
