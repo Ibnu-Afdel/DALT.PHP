@@ -1,5 +1,7 @@
 # Lesson 15: PostgreSQL Reliability
 
+> **Status: Completed** — The migration-ordering challenge has been fixed and verified.
+
 ## Keeping Your Data Safe
 
 A database is only as good as its backup and its ability to evolve without breaking. In this lesson, we cover logical backups with `pg_dump`, how migrations actually work under the hood, and how to design a reliable background worker using Postgres.
