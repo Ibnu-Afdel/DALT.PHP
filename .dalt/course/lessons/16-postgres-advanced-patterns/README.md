@@ -1,5 +1,7 @@
 # Lesson 16: Advanced PostgreSQL
 
+> **Status: Completed** — The missing-RLS challenge has been fixed and verified.
+
 ## Scaling and Security at the Data Layer
 
 As your application grows, doing everything in application code becomes risky and slow. If you build a multi-tenant SaaS, filtering by `tenant_id` in every single PHP query is a bug waiting to happen. If your logs table reaches 100 million rows, `DELETE FROM logs WHERE created_at < NOW() - INTERVAL '30 days'` will lock the table and bring down production.
