@@ -1,244 +1,295 @@
-# Lesson 02: Routing System
+# Lesson 02: Routing — Turning a Request into a Handler Call
 
-## Overview
+## What you will be able to do
 
-The routing system maps incoming URLs to controller files. Understanding how routes work is crucial for debugging "404 Not Found" errors and parameter extraction issues.
+By the end of this lesson, you can:
 
-## Learning Objectives
+- register routes for each supported HTTP method;
+- explain why route order changes which handler runs;
+- trace literal URI matching and named parameter extraction;
+- distinguish query input from route parameters;
+- follow controller resolution from application code to the optional platform;
+- diagnose a routing failure before changing the router itself.
 
-By the end of this lesson, you will understand:
-- How routes are defined and registered
-- How the router matches URLs to patterns
-- How route parameters are extracted
-- How HTTP methods are handled
-- Common routing bugs and how to fix them
+## Recommended prerequisite
 
-## Route Definition
+Complete [Lesson 01: Request Lifecycle](../01-request-lifecycle/README.md) first. Routing is one stage inside the larger request-to-response path:
 
-Routes are defined in `routes/routes.php`:
+```text
+server adapter → front controller → Request snapshot → Router → middleware → handler → Response
+```
+
+The router does not start the session, send headers, or print a response. Its job is to select a route and return the normalized result of that route.
+
+## The route table
+
+Application routes live in `routes/routes.php`:
 
 ```php
-// Simple route
+<?php
+
+global $router;
+
 $router->get('/', 'welcome.php');
-
-// Route with parameter
-$router->get('/posts/{id}', 'posts/show.php');
-
-// Route with multiple parameters
-$router->get('/users/{userId}/posts/{postId}', 'users/posts/show.php');
-
-// Different HTTP methods
-$router->post('/posts', 'posts/store.php');
-$router->patch('/posts/{id}', 'posts/update.php');
-$router->delete('/posts/{id}', 'posts/destroy.php');
-```
-
-## How Route Matching Works
-
-### Step 1: Loop Through Routes
-
-The router loops through all registered routes:
-```php
-foreach ($this->routes as $route) {
-    // Check if this route matches
-}
-```
-
-### Step 2: Check HTTP Method
-
-```php
-if (strtoupper($method) !== $route['method']) {
-    continue; // Skip this route
-}
-```
-
-### Step 3: Match URI Pattern
-
-The router uses regex to match patterns:
-
-**Pattern:** `/posts/{id}`  
-**Actual:** `/posts/123`
-
-The `matchUri()` method:
-1. Converts `{id}` to regex capture group `([^/]+)`
-2. Creates regex: `#^/posts/([^/]+)$#`
-3. Matches against actual URI
-4. Extracts captured values
-
-```php
-protected function matchUri(string $pattern, string $actual)
-{
-    // Exact match fast-path
-    if ($pattern === $actual) {
-        return [];
-    }
-
-    // Convert {id} to ([^/]+)
-    $paramNames = [];
-    $regex = preg_replace_callback('/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/', 
-        function ($matches) use (&$paramNames) {
-            $paramNames[] = $matches[1];
-            return '([^/]+)';
-        }, $pattern);
-
-    $regex = '#^' . $regex . '$#';
-
-    if (preg_match($regex, $actual, $matches)) {
-        array_shift($matches); // remove full match
-        return array_combine($paramNames, $matches) ?: [];
-    }
-
-    return false;
-}
-```
-
-### Step 4: Inject Parameters
-
-Matched parameters are injected into `$_GET`:
-```php
-foreach ($params as $key => $value) {
-    $_GET[$key] = $value;
-}
-```
-
-Now controllers can access them:
-```php
-$id = $_GET['id']; // "123"
-```
-
-## Route Registration Methods
-
-### GET Routes
-```php
 $router->get('/posts', 'posts/index.php');
-```
-Handles: `GET /posts`
-
-### POST Routes
-```php
+$router->get('/posts/{id}', 'posts/show.php');
 $router->post('/posts', 'posts/store.php');
 ```
-Handles: `POST /posts` (form submissions)
 
-### PATCH Routes
+`public/index.php` creates the router, loads the application route file, then loads the optional learning-platform routes. Application routes are registered first, so learner-owned routes take priority over platform fallback routes.
+
+Registering a route creates a `Core\Route` value containing:
+
+- an uppercased HTTP method;
+- a URI pattern;
+- a closure or controller path;
+- optional route middleware attached with `only()`.
+
+The route table is ordered. `Router::route()` checks entries from first to last and returns on the first method-and-URI match.
+
+## Predict before reading the source
+
+For these routes:
+
 ```php
-$router->patch('/posts/{id}', 'posts/update.php');
+$router->get('/posts/create', 'posts/create.php');
+$router->get('/posts/{id}', 'posts/show.php');
+$router->post('/posts', 'posts/store.php');
 ```
-Handles: `PATCH /posts/123` (updates)
 
-### DELETE Routes
+predict the result:
+
+| Request | Matching route | Result |
+|---|---|---|
+| `GET /posts/create` | `/posts/create` | create controller |
+| `GET /posts/42` | `/posts/{id}` with `id = "42"` | show controller |
+| `POST /posts` | `POST /posts` | store controller |
+| `GET /posts` | no `GET /posts` entry | HTTP 404 |
+| `POST /posts/42` | no matching method and URI | HTTP 404 |
+
+The last two cases are 404s from the route boundary. A route that exists for another HTTP method is not a match.
+
+## 1. The router checks the HTTP method first
+
+The public entry point uses the effective method from `Request::method()`:
+
 ```php
-$router->delete('/posts/{id}', 'posts/destroy.php');
+$response = $router->route($request->path(), $request->method(), $request);
 ```
-Handles: `DELETE /posts/123` (deletions)
 
-## Route Parameters
+The router compares the uppercased method with each route's method. DALT supports `GET`, `POST`, `PUT`, `PATCH`, and `DELETE`.
 
-### Single Parameter
+HTML forms only submit `GET` and `POST`, so a real `POST` may use a `_method` input to reach a `PUT`, `PATCH`, or `DELETE` route:
+
+```html
+<form method="POST" action="/posts/42">
+    <input type="hidden" name="_method" value="PATCH">
+</form>
+```
+
+Method overrides are deliberately limited. A `GET` request cannot silently become a destructive method just because its query string contains `_method`.
+
+## 2. URI matching is literal except for placeholders
+
+This route:
+
+```php
+$router->get('/users/{user}/posts/{post}', $handler);
+```
+
+matches `/users/5/posts/42` and extracts:
+
+```php
+[
+    'user' => '5',
+    'post' => '42',
+]
+```
+
+Each placeholder must start with a letter or underscore and may then contain letters, numbers, and underscores. A placeholder matches one or more characters other than `/`.
+
+The router builds the matching expression in pieces. Static text is escaped before it is placed in the expression, so characters such as `.`, `+`, `?`, `(`, and `)` in a route pattern remain literal route text rather than becoming regular-expression operators.
+
+For example:
+
+```php
+$router->get('/files/{name}.json', $handler);
+```
+
+matches `/files/report.json`, but not `/files/reportXjson`.
+
+The current matcher does not add optional trailing slashes or typed constraints. If the application needs another URL shape, register another explicit route.
+
+## 3. Route parameters are request data of their own
+
+A handler can receive route values through the `Request` object:
+
+```php
+$router->get('/posts/{id}', function (Request $request): array {
+    return [
+        'id' => $request->route('id'),
+        'query_page' => $request->query('page'),
+    ];
+});
+```
+
+These are different sources:
+
+| API | Reads |
+|---|---|
+| `$request->route('id')` | `{id}` captured from the URI |
+| `$request->query('id')` | `?id=...` from the query string |
+| `$request->input('title')` | submitted form data |
+| `$request->all()` | query data merged with form data, with form data winning |
+
+The router stores route parameters on the captured request before dispatching the handler. It also copies them into `$_GET` as a compatibility bridge for older controller lessons. New code should use `Request::route()` so a URI parameter cannot be confused with query input.
+
+## 4. Route order is behavior
+
+The matcher is intentionally first-match-wins. A placeholder accepts ordinary text, so this order is wrong:
+
 ```php
 $router->get('/posts/{id}', 'posts/show.php');
+$router->get('/posts/create', 'posts/create.php');
 ```
-- URL: `/posts/123`
-- Controller access: `$_GET['id']` → `"123"`
 
-### Multiple Parameters
-```php
-$router->get('/users/{userId}/posts/{postId}', 'users/posts/show.php');
-```
-- URL: `/users/5/posts/42`
-- Controller access: `$_GET['userId']` → `"5"`, `$_GET['postId']` → `"42"`
+`GET /posts/create` matches `/posts/{id}` first, with `id = "create"`. The create route is never reached.
 
-### Parameter Naming Rules
-- Must start with letter or underscore
-- Can contain letters, numbers, underscores
-- Examples: `{id}`, `{user_id}`, `{postId}`
-
-## Route Order Matters
-
-Routes are matched in the order they're defined:
+Put the more specific route first:
 
 ```php
-// ❌ WRONG - specific route after generic
-$router->get('/posts/{id}', 'posts/show.php');
-$router->get('/posts/create', 'posts/create.php'); // Never matches!
-
-// ✅ CORRECT - specific route first
 $router->get('/posts/create', 'posts/create.php');
 $router->get('/posts/{id}', 'posts/show.php');
 ```
 
-## Middleware on Routes
+This is not a special case in the router. It is a property of any ordered route table with overlapping patterns. When debugging an unexpected handler, inspect earlier routes before changing parameter extraction.
 
-Routes can have middleware:
+## 5. A matched route goes through middleware
+
+Attach middleware to the route immediately after registering it:
+
 ```php
 $router->post('/posts', 'posts/store.php')->only(['auth', 'csrf']);
 ```
 
-This runs `auth` and `csrf` middleware before the controller.
+The router sets the route parameters and then asks the middleware pipeline to run. Middleware can stop dispatch and return a response, or call the next layer and transform the response on the way back out:
 
-## Common Routing Issues
-
-### Issue 1: 404 on Valid Route
-**Cause:** Route pattern doesn't match URL  
-**Debug:** Check regex pattern in `matchUri()`
-
-### Issue 2: Wrong Controller Executes
-**Cause:** Route order problem  
-**Fix:** Move specific routes before generic ones
-
-### Issue 3: Parameters Are Empty
-**Cause:** Parameter injection failed  
-**Debug:** Check `$_GET` injection in `Router::route()`
-
-### Issue 4: POST Route Returns 404
-**Cause:** Form method is GET, not POST  
-**Fix:** Add `method="POST"` to form
-
-## Debugging Routes
-
-### Technique 1: Dump All Routes
-```php
-// In routes/routes.php
-dd($router);
+```text
+route match
+  ↓
+auth before → csrf before → handler → csrf after → auth after
+  ↓
+Response
 ```
 
-### Technique 2: Trace Route Matching
+If no route matches, middleware is not invoked. A 404 caused by a missing route cannot be fixed inside an authentication or CSRF middleware.
+
+## 6. Controller resolution is constrained and predictable
+
+String handlers are relative controller paths such as `posts/show.php`. The router checks:
+
+1. `app/Http/controllers/posts/show.php`;
+2. each optional platform controller root, such as `.dalt/Http/controllers/posts/show.php`.
+
+The application root wins. The router resolves the real path and verifies that it remains below the selected root, so a route cannot use `../` to include an arbitrary file. Unsafe controller paths are rejected when the `Route` is created.
+
+Closures are dispatched through the container. The container can provide the current `Request`, named route parameters, and registered services:
+
 ```php
-// In Router::route()
-dd($uri, $method, $this->routes);
+$router->get('/users/{id}', function (Request $request, string $id): array {
+    return ['route_id' => $id, 'same_request' => $request->route('id') === $id];
+});
 ```
 
-### Technique 3: Check Parameters
-```php
-// In controller
-dd($_GET);
+The route boundary still controls the final value. A closure or controller may return a `Response`, string, array, or `null`; the router normalizes that result through `Response::fromHandler()`.
+
+## 7. Routing ends at a response boundary
+
+The router itself does not call `header()`, `echo`, or `exit`. Handler results become responses:
+
+| Handler result | Normalized response |
+|---|---|
+| `Response` | returned unchanged |
+| string | HTML response, status 200 |
+| array | JSON response, status 200 |
+| `null` | empty response, status 200 |
+| legacy `echo` output | captured as the response body |
+
+`redirect('/login')` creates a redirect response. It does not terminate PHP, which allows middleware and the front controller to finish their outward path.
+
+## A source trace for `GET /posts/42`
+
+Use this sequence when reading the code:
+
+1. `Request::capture()` snapshots the superglobals.
+2. `Request::path()` returns `/posts/42`, excluding any query string.
+3. `Router::route()` compares the effective method with each route.
+4. `Router::matchUri()` captures `42` as `id`.
+5. The request receives `['id' => '42']` as route parameters.
+6. Route middleware runs, if configured.
+7. The controller path is resolved below an allowed controller root.
+8. The handler runs and its result becomes a `Response`.
+9. `public/index.php` sends that response once.
+
+For `GET /posts/create`, inspect the order at step 3. If `/posts/{id}` appears before `/posts/create`, the router is behaving correctly according to its contract; the route table is wrong.
+
+## Debugging checklist
+
+- **404 on a valid-looking URL:** confirm the path, effective method, and exact route registration.
+- **The wrong controller runs:** inspect earlier routes for a generic placeholder pattern.
+- **A route parameter is missing:** confirm the placeholder name and read it with `Request::route()`.
+- **Query and route values are confused:** compare `route()`, `query()`, and `input()` instead of dumping only `$_GET`.
+- **A controller cannot be found:** check the relative path and whether the file is below `app/Http/controllers` or an installed platform controller root.
+- **Middleware never runs:** prove that the route matched before debugging the middleware alias or class.
+- **A route works in a browser but not a form:** inspect the submitted method and any allowed `_method` override.
+
+## Practice exercise
+
+Add an application-owned `/about` page:
+
+1. Register `$router->get('/about', 'about.php');` in `routes/routes.php`.
+2. Create `app/Http/controllers/about.php`.
+3. Return a small `Response` or render a view from the controller.
+4. Verify `GET /about` returns 200 and an unknown path returns 404.
+5. Add a parameter route such as `/team/{member}` and compare `Request::route('member')` with a query value of the same name.
+
+Keep the route and controller in application-owned directories. The optional `.dalt` platform is a fallback, not the place for application features.
+
+## Complete trace exercise
+
+Read these files in order and write down what each contributes:
+
+1. `routes/routes.php`
+2. `public/index.php`
+3. `framework/Core/Request.php`
+4. `framework/Core/Router.php`
+5. `framework/Core/Route.php`
+6. `framework/Core/Middleware/Middleware.php`
+7. `framework/Core/Response.php`
+
+Then run:
+
+```bash
+composer test -- --filter='Router|Request|Response'
 ```
 
-## Key Files
+## Challenge: Broken Routing
 
-- **`routes/routes.php`** - Route definitions
-- **`framework/Core/Router.php`** - Routing logic
-- **`public/index.php`** - Router invocation
+After this lesson, start the linked challenge:
 
-## Practice Exercise
+```bash
+php artisan challenge:start broken-routing
+php artisan challenge:verify
+```
 
-1. Add a new route: `$router->get('/about', 'about.php');`
-2. Create controller: `Http/controllers/about.php`
-3. Create view: `resources/views/about.view.php`
-4. Test in browser: `http://localhost:8000/about`
+The challenge deliberately places `/posts/{id}` before `/posts/create` and comments out `/posts/{id}/edit`. Fix the route table, verify the behavior, then stop the challenge to restore the original files:
 
-## Next Steps
+```bash
+php artisan challenge:stop
+```
 
-- **Lesson 03: Middleware** - How to protect routes
-- **Challenge: Broken Routing** - Debug routing issues
+The two bugs are route-table bugs. The matching algorithm is already doing what it was designed to do: checking routes in registration order and selecting the first valid method-and-URI match.
 
-## Summary
+## Laravel bridge
 
-The routing system:
-1. Registers routes with patterns and controllers
-2. Matches incoming URLs using regex
-3. Extracts parameters from URLs
-4. Injects parameters into `$_GET`
-5. Requires the controller file
-
-Understanding routing is essential for building and debugging web applications.
+Laravel also separates route registration, matching, middleware, controller dispatch, and response sending. Its router adds named routes, route groups, constraints, model binding, resource shortcuts, and richer middleware configuration. DALT keeps only the visible core: an ordered list of method/pattern/handler entries, named string parameters, a small middleware pipeline, and one response boundary.
