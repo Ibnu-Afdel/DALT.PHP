@@ -282,8 +282,9 @@ You have two migration files, but they are numbered incorrectly. The `posts` tab
 
 Additionally, the `posts` table is using SQLite `AUTOINCREMENT` syntax instead of Postgres `BIGSERIAL`.
 
-1. Rename the files so `users` runs before `posts`.
-2. Fix the Postgres syntax in the posts migration.
+1. Move the users-table SQL into `001_create_users_table.sql` so `users` runs first.
+2. Move the posts-table SQL into `002_create_posts_table.sql` so it runs after `users`.
+3. Fix the Postgres syntax in the posts migration by replacing `INTEGER PRIMARY KEY AUTOINCREMENT` with `BIGSERIAL PRIMARY KEY`.
 
 Verify:
 

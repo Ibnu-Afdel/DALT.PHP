@@ -12,6 +12,7 @@ This lesson covers the essential patterns to make your stack secure, resilient, 
 
 - Remove plaintext passwords from Compose using Docker secrets
 - Read secrets securely from PHP
+- Use health checks so dependent services wait for actual readiness
 - Apply `restart` policies correctly
 - Set `mem_limit` and `cpus` to protect neighboring containers
 - Configure log rotation so your disk doesn't fill up
@@ -80,6 +81,28 @@ $pdo = new PDO('pgsql:host=db;dbname=dalt', 'postgres', trim($password));
 The password never exists in the environment.
 
 ---
+
+## Health Checks and Startup Ordering
+
+`depends_on` only controls startup order when it uses the short array syntax. It does not mean that Postgres is ready to accept connections when the `db` container process has started. Add a readiness check to the database and make the app depend on that health status:
+
+```yaml
+services:
+  app:
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+```
+
+`pg_isready` checks whether Postgres is accepting connections. Compose starts the app only after the database reports `healthy`, avoiding a startup race where the app tries to connect while Postgres is still initializing.
 
 ## Restart Policies
 
