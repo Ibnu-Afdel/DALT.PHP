@@ -3,9 +3,5 @@
 global $router;
 
 $router->get('/', 'welcome.php');
-
-// To install the auth example, run:
-//   php artisan example:install auth
-
-
-
+$router->get('/users', 'users/index.php');
+$router->get('/users/{id}', 'users/show.php');
