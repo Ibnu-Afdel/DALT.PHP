@@ -133,8 +133,9 @@ if (count($arguments) < 2 || $arguments[1] === 'help' || $arguments[1] === '--he
     echo "  platform:remove         Alias of platform:clean\n";
     echo "                          WARNING: This removes .dalt/ permanently!\n";
     echo "\nExamples:\n";
-    echo "  example:install auth    Install authentication example\n";
-    echo "                          Copies controllers, views, and routes\n";
+    echo "  example:install auth    Install authentication example safely\n";
+    echo "  example:update auth     Update untouched generated auth files\n";
+    echo "  example:uninstall auth  Remove the generated authentication example\n";
     echo "\n";
     echo "Help:\n";
     echo "  help                    Show this help message\n";
@@ -438,42 +439,32 @@ SQL;
         break;
 
     case 'example:install':
+    case 'example:update':
+    case 'example:uninstall':
         require_platform($command);
         $which = $arguments[2] ?? '';
         if ($which !== 'auth') {
-            echo "Usage: php artisan example:install auth\n";
+            echo "Usage: php artisan {$command} auth" . ($command === 'example:uninstall' ? ' [--force]' : '') . "\n";
             exit(1);
         }
-        $source = base_path('.dalt/stubs/auth');
-        if (!is_dir($source)) {
-            echo "Examples not found.\n";
+        $extra = array_slice($arguments, 3);
+        $force = $command === 'example:uninstall' && $extra === ['--force'];
+        if ($extra !== [] && !$force) {
+            echo "Usage: php artisan {$command} auth" . ($command === 'example:uninstall' ? ' [--force]' : '') . "\n";
             exit(1);
         }
-        // Copy controllers
-        @mkdir(base_path('app/Http/controllers/session'), 0755, true);
-        @mkdir(base_path('app/Http/controllers/registration'), 0755, true);
-        foreach (['session/create.php','session/store.php','session/destroy.php','registration/create.php','registration/store.php'] as $file) {
-            copy($source . '/Http/controllers/' . $file, base_path('app/Http/controllers/' . $file));
+        try {
+            $manager = new Core\AuthScaffoldManager(base_path());
+            $message = match ($command) {
+                'example:install' => $manager->install(),
+                'example:update' => $manager->update(),
+                'example:uninstall' => $manager->uninstall($force),
+            };
+            echo $message . "\n";
+        } catch (Core\AuthScaffoldException $exception) {
+            fwrite(STDERR, $exception->getMessage() . "\n");
+            exit(1);
         }
-        // Copy views
-        @mkdir(base_path('resources/views/auth'), 0755, true);
-        foreach (['auth/login.view.php','auth/register.view.php'] as $file) {
-            copy($source . '/resources/views/' . $file, base_path('resources/views/' . $file));
-        }
-        // Append routes
-        $routesPath = base_path('routes/routes.php');
-        $routeBlock = "\n// Auth example routes\n"
-            . "\$router->get('/register', 'registration/create.php')->only('guest');\n"
-            . "\$router->post('/register', 'registration/store.php')->only(['guest','csrf']);\n"
-            . "\$router->get('/login', 'session/create.php')->only('guest');\n"
-            . "\$router->post('/session', 'session/store.php')->only(['guest','csrf']);\n"
-            . "\$router->delete('/session', 'session/destroy.php')->only(['auth','csrf']);\n";
-        file_put_contents($routesPath, $routeBlock, FILE_APPEND);
-        // Create marker so UI can show CTAs
-        @mkdir(base_path('storage'), 0755, true);
-        file_put_contents(base_path('storage/auth_example_installed'), date('c'));
-        echo "Auth example installed and routes appended to routes/routes.php.\n";
-        echo "Visit /register or /login (or see buttons on the welcome page).\n";
         break;
 
     case 'challenge:list':

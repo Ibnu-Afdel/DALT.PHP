@@ -10,6 +10,19 @@ This directory contains the DALT learning platform UI and assets. It's completel
 - `stubs/` - Code templates for authentication scaffolding
 - `scripts/` - Setup scripts (post-create hooks)
 
+## Authentication Example
+
+Install the small application-owned authentication example with:
+
+```bash
+php artisan example:install auth
+php artisan migrate
+```
+
+The installer refuses existing destination files or conflicting literal routes and records hashes for the files it generated. Repeating install is safe. Use `php artisan example:update auth` only while the generated files are untouched, and `php artisan example:uninstall auth` to remove an unchanged example. Both commands stop if learner edits are present; `example:uninstall auth --force` explicitly discards those generated-file edits.
+
+The example intentionally covers registration, login, logout, sessions, validation, password hashing, prepared queries, and CSRF. It is educational scaffolding, not a production authentication suite; rate limiting, password reset, verification, two-factor authentication, and account recovery are omitted.
+
 ## Removing the Learning Platform
 
 Want to use DALT as a clean micro-framework? Run the supported cleanup command:

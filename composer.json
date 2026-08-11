@@ -101,6 +101,7 @@
             "phpunit.xml",
             "phpunit.xml.dist",
             "/storage/logs/*.log",
+            "/storage/framework/examples",
             "/tests",
             "/vendor",
             "*.log",

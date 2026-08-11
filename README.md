@@ -16,6 +16,8 @@ This isn't a framework for production apps. It's a framework for understanding h
 
 A working web application with routing, database access, and validation, plus an optional authentication example installed with `php artisan example:install auth`. Unlike production frameworks, you can read and understand every line of code.
 
+The auth installer is repeatable and refuses to overwrite application files or conflicting literal routes. Untouched generated files can later be refreshed with `php artisan example:update auth` or removed with `php artisan example:uninstall auth`; learner modifications are preserved by default.
+
 You write real SQL with prepared statements - no ORM hiding the queries. You see `$_SESSION` arrays directly - no magic session handling. You add CSRF tokens to forms yourself - no automatic protection. This is intentional. You learn by doing it yourself.
 
 The framework includes optional lessons and debugging challenges to help you get started, but they're easily removable. The real learning happens when you build your own projects.

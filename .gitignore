@@ -22,6 +22,7 @@ Thumbs.db
 # Logs
 /storage/logs/*
 !/storage/logs/.gitkeep
+/storage/framework/examples/
 *.log
 
 # Temporary files

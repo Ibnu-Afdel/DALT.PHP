@@ -6,7 +6,7 @@
     </a>
     <nav class="flex items-center gap-4 sm:gap-6 text-sm" aria-label="Primary navigation">
       <a href="/learn" class="font-medium hover:text-[#93DA97] transition-colors" <?= urlIs('/learn') ? 'aria-current="page"' : '' ?>>Learn</a>
-      <?php if (file_exists(base_path('storage/auth_example_installed'))): ?>
+      <?php if (file_exists(base_path('storage/framework/examples/auth.json'))): ?>
         <?php if (\Core\Session::has('user')): ?>
           <form action="/session" method="POST" class="inline">
             <input type="hidden" name="_method" value="DELETE">
