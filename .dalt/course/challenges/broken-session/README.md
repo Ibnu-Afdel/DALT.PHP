@@ -1,192 +1,92 @@
 # Challenge: Broken Session
 
-## Difficulty: Beginner
+## Difficulty: Easy
 
-## Setup Instructions
+This challenge practices the session boundary in the request lifecycle. The broken file is a current-compatible `framework/Core/Session.php`, so the rest of the framework remains available while you debug two flash-data defects.
 
-1. **Backup your current Session class:**
-   ```bash
-   cp framework/Core/Session.php framework/Core/Session.php.backup
-   ```
+## Start the challenge
 
-2. **Copy the broken Session class:**
-   ```bash
-   cp challenges/broken-session/framework/Core/Session.php framework/Core/
-   ```
+From the project root, run:
 
-3. **Copy the controller files:**
-   ```bash
-   cp -r challenges/broken-session/Http/controllers/contact Http/controllers/
-   ```
-
-4. **Add routes (append to routes/routes.php):**
-   ```bash
-   cat challenges/broken-session/routes/routes.php >> routes/routes.php
-   ```
-
-5. **Start the server:**
-   ```bash
-   php artisan serve
-   ```
-
-6. **Test the broken session:**
-   - Visit http://localhost:8000/contact
-   - Submit form with empty fields (validation errors won't show correctly!)
-   - Submit valid form (success message persists after refresh!)
-
-## Concept: How Sessions Work
-
-Sessions store data across HTTP requests:
-
-1. **Session Start** - `session_start()` in `public/index.php`
-2. **Store Data** - `$_SESSION['key'] = 'value'`
-3. **Retrieve Data** - `$value = $_SESSION['key']`
-4. **Flash Data** - Data that exists for only one request
-5. **Cleanup** - `Session::unflash()` removes flash data
-
-**Flash data flow:**
-```
-Request 1: Store flash → $_SESSION['_flash']['errors'] = [...]
-Request 2: Retrieve flash → Session::get('errors')
-Request 2 End: Clean up → Session::unflash()
-Request 3: Flash data gone
-```
-
-## The Bugs
-
-### Bug #1: Session::get() Checks Wrong Order
-
-**Symptom:** Flash data is not retrieved correctly.
-
-**What's happening:**
-```php
-// BROKEN - checks regular session first
-return $_SESSION[$key] ?? $_SESSION['_flash'][$key] ?? $default;
-
-// CORRECT - checks flash first
-return $_SESSION['_flash'][$key] ?? $_SESSION[$key] ?? $default;
-```
-
-Flash data should have priority over regular session data.
-
-### Bug #2: unflash() is Disabled
-
-**Symptom:** Flash messages persist across multiple requests.
-
-**What's happening:**
-```php
-// BROKEN - cleanup commented out
-public static function unflash()
-{
-    // unset($_SESSION['_flash']);
-}
-
-// CORRECT - cleanup enabled
-public static function unflash()
-{
-    unset($_SESSION['_flash']);
-}
-```
-
-Without cleanup, flash data never gets removed and appears on every request.
-
-## Learning Objectives
-
-After fixing this challenge, you will understand:
-- How sessions persist data across requests
-- The difference between regular and flash session data
-- Why flash data must be cleaned up
-- How form validation uses flash data
-- How to debug session issues
-
-## Debugging Hints
-
-1. **Check session contents** - Add `dd($_SESSION)` to see what's stored
-2. **Trace flash data** - Add `dd($_SESSION['_flash'])` after flashing
-3. **Test cleanup** - Refresh the page multiple times to see if flash persists
-4. **Check retrieval order** - Look at `Session::get()` logic carefully
-
-## Files to Investigate
-
-- `framework/Core/Session.php` - Session management (Bugs are here!)
-- `public/index.php` - See where `Session::unflash()` is called
-- `Http/controllers/contact/submit.php` - See how flash data is stored
-- `Http/controllers/contact/form.php` - See how flash data is retrieved
-
-## How to Fix
-
-### Fix #1: Correct Session::get() Order
-
-Check flash data before regular session data:
-```php
-// In framework/Core/Session.php
-public static function get($key, $default = null)
-{
-    // Fixed: Check flash first, then regular session
-    return $_SESSION['_flash'][$key] ?? $_SESSION[$key] ?? $default;
-}
-```
-
-### Fix #2: Enable unflash()
-
-Uncomment the cleanup code:
-```php
-// In framework/Core/Session.php
-public static function unflash()
-{
-    unset($_SESSION['_flash']); // Fixed: uncommented
-}
-```
-
-## Success Criteria
-
-When fixed correctly:
-- ✅ Validation errors display after form submission
-- ✅ Old form input is preserved after validation errors
-- ✅ Success messages display once and disappear after refresh
-- ✅ Flash data is cleaned up properly
-
-## Testing Your Fix
-
-1. **Test validation errors:**
-   - Visit http://localhost:8000/contact
-   - Submit empty form
-   - Should see error messages
-   - Refresh page - errors should disappear
-
-2. **Test old input:**
-   - Fill form partially
-   - Submit with some fields empty
-   - Should see your input preserved in valid fields
-
-3. **Test success message:**
-   - Submit valid form
-   - Should see success message
-   - Refresh page - message should disappear
-
-## Cleanup
-
-After completing the challenge:
 ```bash
-# Restore original Session class
-cp framework/Core/Session.php.backup framework/Core/Session.php
-
-# Remove challenge controllers (optional)
-rm -rf Http/controllers/contact
+php artisan challenge:start broken-session
 ```
 
-## Related Lessons
+The command records the exact files it replaces. Do not copy files manually. When you are finished, `challenge:stop` restores your files and removes challenge-created files.
 
-- **Lesson 01: Request Lifecycle** - See where session is initialized
-- **Lesson 04: Authentication** - See how sessions store user data
+## Observe the broken behavior
 
-## Congratulations!
+Start the server with `php artisan serve`, then try these paths:
 
-You've completed all five broken challenges! You now understand:
-- Routing and parameter extraction
-- Middleware execution and validation
-- Authentication and password security
-- Database queries and SQL injection prevention
-- Session management and flash data
+- `/contact/precedence` should display `flash value`, but the broken `Session::get()` returns the persistent value first.
+- Submit the contact form with an empty field. The redirect should show validation errors and old input.
+- Submit valid contact data. The success message should appear on `/contact/success`, then disappear on the next refresh. The broken request-start aging carries old flash data forward, so it persists.
 
-Ready to build your own backend applications!
+The form includes a CSRF field because the POST route uses the same `csrf` middleware as the application runtime.
+
+## What the request lifecycle is supposed to do
+
+The front controller starts the native session before dispatch. `Session::start()` then ages flash data once:
+
+```text
+request start: old expires, new becomes old, new becomes empty
+handler:       flash() writes into new
+next request:  new becomes old and is readable
+following request: old expires
+```
+
+`redirect()` returns a `Response`; it does not terminate PHP. The response travels back through the router and is sent once by `public/index.php`. Therefore flash data cannot depend on skipping an end-of-request cleanup call.
+
+When a key exists in both persistent session data and flash data, `Session::get()` must inspect flash data first. This gives a validation or status message its intended one-request meaning without deleting the persistent value.
+
+## The bugs
+
+### Bug 1: persistent data wins over flash data
+
+`Session::get()` currently checks `$_SESSION[$key]` before calling the flash lookup. The `/contact/precedence` probe writes both values under `probe`, making the wrong precedence visible.
+
+Fix the lookup order while preserving the `exists()`/`has()` distinction and null-safe lookup behavior. Do not replace the current session implementation with the old flat-bag example from historical tutorials.
+
+### Bug 2: old flash data is carried into the next request
+
+`ageFlashData()` should discard the previous `old` bag. It should build the next store from legacy values and the previous `new` bag, then reset `new` to an empty array. Carrying `old` forward makes a one-request flash value live indefinitely.
+
+## Hints
+
+1. Trace `public/index.php` into `Session::start()` before reading the contact controllers.
+2. Inspect the two bags under `$_SESSION['_flash']`; `new` is written during the current request and `old` is read during the following request.
+3. In `Session::get()`, find the existing `flashValue()` helper and ask which result should win when both sources contain the key.
+4. In `ageFlashData()`, compare the values used to construct `old` with the lifecycle diagram above.
+
+## Files to inspect
+
+- `public/index.php` — the one front-controller entry point and final `Response::send()` boundary.
+- `framework/Core/Session.php` — the two defects.
+- `framework/Core/Response.php` and `framework/Core/functions.php` — response and redirect contracts.
+- `app/Http/controllers/contact/` — the challenge's form, redirect, and probe handlers after `challenge:start`.
+- `routes/routes.php` — the challenge routes after `challenge:start`.
+
+## Verify your fix
+
+```bash
+php artisan challenge:verify
+```
+
+The verifier checks structural evidence in the learner-owned file. It does not execute learner PHP, so use the browser/server observations as the runtime proof and the verifier as a focused completion check.
+
+## Stop and restore
+
+```bash
+php artisan challenge:stop
+```
+
+This restores the exact pre-challenge files, including files that did not exist before the challenge. If you need another attempt without losing your original state, use `php artisan challenge:reset`.
+
+## Transfer exercise
+
+Add a small route that flashes a value, redirects to another page, and displays the value exactly once. Write a request-level test that proves:
+
+1. the value is available immediately after `flash()`;
+2. it survives the redirect to the next request;
+3. it is absent on the following request; and
+4. a flash value wins over a persistent value with the same key.

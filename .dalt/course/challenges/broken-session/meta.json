@@ -1,7 +1,7 @@
 {
   "title": "Broken Session",
   "order": 1,
-  "difficulty": "Medium",
+  "difficulty": "Easy",
   "bugs": 2,
   "lesson": "01-request-lifecycle",
   "description": "Fix flash data handling and session persistence",

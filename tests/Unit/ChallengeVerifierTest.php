@@ -217,6 +217,19 @@ test('verification logging rejects untrusted result and challenge fields', funct
         ->toThrow(RuntimeException::class, 'invalid challenge verification result');
 });
 
+test('the broken-session specification rejects its fixture and accepts the verified base session', function () {
+    $path = '.dalt/course/challenges/broken-session';
+
+    $broken = (new ChallengeVerifier($path, false))->verify();
+    $fixed = (new ChallengeVerifier($path, true))->verify();
+
+    expect($broken['status'])->toBe('fail')
+        ->and($broken['failed'])->toBeGreaterThan(0)
+        ->and($fixed['status'])->toBe('pass')
+        ->and($fixed['failed'])->toBe(0)
+        ->and($fixed['total'])->toBe(6);
+});
+
 test('every shipped specification is valid and rejects its broken source fixture', function () {
     $root = base_path();
     $directories = glob(base_path('.dalt/course/challenges/*'), GLOB_ONLYDIR) ?: [];
@@ -233,5 +246,5 @@ test('every shipped specification is valid and rejects its broken source fixture
     }
 
     expect($directories)->toHaveCount(20)
-        ->and($total)->toBe(83);
+        ->and($total)->toBe(85);
 });

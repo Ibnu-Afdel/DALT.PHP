@@ -199,3 +199,64 @@ PHP);
         p05RemoveTree($root);
     }
 });
+
+test('broken-session challenge demonstrates flash precedence and request-start expiry', function () {
+    $root = p05ProjectFixture();
+
+    try {
+        p05RemoveTree($root . '/vendor');
+        mkdir($root . '/vendor', 0700, true);
+        $baseAutoload = var_export(base_path('vendor/autoload.php'), true);
+        $projectRoot = var_export($root, true);
+        file_put_contents($root . '/vendor/autoload.php', <<<PHP
+<?php
+require {$baseAutoload};
+\$projectRoot = {$projectRoot};
+spl_autoload_register(static function (string \$class) use (\$projectRoot): void {
+    if (!str_starts_with(\$class, 'Core' . chr(92))) {
+        return;
+    }
+    \$relative = substr(\$class, 5);
+    foreach ([
+        \$projectRoot . '/framework/Core/' . str_replace(chr(92), '/', \$relative) . '.php',
+        \$projectRoot . '/.dalt/Core/' . str_replace(chr(92), '/', \$relative) . '.php',
+    ] as \$path) {
+        if (is_file(\$path)) {
+            require \$path;
+            return;
+        }
+    }
+}, true, true);
+PHP);
+
+        expect(p05Manager($root, 'start', 'broken-session')['result'])->toBeTrue();
+
+        $client = new ApplicationTestClient($root);
+        $broken = $client->request('GET', '/contact/precedence');
+        expect($broken->statusCode)->toBe(200)
+            ->and($broken->body)->toContain('<p id="probe-value">persistent value</p>');
+
+        copy(base_path('framework/Core/Session.php'), $root . '/framework/Core/Session.php');
+
+        $fixed = $client->request('GET', '/contact/precedence');
+        expect($fixed->statusCode)->toBe(200)
+            ->and($fixed->body)->toContain('<p id="probe-value">flash value</p>');
+
+        $next = $client->request(
+            'GET',
+            '/contact/success',
+            session: ['_flash' => ['new' => ['success' => 'Message sent successfully!']]],
+        );
+        $expired = $client->request(
+            'GET',
+            '/contact/success',
+            session: ['_flash' => ['old' => ['success' => 'Message sent successfully!']]],
+        );
+
+        expect($next->body)->toContain('Message sent successfully!')
+            ->and($expired->body)->toContain('No success message!');
+    } finally {
+        p05Manager($root, 'stop');
+        p05RemoveTree($root);
+    }
+});
