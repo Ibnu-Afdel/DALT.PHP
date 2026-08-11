@@ -22,6 +22,7 @@ final class ApplicationTestClient
      * @param array<string, mixed> $query
      * @param array<string, mixed> $input
      * @param array<string, mixed> $server
+     * @param array<string, mixed> $session
      */
     public function request(
         string $method,
@@ -29,6 +30,7 @@ final class ApplicationTestClient
         array $query = [],
         array $input = [],
         array $server = [],
+        array $session = [],
     ): ApplicationResponse {
         $payload = base64_encode(json_encode([
             'method' => $method,
@@ -36,6 +38,7 @@ final class ApplicationTestClient
             'query' => $query,
             'input' => $input,
             'server' => $server,
+            'session' => $session,
             'project_root' => $this->projectRoot,
         ], JSON_THROW_ON_ERROR));
 

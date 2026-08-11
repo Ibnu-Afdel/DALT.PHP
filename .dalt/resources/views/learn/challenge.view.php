@@ -3,10 +3,10 @@
 
 <!-- Challenge Content Data (outside Vue app) -->
 <script type="application/json" id="challenge-content-data">
-  <?= json_encode($content) ?>
+  <?= json_encode($content, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>
 </script>
 
-<main class="flex-1 bg-[#0f1117] text-gray-300 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px]" id="app">
+<main class="flex-1 bg-[#0f1117] text-gray-300 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px]" id="app" tabindex="-1">
   <!-- Header -->
   <section class="border-b border-[#1e293b] bg-[#161b22]/50 py-8">
     <div class="max-w-5xl mx-auto px-6">
@@ -18,13 +18,13 @@
         <span class="text-gray-300">Challenges</span>
       </div>
       <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="text-5xl drop-shadow-md"><?= $challenge['icon'] ?></div>
-          <div>
+        <div class="flex min-w-0 flex-col items-start gap-4 sm:flex-row sm:items-center">
+          <div class="text-5xl drop-shadow-md" aria-hidden="true"><?= $challenge['icon'] ?></div>
+          <div class="min-w-0">
             <h1 class="text-3xl font-bold text-gray-50 tracking-tight"><?= htmlspecialchars($challenge['title']) ?></h1>
             <div class="flex items-center gap-3 mt-2">
-              <span class="px-2.5 py-1 bg-[#93DA97]/10 border border-[#93DA97]/20 text-[#93DA97] rounded text-[10px] uppercase tracking-wider font-bold">
-                <?= $challenge['difficulty'] ?>
+              <span class="px-2.5 py-1 bg-[#93DA97]/10 border border-[#93DA97]/20 text-[#93DA97] rounded text-xs uppercase tracking-wider font-bold">
+                <?= $isActive ? 'Active' : ($challenge['passed'] ? 'Completed' : htmlspecialchars($challenge['difficulty'])) ?>
               </span>
               <span class="text-gray-400 text-sm flex items-center gap-1.5">
                 <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -60,12 +60,21 @@
       <div class="lg:col-span-2 space-y-6">
         <!-- Challenge Description -->
         <div class="bg-[#161b22] rounded-xl shadow-lg border border-gray-800 p-8 prose prose-invert prose-pre:bg-[#0d1117] prose-pre:border prose-pre:border-gray-800 max-w-none">
-          <challenge-content></challenge-content>
+          <challenge-content>
+            <pre class="markdown-fallback"><?= htmlspecialchars($content, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></pre>
+          </challenge-content>
         </div>
 
         <!-- Verification Section -->
         <div class="bg-[#161b22] rounded-xl shadow-lg border border-gray-800 p-8">
-          <challenge-verifier challenge-id="<?= $challengeId ?>"></challenge-verifier>
+          <challenge-verifier challenge-id="<?= htmlspecialchars($challengeId, ENT_QUOTES, 'UTF-8') ?>">
+            <noscript>
+              <div class="rounded-xl border border-amber-500/40 bg-amber-950/30 p-5 text-amber-100">
+                <h2 class="font-semibold">Browser verification needs JavaScript</h2>
+                <p class="mt-2 text-sm">Use <code>php artisan challenge:verify</code> in your terminal instead.</p>
+              </div>
+            </noscript>
+          </challenge-verifier>
         </div>
       </div>
 
@@ -77,7 +86,7 @@
           <div class="space-y-3 text-sm">
             <div class="flex items-center justify-between">
               <span class="text-gray-500">Difficulty</span>
-              <span class="font-medium text-gray-300"><?= $challenge['difficulty'] ?></span>
+              <span class="font-medium text-gray-300"><?= htmlspecialchars($challenge['difficulty']) ?></span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-gray-500">Bugs to Fix</span>
@@ -85,7 +94,11 @@
             </div>
             <div class="flex items-center justify-between">
               <span class="text-gray-500">Challenge ID</span>
-              <span class="font-mono text-[10px] bg-[#0d1117] border border-gray-800 text-[#93DA97] px-2 py-1 rounded"><?= $challengeId ?></span>
+              <span class="font-mono text-xs bg-[#0d1117] border border-gray-800 text-[#93DA97] px-2 py-1 rounded break-all"><?= htmlspecialchars($challengeId) ?></span>
+            </div>
+            <div class="flex items-center justify-between gap-4">
+              <span class="text-gray-500">Status</span>
+              <span class="font-medium <?= $isActive ? 'text-amber-300' : ($challenge['passed'] ? 'text-emerald-300' : 'text-gray-300') ?>"><?= $isActive ? 'Active' : ($challenge['passed'] ? 'Completed' : 'Not loaded') ?></span>
             </div>
           </div>
         </div>
@@ -101,15 +114,11 @@
           <div class="space-y-4 text-xs font-mono">
             <div>
               <div class="text-gray-500 mb-1"># Verify your fix</div>
-              <div class="bg-black/60 border border-gray-800 rounded px-3 py-2 text-[#93DA97] select-all break-all">
-                php artisan challenge:verify
-              </div>
+              <code class="block bg-black/60 border border-gray-800 rounded px-3 py-2 text-[#93DA97] select-all break-all">php artisan challenge:verify</code>
             </div>
             <div>
               <div class="text-gray-500 mb-1"># View logs</div>
-              <div class="bg-black/60 border border-gray-800 rounded px-3 py-2 text-[#93DA97] select-all break-all">
-                cat storage/logs/challenges.log
-              </div>
+              <code class="block bg-black/60 border border-gray-800 rounded px-3 py-2 text-[#93DA97] select-all break-all">cat storage/logs/challenges.log</code>
             </div>
           </div>
         </div>

@@ -43,6 +43,23 @@ if (!mkdir($sessionDirectory, 0700) && !is_dir($sessionDirectory)) {
 $_ENV['APP_LOG_PATH'] = $sessionDirectory . '/app.log';
 $_SERVER['APP_LOG_PATH'] = $_ENV['APP_LOG_PATH'];
 session_save_path($sessionDirectory);
+
+$seedSession = $payload['session'] ?? [];
+if (!is_array($seedSession)) {
+    throw new RuntimeException('Application test session state must be an array.');
+}
+if ($seedSession !== []) {
+    $sessionName = 'dalt_test_session';
+    $sessionId = 'dalt-test-' . bin2hex(random_bytes(12));
+    $_ENV['SESSION_NAME'] = $sessionName;
+    $_SERVER['SESSION_NAME'] = $sessionName;
+    session_name($sessionName);
+    session_id($sessionId);
+    session_start();
+    $_SESSION = $seedSession;
+    session_write_close();
+    $_COOKIE[$sessionName] = $sessionId;
+}
 ob_start();
 
 register_shutdown_function(static function () use ($sessionDirectory): void {

@@ -1,191 +1,203 @@
 <template>
-  <div>
+  <section aria-labelledby="verification-title">
     <div class="mb-6">
-      <h2 class="text-2xl font-bold mb-2">Verify Your Solution</h2>
-      <p class="text-gray-600">
-        Run the automated tests to check if you've fixed all the bugs correctly.
+      <h2 id="verification-title" class="text-2xl font-bold text-gray-100">Verify your solution</h2>
+      <p class="mt-2 max-w-2xl text-gray-400">
+        Run the structural checks for the challenge currently loaded in your project.
       </p>
     </div>
 
-    <!-- Verify Button -->
     <button
-      @click="runVerification"
+      type="button"
       :disabled="isVerifying"
-      class="px-6 py-3 bg-[#3E5F44] text-white rounded-lg hover:bg-[#2d4532] transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center gap-2"
+      class="inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#3E5F44] px-5 py-3 font-medium text-white transition-colors hover:bg-[#4b7253] disabled:cursor-not-allowed disabled:opacity-60"
+      @click="runVerification"
     >
-      <svg v-if="isVerifying" class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      <svg v-if="isVerifying" aria-hidden="true" class="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
+        <circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" />
+        <path class="opacity-90" d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
       </svg>
-      <span v-if="isVerifying">Running Tests...</span>
-      <span v-else>🧪 Run Verification</span>
+      <svg v-else aria-hidden="true" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+      </svg>
+      {{ isVerifying ? 'Running verification…' : 'Run verification' }}
     </button>
 
-    <!-- Results -->
+    <div class="sr-only" role="status" aria-live="polite" aria-atomic="true">
+      {{ announcement }}
+    </div>
+
     <div v-if="result" class="mt-6">
-      <!-- Success -->
-      <div v-if="result.success" class="bg-green-50 border-2 border-green-500 rounded-xl p-6">
-        <div class="flex items-start gap-4">
-          <div class="text-4xl">✅</div>
-          <div class="flex-1">
-            <h3 class="text-xl font-bold text-green-900 mb-2">All Tests Passed!</h3>
-            <p class="text-green-800 mb-4">{{ result.message }}</p>
-            <div class="text-sm text-green-700">
-              Verified at {{ result.timestamp }}
-            </div>
+      <div v-if="result.status === 'pass'" class="rounded-xl border border-emerald-500/50 bg-emerald-950/30 p-6 text-emerald-100">
+        <div class="flex items-start gap-3">
+          <svg aria-hidden="true" class="mt-0.5 h-7 w-7 shrink-0 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div class="min-w-0">
+            <h3 class="text-xl font-bold">All checks passed</h3>
+            <p class="mt-2 overflow-wrap-anywhere text-emerald-200">{{ result.message }}</p>
+            <p v-if="result.timestamp" class="mt-3 text-sm text-emerald-300">Verified {{ formatTimestamp(result.timestamp) }}</p>
+          </div>
+        </div>
+        <ul v-if="result.tests.length" class="mt-5 space-y-2 border-t border-emerald-500/30 pt-4">
+          <li v-for="test in result.tests" :key="test.name" class="flex items-start gap-2 text-sm text-emerald-200">
+            <svg aria-hidden="true" class="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span class="min-w-0 overflow-wrap-anywhere">{{ test.message }}</span>
+          </li>
+        </ul>
+        <a href="/learn" class="mt-6 inline-flex rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500">Choose another challenge</a>
+      </div>
+
+      <div v-else-if="result.status === 'not_loaded'" class="rounded-xl border border-amber-500/50 bg-amber-950/30 p-6 text-amber-100">
+        <div class="flex items-start gap-3">
+          <svg aria-hidden="true" class="mt-0.5 h-7 w-7 shrink-0 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.3 4.3L2.5 18a2 2 0 001.7 3h15.6a2 2 0 001.7-3L13.7 4.3a2 2 0 00-3.4 0z" />
+          </svg>
+          <div class="min-w-0">
+            <h3 class="text-xl font-bold">Challenge not loaded</h3>
+            <p class="mt-2 overflow-wrap-anywhere text-amber-200">{{ result.message }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="rounded-xl border border-red-500/50 bg-red-950/30 p-6 text-red-100">
+        <div class="flex items-start gap-3">
+          <svg aria-hidden="true" class="mt-0.5 h-7 w-7 shrink-0 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div class="min-w-0">
+            <h3 class="text-xl font-bold">Checks still failing</h3>
+            <p class="mt-2 overflow-wrap-anywhere text-red-200">{{ result.message }}</p>
+            <p v-if="result.timestamp" class="mt-3 text-sm text-red-300">Tested {{ formatTimestamp(result.timestamp) }}</p>
           </div>
         </div>
 
-        <!-- Test Details -->
-        <div v-if="result.tests && result.tests.length > 0" class="mt-4 pt-4 border-t border-green-200">
-          <div class="space-y-2">
-            <div v-for="(test, index) in result.tests" :key="index" class="flex items-center gap-2 text-sm text-green-800">
-              <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        <ul v-if="result.tests.length" class="mt-5 space-y-3 border-t border-red-500/30 pt-4" aria-label="Verification checks">
+          <li
+            v-for="test in result.tests"
+            :key="test.name"
+            class="rounded-lg border p-4"
+            :class="test.passed ? 'border-emerald-500/30 bg-emerald-950/30 text-emerald-100' : 'border-red-500/30 bg-red-950/40 text-red-100'"
+          >
+            <div class="flex items-start gap-2">
+              <svg v-if="test.passed" aria-hidden="true" class="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
-              <span>{{ test.description || test.name }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Next Steps -->
-        <div class="mt-6 pt-4 border-t border-green-200">
-          <p class="text-green-900 font-medium mb-3">🎉 Great job! What's next?</p>
-          <div class="flex gap-3">
-            <a href="/learn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
-              Try Another Challenge
-            </a>
-          </div>
-        </div>
-      </div>
-
-      <!-- Not loaded -->
-      <div v-else-if="result.status === 'not_loaded'" class="bg-amber-50 border-2 border-amber-500 rounded-xl p-6">
-        <div class="flex items-start gap-4">
-          <div class="text-4xl">⚠️</div>
-          <div class="flex-1">
-            <h3 class="text-xl font-bold text-amber-900 mb-2">Challenge Not Loaded</h3>
-            <p class="text-amber-800 mb-4 font-mono text-sm">{{ result.message }}</p>
-            <p class="text-amber-700 text-sm">Load the broken code into your app first, then fix the bugs and run verification again.</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Failure -->
-      <div v-else class="bg-red-50 border-2 border-red-500 rounded-xl p-6">
-        <div class="flex items-start gap-4">
-          <div class="text-4xl">❌</div>
-          <div class="flex-1">
-            <h3 class="text-xl font-bold text-red-900 mb-2">Tests Failed</h3>
-            <p class="text-red-800 mb-4">{{ result.message }}</p>
-            <div class="text-sm text-red-700">
-              Tested at {{ result.timestamp }}
-            </div>
-          </div>
-        </div>
-
-        <!-- Failed Tests -->
-        <div v-if="result.tests && result.tests.length > 0" class="mt-4 pt-4 border-t border-red-200">
-          <p class="text-sm font-medium text-red-900 mb-3">Test Results:</p>
-          <div class="space-y-3">
-            <div v-for="(test, index) in result.tests" :key="index" 
-                 :class="test.passed ? 'bg-green-50 border-green-200' : 'bg-red-100 border-red-300'"
-                 class="border rounded-lg p-3">
-              <div class="flex items-start gap-2">
-                <svg v-if="test.passed" class="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                </svg>
-                <svg v-else class="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-                <div class="flex-1">
-                  <p :class="test.passed ? 'text-green-900' : 'text-red-900'" class="font-medium text-sm">
-                    {{ test.description || test.name }}
-                  </p>
-                  <p v-if="test.hint && !test.passed" class="text-red-700 text-sm mt-1">
-                    💡 Hint: {{ test.hint }}
-                  </p>
-                </div>
+              <svg v-else aria-hidden="true" class="mt-0.5 h-5 w-5 shrink-0 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              <div class="min-w-0">
+                <p class="overflow-wrap-anywhere text-sm font-medium">{{ test.message }}</p>
+                <p v-if="test.hint && !test.passed" class="mt-2 overflow-wrap-anywhere text-sm text-red-200">
+                  <span class="font-semibold">Next hint:</span> {{ test.hint }}
+                </p>
               </div>
             </div>
-          </div>
-        </div>
-
-        <!-- Tips -->
-        <div class="mt-6 pt-4 border-t border-red-200">
-          <p class="text-red-900 font-medium mb-3">💡 Tips:</p>
-          <ul class="space-y-2 text-sm text-red-800">
-            <li class="flex items-start gap-2">
-              <span>•</span>
-              <span>Read the challenge description and hints carefully</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span>•</span>
-              <span>Check the related lesson for guidance</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span>•</span>
-              <span>Look at the test results above for specific issues</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span>•</span>
-              <span>Run verification again after making changes</span>
-            </li>
-          </ul>
-        </div>
+          </li>
+        </ul>
       </div>
     </div>
 
-    <!-- Error -->
-    <div v-if="error" class="mt-6 bg-yellow-50 border border-yellow-300 rounded-xl p-6">
-      <div class="flex items-start gap-4">
-        <div class="text-3xl">⚠️</div>
-        <div>
-          <h3 class="text-lg font-bold text-yellow-900 mb-2">Verification Error</h3>
-          <p class="text-yellow-800">{{ error }}</p>
-        </div>
-      </div>
+    <div v-if="error" class="mt-6 rounded-xl border border-amber-500/50 bg-amber-950/30 p-6 text-amber-100" role="alert">
+      <h3 class="text-lg font-bold">Verification could not run</h3>
+      <p class="mt-2 overflow-wrap-anywhere text-amber-200">{{ error }}</p>
+      <button type="button" class="mt-4 rounded-lg border border-amber-400/50 px-4 py-2 text-sm font-semibold hover:bg-amber-900/40" @click="runVerification">
+        Try again
+      </button>
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue'
 
 const props = defineProps({
   challengeId: {
     type: String,
     required: true
   }
-});
+})
 
-const isVerifying = ref(false);
-const result = ref(null);
-const error = ref(null);
+const isVerifying = ref(false)
+const result = ref(null)
+const error = ref('')
+
+const announcement = computed(() => {
+  if (isVerifying.value) return 'Verification is running.'
+  if (error.value) return error.value
+  if (result.value) return result.value.message
+  return ''
+})
+
+const statusMessage = (status) => ({
+  404: 'This challenge no longer exists. Return to the learning dashboard and choose another challenge.',
+  419: 'Your page token expired. Reload this page, then run verification again.',
+  500: 'The server could not complete verification. Check the application log, then try again.'
+}[status] || `The server returned HTTP ${status}. Try again.`)
+
+const validPayload = (data) => data
+  && typeof data === 'object'
+  && typeof data.status === 'string'
+  && typeof data.message === 'string'
+  && Array.isArray(data.tests)
+
+const formatTimestamp = (timestamp) => {
+  const date = new Date(timestamp)
+  return Number.isNaN(date.getTime()) ? timestamp : new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'medium'
+  }).format(date)
+}
 
 const runVerification = async () => {
-  isVerifying.value = true;
-  result.value = null;
-  error.value = null;
+  if (isVerifying.value) return
+
+  isVerifying.value = true
+  result.value = null
+  error.value = ''
 
   try {
-    const response = await fetch(`/api/verify/${props.challengeId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
+    const token = document.querySelector('meta[name="csrf-token"]')?.content
+    if (!token) throw new Error('The page token is missing. Reload this page, then try again.')
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    const response = await fetch(`/api/verify/${encodeURIComponent(props.challengeId)}`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': token
+      }
+    })
+
+    const body = await response.text()
+    let data = null
+    try {
+      data = body === '' ? null : JSON.parse(body)
+    } catch {
+      data = null
     }
 
-    const data = await response.json();
-    result.value = data;
-  } catch (e) {
-    error.value = `Failed to run verification: ${e.message}. Make sure the PHP server is running.`;
+    if (!response.ok) {
+      if (response.status === 409 && validPayload(data)) {
+        result.value = data
+        return
+      }
+      throw new Error(validPayload(data) ? data.message : statusMessage(response.status))
+    }
+
+    if (!validPayload(data) || !['pass', 'fail'].includes(data.status)) {
+      throw new Error('The server returned an invalid verification result. Reload the page and try again.')
+    }
+
+    result.value = data
+  } catch (exception) {
+    error.value = exception instanceof Error
+      ? exception.message
+      : 'Verification failed unexpectedly. Try again.'
   } finally {
-    isVerifying.value = false;
+    isVerifying.value = false
   }
-};
+}
 </script>

@@ -1,5 +1,49 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
-/* Add your custom CSS here */
+@layer base {
+  :focus-visible {
+    outline: 3px solid #93da97;
+    outline-offset: 3px;
+  }
 
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+.skip-link {
+  position: fixed;
+  inset-block-start: 0.75rem;
+  inset-inline-start: 0.75rem;
+  z-index: 100;
+  transform: translateY(-160%);
+  border-radius: 0.5rem;
+  background: #93da97;
+  color: #0f1117;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+.markdown-fallback {
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

@@ -1,9 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 $lessons = \Core\CourseLoader::getLessons();
 $challenges = \Core\CourseLoader::getChallenges();
+$activeChallenge = \Core\ChallengeManager::getActiveChallenge();
 
-view('learn/index.view.php', [
+return view('learn/index.view.php', [
     'lessons' => $lessons,
-    'challenges' => $challenges
+    'challenges' => $challenges,
+    'activeChallenge' => $activeChallenge,
 ]);

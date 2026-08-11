@@ -1,10 +1,15 @@
 <?php
 
-$challengeId = $_GET['challenge'] ?? '';
+declare(strict_types=1);
 
-// Validate challenge exists and load metadata from meta.json
-$challenge = \Core\CourseLoader::getChallenge($challengeId);
-if (!$challenge) {
+use Core\App;
+use Core\ChallengeManager;
+use Core\CourseLoader;
+use Core\Request;
+
+$challengeId = App::resolve(Request::class)->route('challenge');
+
+if (!is_string($challengeId) || ($challenge = CourseLoader::getChallenge($challengeId)) === null) {
     abort(404);
 }
 
@@ -14,8 +19,12 @@ if (!file_exists($readmePath)) {
 }
 $content = file_get_contents($readmePath);
 
-view('learn/challenge.view.php', [
+$activeChallenge = ChallengeManager::getActiveChallenge();
+
+return view('learn/challenge.view.php', [
     'challengeId' => $challengeId,
     'challenge' => $challenge,
-    'content' => $content
+    'content' => $content,
+    'isActive' => $activeChallenge === $challengeId,
+    'activeChallenge' => $activeChallenge,
 ]);

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="view-transition" content="same-origin">
+  <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
   <title>DALT.PHP — Interactive Backend Debugging Playground</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <style>
@@ -30,4 +31,5 @@
   <?= vite('.dalt/resources/js/app.js') ?>
 </head>
 <body class="min-h-screen antialiased bg-[#0f1117] text-gray-300">
+<a href="#app" class="skip-link">Skip to main content</a>
 <div class="min-h-screen flex flex-col">

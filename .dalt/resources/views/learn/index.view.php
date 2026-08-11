@@ -1,7 +1,7 @@
 <?php require base_path('.dalt/resources/views/layouts/head.php') ?>
 <?php require base_path('.dalt/resources/views/layouts/nav.php') ?>
 
-<main class="flex-1 bg-[#0f1117] text-gray-300 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px]" id="app">
+<main class="flex-1 bg-[#0f1117] text-gray-300 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px]" id="app" tabindex="-1">
   <!-- Header -->
   <section class="border-b border-[#1e293b] bg-[#161b22]/50 py-12">
     <div class="max-w-7xl mx-auto px-6">
@@ -37,8 +37,8 @@
         <?php foreach ($lessons as $index => $lesson): ?>
           <a href="/learn/lessons/<?= $lesson['id'] ?>" class="block bg-[#161b22] rounded-xl border border-gray-800 p-6 hover:border-[#93DA97]/50 hover:bg-[#1a202c] transition-all group">
             <div class="flex items-start justify-between mb-4">
-              <div class="text-3xl"><?= $lesson['icon'] ?></div>
-              <div class="px-2.5 py-1 bg-gray-800/50 border border-gray-700 text-gray-300 text-[10px] uppercase tracking-wider font-semibold rounded">
+              <div class="text-3xl" aria-hidden="true"><?= $lesson['icon'] ?></div>
+              <div class="px-2.5 py-1 bg-gray-800/50 border border-gray-700 text-gray-300 text-xs uppercase tracking-wider font-semibold rounded">
                 Lesson <?= $index + 1 ?>
               </div>
             </div>
@@ -78,9 +78,10 @@
 
       <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         <?php foreach ($challenges as $challenge): ?>
-          <a href="/learn/challenges/<?= $challenge['id'] ?>" class="block bg-[#161b22] rounded-xl border border-gray-800 p-6 hover:border-[#93DA97]/50 hover:bg-[#1a202c] transition-all group">
+          <?php $isActive = $activeChallenge === $challenge['id']; ?>
+          <a href="/learn/challenges/<?= $challenge['id'] ?>" class="block bg-[#161b22] rounded-xl border <?= $isActive ? 'border-amber-500/60' : ($challenge['passed'] ? 'border-emerald-500/40' : 'border-gray-800') ?> p-6 hover:border-[#93DA97]/50 hover:bg-[#1a202c] transition-all group">
             <div class="flex items-start justify-between mb-3">
-              <div class="text-3xl"><?= $challenge['icon'] ?></div>
+              <div class="text-3xl" aria-hidden="true"><?= $challenge['icon'] ?></div>
               <?php
 
                 // Map logical colors to dark-mode-friendly tailwind classes to avoid purge issues
@@ -94,8 +95,8 @@
                 $color = $challenge['color'] ?? 'gray';
                 $mappedClass = $colorMap[$color] ?? 'bg-gray-800 text-gray-300 border-gray-700';
               ?>
-              <span class="px-2.5 py-1 border text-[10px] uppercase tracking-wider font-semibold rounded <?= $mappedClass ?>">
-                <?= $challenge['difficulty'] ?>
+              <span class="px-2.5 py-1 border text-xs uppercase tracking-wider font-semibold rounded <?= $mappedClass ?>">
+                <?= $isActive ? 'Active' : ($challenge['passed'] ? 'Completed' : htmlspecialchars($challenge['difficulty'])) ?>
               </span>
             </div>
             <h3 class="text-lg font-bold mb-2 text-gray-200 group-hover:text-[#93DA97] transition-colors">
@@ -112,7 +113,7 @@
                 <?= $challenge['bugs'] ?> bug<?= $challenge['bugs'] > 1 ? 's' : '' ?>
               </span>
               <div class="flex items-center text-[#93DA97] text-sm font-medium">
-                <span>Start</span>
+                <span><?= $isActive ? 'Continue' : ($challenge['passed'] ? 'Review' : 'Open') ?></span>
                 <svg class="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
                 </svg>
@@ -142,7 +143,7 @@
             <a href="/learn/lessons/01-request-lifecycle" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-bold shadow-sm">
               Start with Lesson 1
             </a>
-            <a href="https://github.com/Ibnu-Afdel/DALT.PHP/blob/main/TESTING_GUIDE.md" target="_blank" class="px-4 py-2 bg-[#0d1117] text-gray-300 border border-gray-700 rounded-lg hover:bg-[#1e293b] hover:text-white transition-colors text-sm font-medium">
+            <a href="https://github.com/Ibnu-Afdel/DALT.PHP/blob/main/TESTING_GUIDE.md" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-[#0d1117] text-gray-300 border border-gray-700 rounded-lg hover:bg-[#1e293b] hover:text-white transition-colors text-sm font-medium">
               Read Testing Guide
             </a>
           </div>

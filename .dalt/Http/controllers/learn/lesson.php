@@ -1,10 +1,14 @@
 <?php
 
-$lessonId = $_GET['lesson'] ?? '';
+declare(strict_types=1);
 
-// Load lesson from meta.json
-$lesson = \Core\CourseLoader::getLesson($lessonId);
-if (!$lesson) {
+use Core\App;
+use Core\CourseLoader;
+use Core\Request;
+
+$lessonId = App::resolve(Request::class)->route('lesson');
+
+if (!is_string($lessonId) || ($lesson = CourseLoader::getLesson($lessonId)) === null) {
     abort(404);
 }
 
@@ -15,12 +19,18 @@ if (!file_exists($readmePath)) {
 $content = file_get_contents($readmePath);
 
 // Find related challenge(s) - first one that links to this lesson
-$relatedChallenges = array_values(\Core\CourseLoader::getChallengesForLesson($lessonId));
+$relatedChallenges = array_values(CourseLoader::getChallengesForLesson($lessonId));
 $relatedChallengeId = !empty($relatedChallenges) ? $relatedChallenges[0]['id'] : null;
+$lessonsById = array_column(CourseLoader::getLessons(), null, 'id');
+$prerequisites = array_values(array_intersect_key(
+    $lessonsById,
+    array_flip($lesson['prerequisites']),
+));
 
-view('learn/lesson.view.php', [
+return view('learn/lesson.view.php', [
     'lessonId' => $lessonId,
     'lesson' => $lesson,
     'content' => $content,
-    'relatedChallengeId' => $relatedChallengeId
+    'relatedChallengeId' => $relatedChallengeId,
+    'prerequisites' => $prerequisites,
 ]);
