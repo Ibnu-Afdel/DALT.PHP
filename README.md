@@ -75,6 +75,7 @@ After learning with PHP, these concepts transfer to any backend language. You'll
 - [Architecture](documentation/architecture.md)
 - [Errors and Debugging](documentation/errors-and-debugging.md)
 - [Contributor Content Guide](documentation/contributor-content.md)
+- [Competency Roadmap](documentation/competency-roadmap.md)
 
 Full documentation at: **[daltphp.com/docs](https://dalt.ibnuafdel.com/docs)**
 
