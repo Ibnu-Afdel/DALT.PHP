@@ -10,6 +10,7 @@ use Throwable;
 final class ChallengeVerifier
 {
     private const TEST_TYPES = [
+        'class_contract',
         'file_contains',
         'file_not_contains',
         'function_call',
@@ -17,6 +18,12 @@ final class ChallengeVerifier
         'route_order',
         'session_key',
     ];
+
+    /**
+     * class_contract loads learner code, so it is restricted to declaration-only
+     * files. Controllers execute on require and are not eligible.
+     */
+    private const CLASS_CONTRACT_PATH = '~\Aframework/Core/[A-Za-z][A-Za-z0-9]*(?:/[A-Za-z][A-Za-z0-9]*)*\.php\z~D';
 
     private readonly string $projectRoot;
     private readonly string $challengeDirectory;
@@ -140,10 +147,25 @@ final class ChallengeVerifier
         }
         $config['hint'] = trim($config['hint'] ?? 'Review the challenge README and the failed check.');
 
-        if (in_array($type, ['file_contains', 'file_not_contains', 'function_call', 'session_key'], true)) {
+        if (in_array($type, ['class_contract', 'file_contains', 'file_not_contains', 'function_call', 'session_key'], true)) {
             $this->requireString($config, 'file', $name);
             $this->assertAllowedSourcePath($config['file']);
             $this->assertSpecificationSource($config['file']);
+        }
+        if ($type === 'class_contract') {
+            if (preg_match(self::CLASS_CONTRACT_PATH, $config['file']) !== 1) {
+                throw new RuntimeException(
+                    "Check '{$name}' may only inspect a framework/Core class file; requiring anything else executes learner code.",
+                );
+            }
+            $this->requireString($config, 'class', $name);
+            $config['class'] = $this->validClassName($config['class'], $name, 'class');
+            $config['implements'] = $this->validClassList($config, 'implements', $name);
+            $config['methods'] = $this->validMethodList($config, $name);
+
+            if ($config['implements'] === [] && $config['methods'] === []) {
+                throw new RuntimeException("Check '{$name}' must assert at least one interface or method.");
+            }
         }
         if (in_array($type, ['file_contains', 'file_not_contains'], true)) {
             $this->requireString($config, 'search', $name);
@@ -166,13 +188,64 @@ final class ChallengeVerifier
                 throw new RuntimeException("Check '{$name}' has an unsupported route method.");
             }
             $config['method'] = $method;
-        } else {
+        } elseif ($type === 'route_order') {
             $this->assertSpecificationSource('routes/routes.php');
             $this->requireString($config, 'specific', $name);
             $this->requireString($config, 'generic', $name);
         }
 
         return $config;
+    }
+
+    private function validClassName(string $value, string $name, string $field): string
+    {
+        $normalized = ltrim(trim($value), '\\');
+
+        if (preg_match('/\A[A-Za-z_][A-Za-z0-9_]*(?:\\\\[A-Za-z_][A-Za-z0-9_]*)*\z/D', $normalized) !== 1) {
+            throw new RuntimeException("Check '{$name}' has an invalid '{$field}' class name.");
+        }
+
+        return $normalized;
+    }
+
+    /** @param array<string, mixed> $config @return list<string> */
+    private function validClassList(array $config, string $field, string $name): array
+    {
+        $values = $config[$field] ?? [];
+
+        if (!is_array($values)) {
+            throw new RuntimeException("Check '{$name}' requires '{$field}' to be a list of class names.");
+        }
+
+        $result = [];
+        foreach ($values as $value) {
+            if (!is_string($value)) {
+                throw new RuntimeException("Check '{$name}' requires '{$field}' to contain only strings.");
+            }
+            $result[] = $this->validClassName($value, $name, $field);
+        }
+
+        return $result;
+    }
+
+    /** @param array<string, mixed> $config @return list<string> */
+    private function validMethodList(array $config, string $name): array
+    {
+        $values = $config['methods'] ?? [];
+
+        if (!is_array($values)) {
+            throw new RuntimeException("Check '{$name}' requires 'methods' to be a list of method names.");
+        }
+
+        $result = [];
+        foreach ($values as $value) {
+            if (!is_string($value) || preg_match('/\A[A-Za-z_][A-Za-z0-9_]*\z/D', $value) !== 1) {
+                throw new RuntimeException("Check '{$name}' has an invalid method name in 'methods'.");
+            }
+            $result[] = $value;
+        }
+
+        return $result;
     }
 
     /** @param array<string, mixed> $config */
@@ -187,6 +260,7 @@ final class ChallengeVerifier
     private function runTest(array $config): array
     {
         return match ($config['type']) {
+            'class_contract' => $this->testClassContract($config),
             'route_exists' => $this->testRouteExists($config),
             'route_order' => $this->testRouteOrder($config),
             'file_contains' => $this->testFileContains($config, true),
@@ -364,6 +438,96 @@ final class ChallengeVerifier
         }
 
         return preg_replace('/^[ \t]*#.*$/m', '', $content) ?? $content;
+    }
+
+    /**
+     * Executes the learner's class in a separate process and reports what it
+     * actually declares. A parse error or a missing dependency is a fatal that
+     * cannot be caught in-process, which is precisely the failure this check
+     * exists to surface, so it must not run here.
+     *
+     * @param array<string, mixed> $config
+     * @return array{passed: bool, message: string}
+     */
+    private function testClassContract(array $config): array
+    {
+        $path = $this->resolveTargetPath($config['file']);
+        $probe = __DIR__ . DIRECTORY_SEPARATOR . 'probe-class-contract.php';
+        $this->assertRegularFile($probe, 'class contract probe');
+
+        $command = escapeshellarg(PHP_BINARY)
+            . ' ' . escapeshellarg($probe)
+            . ' ' . escapeshellarg($this->projectRoot)
+            . ' ' . escapeshellarg($path)
+            . ' ' . escapeshellarg($config['class'])
+            . ' 2>/dev/null';
+
+        $output = shell_exec($command);
+        $report = is_string($output) ? json_decode(trim($output), true) : null;
+
+        if (!is_array($report) || !isset($report['ok'])) {
+            return [
+                'passed' => false,
+                'message' => "Loading {$config['file']} failed outright, so {$config['class']} could not be inspected. "
+                    . 'Check the file parses and that every class it references exists.',
+            ];
+        }
+
+        if ($report['ok'] !== true) {
+            return [
+                'passed' => false,
+                'message' => is_string($report['error'] ?? null)
+                    ? $report['error']
+                    : "Class {$config['class']} could not be inspected.",
+            ];
+        }
+
+        $missingInterfaces = array_values(array_udiff(
+            $config['implements'],
+            $report['implements'] ?? [],
+            static fn (string $a, string $b): int => strcasecmp($a, $b),
+        ));
+
+        if ($missingInterfaces !== []) {
+            return [
+                'passed' => false,
+                'message' => "{$config['class']} does not implement " . implode(', ', $missingInterfaces) . '.',
+            ];
+        }
+
+        $missingMethods = array_values(array_udiff(
+            $config['methods'],
+            $report['methods'] ?? [],
+            static fn (string $a, string $b): int => strcasecmp($a, $b),
+        ));
+
+        if ($missingMethods !== []) {
+            return [
+                'passed' => false,
+                'message' => "{$config['class']} is missing the method(s): " . implode(', ', $missingMethods) . '.',
+            ];
+        }
+
+        return ['passed' => true, 'message' => "{$config['class']} satisfies the expected contract."];
+    }
+
+    private function resolveTargetPath(string $sourcePath): string
+    {
+        $this->assertAllowedSourcePath($sourcePath);
+        $mapped = $this->verifyAgainstBase && str_starts_with($sourcePath, 'Http/controllers/')
+            ? 'app/' . $sourcePath
+            : $sourcePath;
+        $path = $this->verifyAgainstBase
+            ? $this->absolute($mapped)
+            : $this->challengeDirectory . '/' . $sourcePath;
+        $this->assertWithin($path, $this->verifyAgainstBase ? $this->projectRoot : $this->challengeDirectory);
+
+        if (!file_exists($path) && !is_link($path)) {
+            throw new ChallengeTargetMissingException("Target file '{$sourcePath}' does not exist.");
+        }
+        $this->assertRegularFile($path, "target '{$sourcePath}'");
+
+        return $path;
     }
 
     private function readTarget(string $sourcePath): string
