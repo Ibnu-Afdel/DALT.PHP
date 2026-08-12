@@ -53,9 +53,21 @@ Before running queries for a specific tenant, tell Postgres who the current tena
 
 ```php
 $tenantId = 5; // e.g., determined from the logged-in user or the subdomain
-$pdo = $db->getConnection();
-$pdo->exec("SET app.tenant_id = {$tenantId}");
+
+$db->query('SELECT set_config(:key, :value, false)', [
+    'key'   => 'app.tenant_id',
+    'value' => (string) $tenantId,
+]);
 ```
+
+**Why `set_config()` and not `SET`?** Because `SET` is a utility statement, not a query — PostgreSQL will not accept a bind parameter in it:
+
+```php
+$db->query('SET app.tenant_id = :id', ['id' => $tenantId]);
+// PDOException: SQLSTATE[42601]: Syntax error ... syntax error at or near "$1"
+```
+
+The tempting workaround is to interpolate the value into the string. Do not: that puts user-derived data straight into SQL, in the one feature whose entire job is preventing data from leaking between tenants. `set_config(name, value, is_local)` is an ordinary function call, so the value binds normally. The third argument `false` means the setting lasts for the session rather than only the current transaction.
 
 Now, when you run this query:
 
@@ -63,7 +75,37 @@ Now, when you run this query:
 $posts = $db->query('SELECT * FROM posts')->get();
 ```
 
-Postgres automatically rewrites it to effectively be `SELECT * FROM posts WHERE tenant_id = 5`. The isolation is guaranteed by the database engine.
+Postgres automatically rewrites it to effectively be `SELECT * FROM posts WHERE tenant_id = 5`. The isolation is enforced by the database engine.
+
+### The trap: RLS does nothing for a superuser
+
+Everything above is correct and still leaks if you connect as the wrong role.
+
+**Superusers bypass row-level security entirely, and so does the table's owner by default.** No error, no warning — policies are simply not applied. DALT's default configuration connects as `postgres`, which is a superuser, so a policy you have written and enabled will silently do nothing.
+
+Demonstrated on the same table and policy, changing only the connecting role:
+
+```
+as superuser 'postgres':   tenant 1 sees: t1-a, t1-b, t2-a     ← isolation absent
+as non-superuser 'app_user': tenant 1 sees: t1-a, t1-b
+                             tenant 2 sees: t2-a               ← isolation working
+```
+
+So the policy is only half the work. The application must connect as an ordinary role:
+
+```sql
+CREATE ROLE app_user LOGIN PASSWORD 'change-me';
+GRANT SELECT, INSERT, UPDATE, DELETE ON posts TO app_user;
+```
+
+```env
+DB_USERNAME=app_user
+DB_PASSWORD=change-me
+```
+
+If the application must own the table as well, add `ALTER TABLE posts FORCE ROW LEVEL SECURITY;` so the owner is subject to its own policies too.
+
+This is the most important thing to take from this section: **verify isolation, never assume it.** Query as two different tenants and confirm each sees only its own rows. A security control that fails open looks exactly like one that works.
 
 ---
 

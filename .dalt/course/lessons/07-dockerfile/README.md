@@ -27,7 +27,10 @@ FROM php:8.2-fpm-alpine
 
 WORKDIR /var/www/html
 
-RUN docker-php-ext-install pdo pdo_pgsql
+RUN apk add --no-cache postgresql-dev \
+    && docker-php-ext-install pdo pdo_pgsql
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-interaction
@@ -39,7 +42,7 @@ EXPOSE 9000
 CMD ["php-fpm"]
 ```
 
-That's 9 lines. Let's go through each one.
+Two of those lines are the ones people leave out and then spend an afternoon debugging: the `apk add` and the `COPY --from=composer:2`. Without them the build fails, and the errors do not obviously point at the cause. Each is explained below.
 
 ## Instruction by Instruction
 
@@ -76,16 +79,34 @@ Sets the working directory inside the container. All subsequent commands (`RUN`,
 
 Without `WORKDIR`, Docker defaults to `/`. You'd end up with your files scattered at the root.
 
-### `RUN docker-php-ext-install pdo pdo_pgsql`
+### `RUN apk add --no-cache postgresql-dev && docker-php-ext-install pdo pdo_pgsql`
 
 `RUN` executes a shell command during the image build. This one installs two PHP extensions:
 - `pdo` — PHP Data Objects, the abstraction layer for database access. Required for `new PDO(...)` to work.
 - `pdo_pgsql` — the PostgreSQL driver for PDO. Required for `pgsql:host=...` DSNs to work.
 
-`docker-php-ext-install` is a helper script built into the official PHP Docker images. It handles compilation, system dependency resolution, and enabling the extension — all in one command.
+`docker-php-ext-install` is a helper script built into the official PHP images. It compiles the extension and enables it. What it does **not** do is install the operating-system libraries that extension needs to compile against — that is your job.
+
+**Why `apk add postgresql-dev` first?**
+`pdo_pgsql` compiles against PostgreSQL's client headers. The Alpine PHP image does not ship them, so on its own the step fails:
+
+```
+checking for pg_config... not found
+configure: error: Cannot find libpq-fe.h. Please specify correct PostgreSQL installation path
+```
+
+That message names a C header, not PHP or Postgres, which is why it is confusing the first time. `postgresql-dev` provides `libpq-fe.h`; `apk` is Alpine's package manager, and `--no-cache` avoids leaving a package index in the layer.
+
+Chaining both commands in a single `RUN` with `&&` keeps them in one layer, so the headers and the compiled extension are cached and invalidated together.
 
 **Why isn't pdo_pgsql installed by default?**
-The PHP image ships with minimal extensions to keep the image small. You opt in to what you need.
+The PHP image ships with minimal extensions to keep the image small. You opt in to what you need. Confirm for yourself:
+
+```bash
+docker run --rm php:8.2-fpm-alpine php -m | grep -i pdo
+```
+
+You get `PDO` and `pdo_sqlite`, and no `pdo_pgsql`.
 
 **Why this runs before COPY?**
 Extension installation is slow and doesn't depend on your code. If it's in a layer before your code, Docker caches it. You won't wait for extension compilation on every code change — only when this line changes.
@@ -109,9 +130,22 @@ Installs PHP dependencies from the lock file.
 - `--no-interaction` — disables interactive prompts. Essential for automated builds — no one to type "yes" in CI.
 
 **Where does Composer come from?**
-The official PHP images don't include Composer by default. But in later lessons you'll see how to get it via a multi-stage build. For now, if your base image doesn't have Composer, add this before the `RUN`:
+It is not in the base image — not optionally, not sometimes. Check:
+
+```bash
+docker run --rm php:8.2-fpm-alpine command -v composer   # prints nothing
+```
+
+So this line is mandatory, and it must come before any `RUN composer ...`:
+
 ```dockerfile
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+```
+
+`COPY --from=` copies out of another image instead of your build context — here, the official `composer:2` image. This is a small taste of multi-stage builds, which Lesson 12 covers properly. Leave it out and the build stops with:
+
+```
+/bin/sh: composer: not found
 ```
 
 ### `COPY . .`
@@ -178,34 +212,33 @@ This is the most important concept in Dockerfile optimization. Let's trace what 
 ```
 Layer 1: FROM php:8.2-fpm-alpine       ← downloaded (slow)
 Layer 2: WORKDIR /var/www/html         ← created
-Layer 3: RUN docker-php-ext-install    ← compiled (slow)
-Layer 4: COPY composer.json ...        ← copied
-Layer 5: RUN composer install          ← installed (slow)
-Layer 6: COPY . .                      ← copied
-Layer 7: EXPOSE 9000                   ← recorded
-Layer 8: CMD ["php-fpm"]               ← recorded
+Layer 3: RUN apk add ... && ext-install ← packages + compile (slowest)
+Layer 4: COPY --from=composer:2 ...    ← copied
+Layer 5: COPY composer.json ...        ← copied
+Layer 6: RUN composer install          ← installed (slow)
+Layer 7: COPY . .                      ← copied
+Layer 8: EXPOSE 9000                   ← recorded
+Layer 9: CMD ["php-fpm"]               ← recorded
 ```
 
 **You change a PHP file, rebuild:**
 ```
-Layer 1: FROM php:8.2-fpm-alpine       ← CACHED (instant)
-Layer 2: WORKDIR /var/www/html         ← CACHED (instant)
-Layer 3: RUN docker-php-ext-install    ← CACHED (instant)
-Layer 4: COPY composer.json ...        ← CACHED (composer.json unchanged)
-Layer 5: RUN composer install          ← CACHED (instant)
-Layer 6: COPY . .                      ← REBUILT (code changed)
-Layer 7-8: ...                         ← REBUILT
+Layer 1-6: CACHED (instant)
+Layer 7: COPY . .                      ← REBUILT (code changed)
+Layer 8-9: ...                         ← REBUILT
 ```
 
-Only layers 6+ rebuild. A code change that would take 60+ seconds without cache takes ~1 second with it.
+Only layers 7+ rebuild. A code change that would take minutes without cache takes about a second with it.
 
 **You add a new package to composer.json, rebuild:**
 ```
-Layer 1-3: CACHED (instant)
-Layer 4: COPY composer.json ...        ← REBUILT (composer.json changed)
-Layer 5: RUN composer install          ← REBUILT (must reinstall)
-Layer 6-8: REBUILT
+Layer 1-4: CACHED (instant)
+Layer 5: COPY composer.json ...        ← REBUILT (composer.json changed)
+Layer 6: RUN composer install          ← REBUILT (must reinstall)
+Layer 7-9: REBUILT
 ```
+
+Note that layer 3 — the slowest one — stays cached in both cases. That is the payoff for putting system dependencies first.
 
 The order of instructions directly controls how much cache is reused.
 
@@ -243,11 +276,13 @@ Run this command to load an incomplete Dockerfile into your project:
 php artisan challenge:start docker-incomplete-dockerfile
 ```
 
-The challenge will copy an incomplete `Dockerfile` to your project root. Your job is to complete the three missing parts:
+The challenge will copy an incomplete `Dockerfile` to your project root. Your job is to complete the missing parts:
 
 1. Set the working directory
-2. Install the PHP extensions needed for PostgreSQL
+2. Install the PostgreSQL client headers **and** the PHP extensions that compile against them
 3. Add the command that starts PHP-FPM
+
+Step 2 is two things in one `RUN`. If you only run the helper, the build stops at a missing C header.
 
 After completing it, verify your solution:
 
@@ -295,6 +330,40 @@ The CLI image has no FPM. Nginx can't forward requests to it.
 
 ### Not installing extensions
 DALT.PHP requires `pdo` and `pdo_pgsql`. If they're missing, the database connection fails with a cryptic error at runtime.
+
+### Installing the extension without its system library
+```dockerfile
+# BAD: fails with "Cannot find libpq-fe.h"
+RUN docker-php-ext-install pdo pdo_pgsql
+```
+```dockerfile
+# GOOD: headers first, same layer
+RUN apk add --no-cache postgresql-dev \
+    && docker-php-ext-install pdo pdo_pgsql
+```
+
+### Calling composer without installing it
+```dockerfile
+# BAD: "composer: not found" — it is not in the base image
+RUN composer install --no-dev --no-interaction
+```
+```dockerfile
+# GOOD
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+RUN composer install --no-dev --no-interaction
+```
+
+## Checkpoint
+
+Answer from memory:
+
+1. Explain what `docker-php-ext-install` does and, precisely, what it does not do.
+2. You see `configure: error: Cannot find libpq-fe.h`. Name the cause and the fix.
+3. You see `/bin/sh: composer: not found`. Name the cause and the fix.
+4. Explain why `apk add` and `docker-php-ext-install` are chained in one `RUN` rather than written as two.
+5. You change one line of PHP and rebuild. State which layers are reused and why the slowest one is among them.
+6. Explain why `CMD ["php-fpm"]` is preferred over `CMD "php-fpm"`.
+7. Explain what `EXPOSE 9000` does and does not do.
 
 ## Summary
 

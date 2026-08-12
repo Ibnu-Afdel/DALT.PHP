@@ -111,8 +111,7 @@ $posts = $db->query(
      ORDER BY users.name, post_rank'
 )->get();
 
-header('Content-Type: application/json');
-echo json_encode($posts);
+return $posts;
 ```
 
 ---
@@ -329,10 +328,7 @@ $db = \Core\App::resolve(\Core\Database::class);
 $q = trim($_GET['q'] ?? '');
 
 if ($q === '') {
-    http_response_code(400);
-    header('Content-Type: application/json');
-    echo json_encode(['error' => 'Query parameter q is required']);
-    exit;
+    return Response::json(['error' => 'Query parameter q is required'], 400);
 }
 
 $posts = $db->query(
@@ -345,8 +341,7 @@ $posts = $db->query(
     ['q' => $q]
 )->get();
 
-header('Content-Type: application/json');
-echo json_encode(['query' => $q, 'results' => $posts]);
+return ['query' => $q, 'results' => $posts];
 ```
 
 Note: `:q` is used twice — PDO's named parameters allow this as long as the same value is intended.
@@ -492,8 +487,7 @@ $db->query(
     ]
 );
 
-header('Content-Type: application/json');
-echo json_encode(['short_code' => $code, 'url' => "http://localhost:8080/{$code}"]);
+return Response::json(['short_code' => $code, 'url' => "http://localhost:8080/{$code}"], 201);
 ```
 
 ### Step 2: `GET /{code}` — redirect
@@ -503,20 +497,16 @@ Look up the short code. Check expiry. Log the click. Redirect.
 ```php
 $url = $db->query(
     'SELECT id, original_url, expires_at FROM urls WHERE short_code = :code',
-    ['code' => $router->getParam('code')]
+    ['code' => \Core\App::resolve(\Core\Request::class)->route('code')]
 )->find();
 
 if (!$url) {
-    http_response_code(404);
-    echo 'Not found';
-    exit;
+    return Response::text('Not found', 404);
 }
 
 // Check expiry
 if ($url['expires_at'] !== null && strtotime($url['expires_at']) < time()) {
-    http_response_code(410);
-    echo 'Link expired';
-    exit;
+    return Response::text('Link expired', 410);
 }
 
 // Log the click (fire and forget — don't let logging failures block the redirect)
@@ -540,7 +530,7 @@ Return total clicks, unique IPs, and clicks grouped by day:
 ```php
 $url = $db->query(
     'SELECT id, short_code, original_url, expires_at, created_at FROM urls WHERE short_code = :code',
-    ['code' => $router->getParam('code')]
+    ['code' => \Core\App::resolve(\Core\Request::class)->route('code')]
 )->findOrFail();
 
 $totals = $db->query(
@@ -559,13 +549,12 @@ $byDay = $db->query(
     ['id' => $url['id']]
 )->get();
 
-header('Content-Type: application/json');
-echo json_encode([
+return [
     'url'              => $url,
     'total_clicks'     => (int)$totals['total'],
     'unique_visitors'  => (int)$totals['unique_visitors'],
     'clicks_by_day'    => $byDay,
-]);
+];
 ```
 
 ### Step 4: `DELETE /shorten/{code}`
@@ -573,13 +562,12 @@ echo json_encode([
 ```php
 $affected = $db->query(
     'DELETE FROM urls WHERE short_code = :code',
-    ['code' => $router->getParam('code')]
+    ['code' => \Core\App::resolve(\Core\Request::class)->route('code')]
 );
 
 // clicks are deleted by CASCADE
 
-header('Content-Type: application/json');
-echo json_encode(['deleted' => true]);
+return ['deleted' => true];
 ```
 
 ### Success criteria

@@ -71,20 +71,45 @@ Mount the secret into the app container as well:
       - db_password
 ```
 
-In PHP, read the secret file to build your PDO connection string. DALT's config supports this:
+Now the honest part. **DALT's configuration does not read `_FILE` variables.** `config/database.php` calls `env('DB_PASSWORD', '')`, and `env()` looks only in `$_ENV`, `$_SERVER`, and `getenv()`. Mounting the secret changes nothing on its own — the file appears at `/run/secrets/db_password` and the framework never looks at it.
 
-```php
-$password = file_get_contents('/run/secrets/db_password');
-$pdo = new PDO('pgsql:host=db;dbname=dalt', 'postgres', trim($password));
+`POSTGRES_PASSWORD_FILE` works because the **Postgres image** implements that convention, not because Docker or DALT does. Each program has to opt in.
+
+So you bridge it yourself in the app's entrypoint, before PHP starts:
+
+```sh
+#!/bin/sh
+# docker-entrypoint.sh
+set -e
+
+if [ -f /run/secrets/db_password ]; then
+    DB_PASSWORD="$(cat /run/secrets/db_password)"
+    export DB_PASSWORD
+fi
+
+exec "$@"
 ```
 
-The password never exists in the environment.
+```dockerfile
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["php-fpm"]
+```
+
+Nothing in the application changes: `env('DB_PASSWORD')` finds the value as usual, and the secret never appears in `docker-compose.yml` or in the image.
+
+**Be clear about what this does and does not buy you.** The secret is no longer committed to source control or baked into the image, which is the main risk. But once the entrypoint exports it, the value *is* in the process environment and can still surface through `phpinfo()` or a crash dump. Reading the file at the point of use avoids that; exporting it trades some of the benefit for not modifying the framework's config layer.
+
+Do **not** reach for a raw `new PDO(...)` to work around this. That bypasses `Core\Database` — its DSN validation, its PDO attributes, and the single shared connection — for no gain.
 
 ---
 
 ## Health Checks and Startup Ordering
 
-`depends_on` only controls startup order when it uses the short array syntax. It does not mean that Postgres is ready to accept connections when the `db` container process has started. Add a readiness check to the database and make the app depend on that health status:
+The short array form — `depends_on: [db]` — controls **start order only**. Compose starts `db` first and then immediately starts `app`, without waiting for Postgres to finish initialising. On a cold volume that initialisation takes seconds, so the app's first connection attempt often fails while the container is technically "up".
+
+The long form adds the wait. Give the database a readiness check and make the app depend on its health:
 
 ```yaml
 services:
@@ -224,6 +249,17 @@ How does this code get to the server? You don't run `git pull` on the production
 This guarantees the image you tested in CI is exactly the bit-for-bit identical image running in production.
 
 ---
+
+## Checkpoint
+
+Answer from memory:
+
+1. Explain why `POSTGRES_PASSWORD_FILE` works while `DB_PASSWORD_FILE` does nothing, in terms of who implements the convention.
+2. State what mounting a secret into the app container achieves on its own, before you write any code.
+3. Name the risk that survives exporting a secret in an entrypoint, and the alternative that avoids it.
+4. Explain the difference between `depends_on: [db]` and `depends_on: db: condition: service_healthy`, and the failure the second one prevents.
+5. `pg_isready` reports healthy. State what that does and does not guarantee about your application's queries.
+6. Explain why reaching for `new PDO(...)` to read a secret is a bad trade.
 
 ## Your Task
 

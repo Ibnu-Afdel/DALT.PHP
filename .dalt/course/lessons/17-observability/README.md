@@ -109,27 +109,42 @@ If your logging query fails (e.g., the `request_log` table is locked), it should
 
 Wrap the logging logic in a `try/catch` and swallow the exception.
 
+The natural place for this in DALT is a middleware, because middleware sees the request on the way in **and** the response on the way out (Lesson 03):
+
 ```php
-// In your framework's shutdown function or middleware:
-try {
-    $duration = (microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']) * 1000;
-    
-    $db->query(
-        'INSERT INTO request_log (method, uri, status_code, duration_ms) 
-         VALUES (:method, :uri, :status, :duration)',
-        [
-            'method'   => $_SERVER['REQUEST_METHOD'],
-            'uri'      => $_SERVER['REQUEST_URI'],
-            'status'   => http_response_code(),
-            'duration' => $duration
-        ]
-    );
-} catch (\Exception $e) {
-    // Log to a local file, but DO NOT rethrow or crash.
-    // The user's request is already complete.
-    error_log("Failed to insert request log: " . $e->getMessage());
+final class RequestLog implements MiddlewareInterface
+{
+    public function handle(Request $request, Closure $next): Response
+    {
+        $start = microtime(true);
+
+        $response = $next($request);
+
+        try {
+            \Core\App::resolve(\Core\Database::class)->query(
+                'INSERT INTO request_log (method, uri, status_code, duration_ms)
+                 VALUES (:method, :uri, :status, :duration)',
+                [
+                    'method'   => $request->method(),
+                    'uri'      => $request->path(),
+                    'status'   => $response->status(),
+                    'duration' => (int) ((microtime(true) - $start) * 1000),
+                ],
+            );
+        } catch (\Throwable $e) {
+            // Never let telemetry break the response the user is waiting on.
+            error_log('Failed to insert request log: ' . $e->getMessage());
+        }
+
+        return $response;
+    }
 }
 ```
+
+Two details worth naming:
+
+- **Read the status from the `Response`, not from `http_response_code()`.** The global is only populated when `Response::send()` runs, which happens *after* middleware. Ask it too early and you get the default `200` for every request, including the failures you most wanted to see.
+- **Catch `\Throwable`, not `\Exception`.** A `TypeError` in the logging block would otherwise escape and take down a request that had already succeeded.
 
 ---
 
@@ -148,13 +163,23 @@ $queries = $db->query(
      LIMIT 10'
 )->get();
 
-header('Content-Type: application/json');
-echo json_encode(['data' => $queries]);
+return ['data' => $queries];
 ```
 
 This gives you a real-time dashboard of database health without logging into the server.
 
 ---
+
+## Checkpoint
+
+Answer from memory:
+
+1. Explain what `Rows Removed by Filter` tells you in an `EXPLAIN ANALYZE` plan.
+2. State why an index is a trade rather than a free win.
+3. Explain why request logging belongs in middleware rather than at the end of a controller.
+4. A logging middleware records `200` for every request including failures. Name the cause.
+5. Explain why the logging block catches and swallows, and what it must never do.
+6. Your table has ten rows and the plan shows a `Seq Scan`. Explain why that is not evidence of a problem.
 
 ## Your Task
 

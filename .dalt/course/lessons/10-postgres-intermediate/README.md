@@ -311,6 +311,10 @@ UPDATE users SET credits = credits + 100 WHERE id = 2;  -- never runs
 
 Without `BEGIN`, each statement auto-commits. The first deduction is permanent even if the second fails.
 
+**Be precise about which failure this is.** Once you *have* opened a transaction, an error partway through does not corrupt anything: nothing before `commit()` is durable, and a connection that closes with a transaction still open has it discarded by the driver. Data loss is the no-transaction case above.
+
+That is why the reason to write `rollBack()` explicitly is not "otherwise the money disappears". It is that you want a controlled error response instead of an uncaught exception, you want row locks released now rather than at teardown, and you do not want to depend on cleanup you did not write — implicit rollback is driver behavior, and it stops applying the moment a connection is pooled or something catches the error and carries on inside a poisoned transaction.
+
 ### In PHP with PDO
 
 ```php
@@ -330,15 +334,23 @@ try {
     );
 
     $pdo->commit();
-} catch (\Exception $e) {
-    $pdo->rollBack();
-    http_response_code(500);
-    echo json_encode(['error' => 'Transfer failed']);
-    exit;
+
+    return ['success' => true];
+} catch (\Throwable $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+
+    return \Core\Response::json(['error' => 'Transfer failed'], 500);
 }
 ```
 
-The `catch` block is non-negotiable. Without it, an exception during the second query leaves the transaction open and the data in an indeterminate state.
+Four details in that `catch`:
+
+- **`\Throwable`, not `\Exception`** — a `TypeError` inside the block must roll back too.
+- **`inTransaction()` guard** — `rollBack()` throws `PDOException: There is no active transaction` when none is open, which is exactly the state you are in if `beginTransaction()` itself failed. Unguarded, your error handler throws a second exception that hides the first.
+- **Return a `Response`, do not print** — `http_response_code()` is overwritten by `Response::send()`, and `exit` abandons the outward middleware path. Lesson 11 covers this boundary.
+- **The rollback is explicit** — not because the data would otherwise be lost, but for the reasons given above: a controlled response, locks released promptly, and no dependence on driver teardown behavior.
 
 ### Isolation levels (conceptual)
 
@@ -353,7 +365,7 @@ Postgres supports multiple isolation levels that control what concurrent transac
 Connect to your Compose Postgres container:
 
 ```bash
-docker compose exec db psql -U postgres -d dalt
+docker compose exec db psql -U postgres -d dalt_php_app
 ```
 
 First, create a posts table (if it doesn't exist yet):

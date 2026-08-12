@@ -49,6 +49,7 @@ services:
     ports:
       - "8080:80"
     volumes:
+      - .:/var/www/html
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       - app
@@ -56,6 +57,12 @@ services:
 volumes:
   pgdata:
 ```
+
+Note that **nginx gets the application code as well as the config**. That surprises people: PHP runs in the `app` container, so why does the web server need the files?
+
+Because nginx serves static files itself. Its config sets `root /var/www/html/public` and uses `try_files $uri $uri/ /index.php?$query_string` — both of which are evaluated against nginx's **own** filesystem. Only when no file matches does the request become a PHP request forwarded to `app:9000`.
+
+Mount the config alone and the stack looks like it works: pages render, because PHP is reached through the fallback. But `/build/assets/app-*.css`, `/build/assets/app-*.js`, and `/favicon.svg` all return 404, and you get an unstyled page with no obvious error in the PHP logs.
 
 ## Anatomy of the File
 
@@ -215,7 +222,7 @@ docker compose logs -f app
 
 # Run a command inside a running container
 docker compose exec app sh
-docker compose exec db psql -U postgres -d dalt
+docker compose exec db psql -U postgres -d dalt_php_app
 
 # Rebuild the app image after Dockerfile changes
 docker compose build app
@@ -229,16 +236,27 @@ docker compose up --build
 When you run `docker compose up`, Compose:
 
 1. Starts `db` first (Postgres)
-2. Starts `app` (PHP-FPM) — reads `.env`, builds `pgsql:host=db;port=5432;dbname=dalt` DSN
+2. Starts `app` (PHP-FPM) — reads `.env`, builds a `pgsql:host=db;port=5432;dbname=dalt_php_app` DSN
 3. Starts `nginx` (web server) — forwards HTTP to `app:9000`
 
-DALT's `DatabaseManager` runs migrations automatically if the `users` table is missing. The first request after a fresh `docker compose up -v` will trigger migration.
-
-To run migrations manually inside Docker:
+**Migrations do not run by themselves.** Nothing in the boot path applies them: the container registration only builds a `Database`, and the first request that queries a missing table fails with a `PDOException` naming it. After a fresh stack — or any time you have run `docker compose down -v` and thrown the volume away — run them yourself:
 
 ```bash
 docker compose exec app php artisan migrate
 ```
+
+This is the single most common "the stack is up but the site is broken" cause. The symptom is an exception about a relation that does not exist, not a connection error.
+
+## Checkpoint
+
+Answer from memory:
+
+1. Explain how the `app` container finds the database without any IP address or `ports:` entry.
+2. State which of your three services needs a `ports:` entry and why the other two do not.
+3. Explain why the source code is a bind mount but the Postgres data is a named volume.
+4. The nginx service mounts the application code even though PHP runs elsewhere. Explain what breaks without it, and why pages still appear to load.
+5. The stack is up and the site returns an exception naming a missing relation. State the cause and the command that fixes it.
+6. Explain the difference between `docker compose down` and `docker compose down -v`, and when the second is what you want.
 
 ## Your Task
 

@@ -21,6 +21,20 @@ By the end of this lesson, you will understand:
 - The core Docker CLI commands you'll use every day
 - How Docker will change the way you run DALT.PHP
 
+## Predict before reading
+
+You will run these commands at the end of the lesson. Write down your answers first.
+
+| Command | What do you expect? |
+|---|---|
+| `docker run --rm php:8.2-cli php -v` on a machine with no PHP installed | ? |
+| the same command a second time | ? |
+| `docker run -d --name my-php php:8.2-fpm-alpine` then `docker ps` | ? |
+| `docker run --rm php:8.2-cli php -m \| grep pdo_pgsql` | ? |
+| editing one source file and rebuilding the image | which layers rebuild? |
+
+The fourth is the one worth being wrong about — check it yourself in the task at the end.
+
 ## Containers vs Virtual Machines
 
 Both solve the "different environment" problem, but differently.
@@ -98,6 +112,8 @@ Layer 1: FROM php:8.2-fpm-alpine (base image — almost never changes)
 ```
 
 **Key insight:** put things that change less frequently at the bottom. Docker rebuilds from the first changed layer downward.
+
+This sketch is simplified in one way you will fix in Lesson 07: `composer install` needs `composer.json` inside the image before it can run, so the real Dockerfile copies those two files on their own first. That ordering is what keeps the slow dependency layer cached when only your source changes.
 
 ## Core CLI Commands
 
@@ -252,7 +268,20 @@ If you see this, Docker is working correctly.
 4. Run `docker run --rm php:8.2-cli php -r "echo phpversion();"` — you're running PHP code in a container
 5. Run `docker run -it --rm php:8.2-cli sh` — you're now inside a container shell. Type `exit` to leave.
 
+6. Run `docker run --rm php:8.2-cli php -m | grep -i pdo` — note which PDO drivers the official image ships. You will find `pdo_sqlite` but **not** `pdo_pgsql`. That absence is exactly why Lesson 07 installs it.
+
 You haven't written a single Dockerfile yet. But you've run PHP in an isolated container. That's the foundation.
+
+## Checkpoint
+
+Answer from memory:
+
+1. Explain why a container is smaller and starts faster than a virtual machine, in terms of what each one packages.
+2. State the difference between an image and a container, and how many containers one image can produce.
+3. You change one line in a controller and rebuild. Explain which layers Docker reuses and which it rebuilds.
+4. Explain why `composer install` is placed before `COPY . .` rather than after.
+5. `docker ps` shows nothing but `docker ps -a` shows your container. What happened?
+6. Name what `--rm` does and when you would not want it.
 
 ## Key Files Going Forward
 
@@ -263,7 +292,7 @@ You haven't written a single Dockerfile yet. But you've run PHP in an isolated c
 ## Common Issues
 
 ### "Cannot connect to Docker daemon"
-Docker Desktop is not running. Start it from your Applications/taskbar.
+The daemon is not running, or your user cannot reach its socket. On macOS and Windows, start Docker Desktop. On Linux, start the service with `sudo systemctl start docker`; if it is already running, check that your user is in the `docker` group (`groups | grep docker`) and log out and back in after adding it.
 
 ### "Port already in use"
 Another process is using the port. Stop it or map to a different port with `-p 8081:80`.

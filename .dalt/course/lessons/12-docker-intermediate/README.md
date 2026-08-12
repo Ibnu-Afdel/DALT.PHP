@@ -49,8 +49,10 @@ FROM php:8.2-fpm-alpine AS runtime
 
 WORKDIR /var/www/html
 
-# Install the OS packages and PHP extensions the app needs
-RUN apk add --no-cache curl \
+# Install the OS packages and PHP extensions the app needs.
+# postgresql-dev supplies libpq-fe.h, which pdo_pgsql compiles against —
+# without it the build stops at "Cannot find libpq-fe.h" (Lesson 07).
+RUN apk add --no-cache curl postgresql-dev \
  && docker-php-ext-install pdo pdo_pgsql
 
 # Pull ONLY the installed vendor directory from the builder stage
@@ -272,6 +274,17 @@ Watch how much faster the build context upload step is.
 | `.dockerignore` | Smaller build context, faster builds, no secrets in image |
 
 ---
+
+## Checkpoint
+
+Answer from memory:
+
+1. Explain what ends up in the final image from a multi-stage build, and what is discarded.
+2. State the security argument for keeping Composer out of the runtime stage.
+3. `COPY --from=builder /app/vendor ./vendor` — explain why the source path is `/app` and not `/var/www/html`.
+4. Explain why layer-cache ordering still matters *inside* each stage.
+5. Name the OS package `pdo_pgsql` compiles against, and the error you get without it.
+6. Explain what `depends_on: condition: service_healthy` gives you that plain `depends_on` does not.
 
 ## Your Task
 

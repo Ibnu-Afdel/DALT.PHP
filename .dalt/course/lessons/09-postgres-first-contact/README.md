@@ -29,18 +29,18 @@ By the end of this lesson, you will:
 With your Compose stack running (`docker compose up -d`), connect to Postgres:
 
 ```bash
-docker compose exec db psql -U postgres -d dalt
+docker compose exec db psql -U postgres -d dalt_php_app
 ```
 
 Breaking this down:
 - `docker compose exec db` — run a command inside the `db` container
 - `psql` — the Postgres interactive CLI
 - `-U postgres` — connect as user `postgres`
-- `-d dalt` — connect to the `dalt` database
+- `-d dalt_php_app` — connect to the `dalt_php_app` database
 
 You'll see the `psql` prompt:
 ```
-dalt=#
+dalt_php_app=#
 ```
 
 You're now inside Postgres. Everything you type here runs as SQL or a psql meta-command.
@@ -51,7 +51,7 @@ These meta-commands start with `\` and are not SQL — they're psql shortcuts.
 
 ```sql
 \l              -- list all databases
-\c dalt         -- connect to the "dalt" database
+\c dalt_php_app -- connect to the "dalt_php_app" database
 \dt             -- list all tables in current database
 \d users        -- describe the users table (columns, types, constraints)
 \d+ users       -- describe with more detail (indexes, triggers)
@@ -62,7 +62,7 @@ These meta-commands start with `\` and are not SQL — they're psql shortcuts.
 
 Try them now:
 ```sql
-\dt             -- should show the users table (DALT ran migrations on startup)
+\dt             -- shows the users table once you have run php artisan migrate
 \d users        -- see the column types
 ```
 
@@ -194,7 +194,7 @@ In your project's `.env`, change the database settings:
 DB_DRIVER=pgsql
 DB_HOST=db
 DB_PORT=5432
-DB_NAME=dalt
+DB_NAME=dalt_php_app
 DB_USERNAME=postgres
 DB_PASSWORD=secret
 ```
@@ -215,7 +215,20 @@ docker compose exec app php artisan migrate
 php artisan migrate
 ```
 
-DALT auto-detects the driver from `DB_DRIVER` and converts SQLite-only syntax (`AUTOINCREMENT`, `DATETIME`) when it encounters a pgsql connection.
+DALT reads the driver from the live connection and rewrites SQLite-only syntax before sending a migration to Postgres. Specifically it:
+
+- turns `INTEGER PRIMARY KEY AUTOINCREMENT` into `BIGSERIAL PRIMARY KEY`;
+- turns `DATETIME` into `TIMESTAMP`;
+- strips any remaining bare `AUTOINCREMENT`;
+- removes `PRAGMA` statements, which Postgres has no equivalent for.
+
+It then re-checks the result, and if SQLite-only syntax somehow survives it refuses to run the migration rather than sending SQL Postgres will reject:
+
+```
+Migration contains SQLite-only syntax that cannot be converted for PostgreSQL: <file>
+```
+
+This is a deliberate convenience with a limit. It rescues the common SQLite idioms; it is not a general SQL translator, and anything beyond those four rules you write for the target yourself.
 
 To start fresh (drops all tables and re-runs):
 ```bash
@@ -251,7 +264,7 @@ Edit this file to match your actual schema, then run `php artisan migrate`.
 Connect to your Compose Postgres container and run these queries manually. This is not a challenge — it's a practice session to build muscle memory.
 
 ```bash
-docker compose exec db psql -U postgres -d dalt
+docker compose exec db psql -U postgres -d dalt_php_app
 ```
 
 Inside psql:
@@ -296,7 +309,7 @@ Every one of these queries works in Postgres. By the time you've run them all on
 DALT's migration (`database/migrations/001_create_users_table.sql`) was written in SQLite syntax, but when `DB_DRIVER=pgsql` the system auto-converts it. After running migrations on Postgres, check what was created:
 
 ```bash
-docker compose exec db psql -U postgres -d dalt -c "\d users"
+docker compose exec db psql -U postgres -d dalt_php_app -c "\d users"
 ```
 
 You should see:
@@ -355,7 +368,7 @@ Load the broken controllers:
 php artisan challenge:start db-first-queries
 ```
 
-Two controller files will be added to your project. They have three bugs between them — all related to what you learned in this lesson: SQL injection, wrong column names, and invalid response format.
+Two controller files will be added to your project. They have three bugs between them: SQL injection, a wrong column name, and a status code that never reaches the client.
 
 Fix the bugs, then verify:
 
@@ -368,14 +381,25 @@ php artisan challenge:verify
 ### "could not find driver" error
 The `pdo_pgsql` PHP extension is not installed. In Docker, this is fixed by the `docker-php-ext-install pdo pdo_pgsql` line in your Dockerfile (Phase 1 challenge).
 
-### "FATAL: database 'dalt' does not exist"
-The Postgres container started fresh without running init. Run `docker compose down -v` and `docker compose up` again — the `POSTGRES_DB=dalt` env var creates the database on first boot.
+### "FATAL: database 'dalt_php_app' does not exist"
+Postgres only creates the database named by `POSTGRES_DB` on the *first* boot of an empty data volume. If that variable changed after the volume already existed, the old database is still there and the new name was never created. Run `docker compose down -v` to discard the volume, then `docker compose up` again.
 
 ### "column user_id does not exist"
 You're querying with the wrong column name. Use `\d tablename` in psql to see the actual column names.
 
-### "echo $array" prints "Array"
-PHP arrays can't be echoed directly. Use `json_encode($array)`.
+### A 404 response arrives with status 200
+The controller called `http_response_code(404)` and then returned data. `Response::send()` sets the status from the Response object, overwriting it. Return `Response::json($data, 404)` instead.
+
+## Checkpoint
+
+Answer from memory:
+
+1. Name three SQLite idioms DALT rewrites for Postgres, and state what happens when a migration contains SQLite-only syntax it cannot rewrite.
+2. Explain why `DB_HOST=db` works inside Compose but not on your host machine.
+3. `?search=` is passed straight into a `LIKE` clause. Describe what an attacker can do, and where the `%` wildcards belong once you bind it.
+4. A lookup returns nothing even though the row exists. Name the psql meta-command that would show you why.
+5. A controller sets `http_response_code(404)` and returns an array. State the status the client actually receives and why.
+6. Explain why `POSTGRES_DB` appears to be ignored when you change it on an existing stack.
 
 ## Summary
 
