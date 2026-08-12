@@ -34,6 +34,7 @@ Thumbs.db
 .dalt/challenge-backup/
 .dalt/challenge-state.json
 .dalt/challenge.lock
+.dalt/progress.lock
 .dalt/progress.json
 .dalt/baseline/
 .dalt-removing-*/

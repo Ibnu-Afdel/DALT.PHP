@@ -8,6 +8,7 @@ use Core\ChallengeVerifier;
 use Core\CourseLoader;
 use Core\Request;
 use Core\Response;
+use Core\ProgressManager;
 
 try {
     $request = App::resolve(Request::class);
@@ -40,12 +41,22 @@ try {
         ChallengeManager::markPassed($challengeId);
     }
 
+    $challenge = CourseLoader::getChallenge($challengeId);
+    $nextLesson = null;
+    if ($challenge !== null && ($lesson = CourseLoader::getLesson($challenge['lesson'])) !== null) {
+        $completed = ProgressManager::completedLessonIds(CourseLoader::getChallenges());
+        $nextLesson = ProgressManager::nextInSection($lesson, CourseLoader::getLessons(), $completed);
+    }
+
     return Response::json([
         'success' => $result['status'] === 'pass',
         'status' => $result['status'],
         'message' => $result['message'],
         'tests' => $result['results'],
         'timestamp' => gmdate('c'),
+        'lesson_id' => $challenge['lesson'] ?? null,
+        'lesson_title' => $challenge === null ? null : CourseLoader::getLesson($challenge['lesson'])['title'],
+        'next_lesson' => $nextLesson === null ? null : ['id' => $nextLesson['id'], 'title' => $nextLesson['title']],
     ]);
 } catch (Throwable $exception) {
     app_log('Challenge verification request failed: ' . $exception->getMessage());

@@ -45,13 +45,33 @@
       </div>
     </div>
 
-    <?php if (!empty($relatedChallengeId)): ?>
-      <aside class="border-y border-[#1e293b] py-8" aria-labelledby="practice-title">
+    <aside class="border-y border-[#1e293b] py-8" aria-labelledby="practice-title">
+      <?php if ($relatedChallenges !== []): ?>
         <h2 id="practice-title" class="text-xl font-bold tracking-tight text-gray-100">Ready to put this into practice?</h2>
-        <p class="mt-2 max-w-xl leading-7 text-gray-500">Open the linked debugging challenge when you are ready to test what you learned.</p>
-        <a href="/learn/challenges/<?= $relatedChallengeId ?>" class="mt-5 inline-flex items-center rounded-lg bg-[#93DA97] px-4 py-2.5 text-sm font-bold text-[#0a0d12] transition-colors hover:bg-[#b5edb8]">Open challenge <span class="ml-2" aria-hidden="true">→</span></a>
-      </aside>
-    <?php endif; ?>
+        <p class="mt-2 max-w-xl leading-7 text-gray-500">Use a debugging challenge to test what you learned. Practice is optional; completing this lesson is separate from verification.</p>
+        <ul class="mt-5 space-y-3">
+          <?php foreach ($relatedChallenges as $challenge): ?>
+            <li class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#1e293b] px-4 py-3"><span class="font-medium text-gray-200"><?= $challenge['passed'] ? '✓ ' : '' ?><?= htmlspecialchars($challenge['title']) ?></span><a href="/learn/challenges/<?= htmlspecialchars($challenge['id']) ?>" class="text-sm font-semibold text-[#93DA97] hover:text-[#b5edb8]">Open challenge →</a></li>
+          <?php endforeach; ?>
+        </ul>
+      <?php else: ?>
+        <h2 id="practice-title" class="text-xl font-bold tracking-tight text-gray-100">You've reached the end of <?= htmlspecialchars($lesson['title']) ?>.</h2>
+        <p class="mt-2 max-w-xl leading-7 text-gray-500">Mark it complete when you're ready to continue along this learning path.</p>
+      <?php endif; ?>
+
+      <?php if ($isVerified): ?>
+        <p class="mt-6 font-semibold text-[#93DA97]">Lesson verified ✓</p><p class="mt-1 text-sm text-gray-500">A practical challenge has been passed.</p>
+      <?php elseif ($isCompleted): ?>
+        <p class="mt-6 font-semibold text-[#93DA97]">Lesson completed ✓</p><?php if ($relatedChallenges !== []): ?><p class="mt-1 text-sm text-gray-500">Practice a challenge when you want to verify your understanding.</p><?php endif; ?>
+      <?php elseif ($relatedChallenges !== []): ?>
+        <div class="mt-6"><h3 class="font-semibold text-gray-200">Finished the lesson?</h3>
+          <form method="post" action="/learn/lessons/<?= htmlspecialchars($lessonId) ?>/complete" class="mt-4"><?= csrf_field() ?><button type="submit" class="inline-flex items-center rounded-lg bg-[#93DA97] px-4 py-2.5 text-sm font-bold text-[#0a0d12] transition-colors hover:bg-[#b5edb8]">Mark lesson complete</button></form>
+        </div>
+      <?php endif; ?>
+      <?php if (!$isCompleted && $relatedChallenges === []): ?>
+        <form method="post" action="/learn/lessons/<?= htmlspecialchars($lessonId) ?>/complete" class="mt-4"><?= csrf_field() ?><input type="hidden" name="continue" value="1"><button type="submit" class="inline-flex items-center rounded-lg border border-[#93DA97]/50 px-4 py-2.5 text-sm font-bold text-[#93DA97] transition-colors hover:bg-[#93DA97]/10">Complete &amp; continue →</button></form>
+      <?php endif; ?>
+    </aside>
 
     <?php if ($previousLesson !== null || $nextLesson !== null): ?>
       <nav class="mt-10 grid gap-3 sm:grid-cols-2" aria-label="Lesson pager">

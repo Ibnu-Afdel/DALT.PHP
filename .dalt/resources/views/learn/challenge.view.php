@@ -67,7 +67,7 @@
 
         <!-- Verification Section -->
         <div class="bg-[#161b22] rounded-xl shadow-lg border border-gray-800 p-8">
-          <challenge-verifier challenge-id="<?= htmlspecialchars($challengeId, ENT_QUOTES, 'UTF-8') ?>">
+          <challenge-verifier challenge-id="<?= htmlspecialchars($challengeId, ENT_QUOTES, 'UTF-8') ?>" lesson-title="<?= htmlspecialchars($relatedLesson['title'] ?? '', ENT_QUOTES, 'UTF-8') ?>" next-lesson-id="<?= htmlspecialchars($nextLesson['id'] ?? '', ENT_QUOTES, 'UTF-8') ?>" next-lesson-title="<?= htmlspecialchars($nextLesson['title'] ?? '', ENT_QUOTES, 'UTF-8') ?>" track-id="<?= htmlspecialchars($relatedLesson['section'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
             <noscript>
               <div class="rounded-xl border border-amber-500/40 bg-amber-950/30 p-5 text-amber-100">
                 <h2 class="font-semibold">Browser verification needs JavaScript</h2>

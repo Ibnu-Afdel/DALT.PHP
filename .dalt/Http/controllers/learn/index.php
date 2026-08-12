@@ -7,21 +7,9 @@ $sections = \Core\CourseLoader::getSections();
 $challenges = \Core\CourseLoader::getChallenges();
 $activeChallenge = \Core\ChallengeManager::getActiveChallenge();
 
-$completedLessonIds = [];
-foreach ($challenges as $challenge) {
-    if ($challenge['passed']) {
-        $completedLessonIds[$challenge['lesson']] = true;
-    }
-}
-
-$nextLesson = null;
-foreach ($lessons as $lesson) {
-    if (!isset($completedLessonIds[$lesson['id']])) {
-        $nextLesson = $lesson;
-        break;
-    }
-}
-$nextLesson ??= $lessons[0] ?? null;
+$completedLessonIds = \Core\ProgressManager::completedLessonIds($challenges);
+$verifiedLessonIds = \Core\ProgressManager::verifiedLessonIds($challenges);
+$nextLesson = \Core\ProgressManager::continuation($lessons, $completedLessonIds);
 
 $currentChallenge = null;
 foreach ($challenges as $challenge) {
@@ -36,6 +24,7 @@ return view('learn/index.view.php', [
     'challenges' => $challenges,
     'activeChallenge' => $activeChallenge,
     'completedLessonIds' => $completedLessonIds,
+    'verifiedLessonIds' => $verifiedLessonIds,
     'nextLesson' => $nextLesson,
     'currentChallenge' => $currentChallenge,
     'sections' => $sections,

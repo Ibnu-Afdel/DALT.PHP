@@ -22,7 +22,7 @@ $progress = $totalLessons > 0 ? (int) round(($completedCount / $totalLessons) * 
     <section class="mt-12 overflow-hidden rounded-2xl border border-[#93DA97]/25 bg-[#11161d]" aria-labelledby="continue-title">
       <div class="grid gap-8 p-7 sm:p-9 lg:grid-cols-[1fr_14rem] lg:items-end">
         <div>
-          <p class="text-sm font-semibold text-[#93DA97]"><?= $currentChallenge !== null ? 'Active challenge' : ($completedCount === 0 ? 'Start here' : 'Continue learning') ?></p>
+          <p class="text-sm font-semibold text-[#93DA97]"><?= $currentChallenge !== null ? 'Active challenge' : ($nextLesson === null ? 'Learning complete' : ($completedCount === 0 ? 'Start here' : 'Continue learning')) ?></p>
           <?php if ($currentChallenge !== null): ?>
             <h2 id="continue-title" class="mt-2 text-2xl font-bold tracking-tight text-gray-50"><?= htmlspecialchars($currentChallenge['title']) ?></h2>
             <p class="mt-3 max-w-xl leading-7 text-gray-400">Your challenge is ready. Continue debugging, then run verification when you are ready.</p>
@@ -31,6 +31,10 @@ $progress = $totalLessons > 0 ? (int) round(($completedCount / $totalLessons) * 
             <h2 id="continue-title" class="mt-2 text-2xl font-bold tracking-tight text-gray-50"><?= htmlspecialchars($nextLesson['title']) ?></h2>
             <p class="mt-3 max-w-xl leading-7 text-gray-400"><?= htmlspecialchars($nextLesson['description']) ?></p>
             <a href="/learn/lessons/<?= htmlspecialchars($nextLesson['id']) ?>" class="mt-6 inline-flex items-center rounded-lg bg-[#93DA97] px-4 py-2.5 text-sm font-bold text-[#0a0d12] transition-colors hover:bg-[#b5edb8]">Continue learning <span class="ml-2" aria-hidden="true">→</span></a>
+          <?php else: ?>
+            <h2 id="continue-title" class="mt-2 text-2xl font-bold tracking-tight text-gray-50">All lessons complete</h2>
+            <p class="mt-3 max-w-xl leading-7 text-gray-400">You've completed the current DALT learning curriculum.</p>
+            <a href="/learn/tracks/foundation" class="mt-6 inline-flex items-center rounded-lg bg-[#93DA97] px-4 py-2.5 text-sm font-bold text-[#0a0d12] transition-colors hover:bg-[#b5edb8]">Review learning paths <span class="ml-2" aria-hidden="true">→</span></a>
           <?php endif; ?>
         </div>
         <div class="border-t border-[#93DA97]/15 pt-6 lg:border-l lg:border-t-0 lg:pl-7 lg:pt-0">

@@ -5,12 +5,14 @@ declare(strict_types=1);
 use Core\App;
 use Core\CourseLoader;
 use Core\Request;
+use Core\ProgressManager;
 
 $lessonId = App::resolve(Request::class)->route('lesson');
 
 if (!is_string($lessonId) || ($lesson = CourseLoader::getLesson($lessonId)) === null) {
     abort(404);
 }
+ProgressManager::visitLesson($lessonId);
 
 $readmePath = base_path(".dalt/course/lessons/{$lessonId}/README.md");
 if (!file_exists($readmePath)) {
@@ -34,12 +36,18 @@ $prerequisites = array_values(array_intersect_key(
 // neighboring IDs; this just attaches their titles for the pager labels.
 $previousLesson = $lesson['prev'] !== null ? $lessonsById[$lesson['prev']] : null;
 $nextLesson = $lesson['next'] !== null ? $lessonsById[$lesson['next']] : null;
+$allChallenges = CourseLoader::getChallenges();
+$completedLessonIds = ProgressManager::completedLessonIds($allChallenges);
+$verifiedLessonIds = ProgressManager::verifiedLessonIds($allChallenges);
 
 return view('learn/lesson.view.php', [
     'lessonId' => $lessonId,
     'lesson' => $lesson,
     'content' => $content,
     'relatedChallengeId' => $relatedChallengeId,
+    'relatedChallenges' => $relatedChallenges,
+    'isCompleted' => isset($completedLessonIds[$lessonId]),
+    'isVerified' => isset($verifiedLessonIds[$lessonId]),
     'prerequisites' => $prerequisites,
     'previousLesson' => $previousLesson,
     'nextLesson' => $nextLesson,

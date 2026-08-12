@@ -144,6 +144,61 @@ test('learning paths and resource filters keep navigation intentions separate', 
         ->and($routing->body)->not->toContain('/learn/lessons/04-authentication\" class="group rounded-xl');
 });
 
+test('lesson completion persists independently from verification and drives resume', function () {
+    $root = p05ProjectFixture();
+
+    try {
+        $client = new ApplicationTestClient($root);
+        $opened = $client->request('GET', '/learn/lessons/06-docker-basics');
+        expect($opened->statusCode)->toBe(200)
+            ->and($opened->body)->toContain('Complete &amp; continue')
+            ->and(json_decode(file_get_contents($root . '/.dalt/progress.json'), true, 512, JSON_THROW_ON_ERROR)['last_visited_lesson'])
+            ->toBe('06-docker-basics');
+
+        $complete = $client->request(
+            'POST',
+            '/learn/lessons/06-docker-basics/complete',
+            input: ['continue' => '1'],
+            server: ['HTTP_X_CSRF_TOKEN' => 'known-token'],
+            session: ['_csrf' => 'known-token'],
+        );
+        $progress = json_decode(file_get_contents($root . '/.dalt/progress.json'), true, 512, JSON_THROW_ON_ERROR);
+        $dashboard = $client->request('GET', '/learn');
+        $track = $client->request('GET', '/learn/tracks/docker');
+
+        expect($complete->statusCode)->toBe(303)
+            ->and($progress['completed_lessons'])->toContain('06-docker-basics')
+            ->and($progress['passed'])->toBe([])
+            ->and($dashboard->body)->toContain('Writing Dockerfiles')
+            ->and($track->body)->toContain('✓ Completed');
+    } finally {
+        p05RemoveTree($root);
+    }
+});
+
+test('legacy passed progress remains effective and a completed curriculum has no lesson-one fallback', function () {
+    $root = p05ProjectFixture();
+
+    try {
+        file_put_contents($root . '/.dalt/progress.json', json_encode(['passed' => ['broken-routing']], JSON_THROW_ON_ERROR));
+        $client = new ApplicationTestClient($root);
+        $legacy = $client->request('GET', '/learn/tracks/foundation');
+        expect($legacy->body)->toContain('✓ Verified');
+
+        $lessonIds = array_column(\Core\CourseLoader::getLessons(), 'id');
+        file_put_contents($root . '/.dalt/progress.json', json_encode([
+            'passed' => [],
+            'completed_lessons' => $lessonIds,
+            'last_visited_lesson' => '17-observability',
+        ], JSON_THROW_ON_ERROR));
+        $complete = $client->request('GET', '/learn');
+        expect($complete->body)->toContain('All lessons complete')
+            ->and($complete->body)->not->toContain('href="/learn/lessons/01-request-lifecycle" class="mt-6');
+    } finally {
+        p05RemoveTree($root);
+    }
+});
+
 test('verification requires csrf and maps unknown and inactive challenges', function () {
     $client = new ApplicationTestClient();
     $missingToken = $client->request('POST', '/api/verify/broken-routing');
@@ -213,13 +268,21 @@ PHP);
         expect($passed->statusCode)->toBe(200)
             ->and($passedData['status'])->toBe('pass')
             ->and($passedData['success'])->toBeTrue()
-            ->and($progress)->toBe(['passed' => ['broken-routing']]);
+            ->and($progress)->toBe([
+                'passed' => ['broken-routing'],
+                'completed_lessons' => ['02-routing'],
+                'last_visited_lesson' => null,
+            ]);
 
         $repeat = $request();
         expect($repeat->statusCode)->toBe(200)
             ->and(json_decode($repeat->body, true, 512, JSON_THROW_ON_ERROR)['status'])->toBe('pass')
             ->and(json_decode(file_get_contents($root . '/.dalt/progress.json'), true, 512, JSON_THROW_ON_ERROR))
-            ->toBe(['passed' => ['broken-routing']]);
+            ->toBe([
+                'passed' => ['broken-routing'],
+                'completed_lessons' => ['02-routing'],
+                'last_visited_lesson' => null,
+            ]);
 
         expect(p05Manager($root, 'stop')['result'])->toBeTrue();
         $completedDashboard = $client->request('GET', '/learn/resources');

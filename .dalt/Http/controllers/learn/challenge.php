@@ -28,6 +28,12 @@ $allChallenges = CourseLoader::getChallenges();
 $challengeIndex = array_search($challengeId, array_column($allChallenges, 'id'), true);
 $previousChallenge = $challengeIndex > 0 ? $allChallenges[$challengeIndex - 1] : null;
 $nextChallenge = $challengeIndex < count($allChallenges) - 1 ? $allChallenges[$challengeIndex + 1] : null;
+$relatedLesson = CourseLoader::getLesson($challenge['lesson']);
+$nextLesson = null;
+if ($relatedLesson !== null) {
+    $completed = \Core\ProgressManager::completedLessonIds($allChallenges);
+    $nextLesson = \Core\ProgressManager::nextInSection($relatedLesson, CourseLoader::getLessons(), $completed);
+}
 
 return view('learn/challenge.view.php', [
     'challengeId' => $challengeId,
@@ -37,4 +43,6 @@ return view('learn/challenge.view.php', [
     'activeChallenge' => $activeChallenge,
     'previousChallenge' => $previousChallenge,
     'nextChallenge' => $nextChallenge,
+    'relatedLesson' => $relatedLesson,
+    'nextLesson' => $nextLesson,
 ]);

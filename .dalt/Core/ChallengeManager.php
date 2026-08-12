@@ -224,31 +224,7 @@ final class ChallengeManager
     /** @return list<string> */
     public static function getPassedChallenges(): array
     {
-        $file = base_path(self::PROGRESS_FILE);
-        if (!file_exists($file)) {
-            return [];
-        }
-        self::assertRegularFile($file, 'progress file');
-
-        try {
-            $data = json_decode(self::readFile($file, 'progress file'), true, 512, JSON_THROW_ON_ERROR);
-        } catch (JsonException $exception) {
-            throw new ChallengeStateException('The challenge progress file is malformed JSON.', 0, $exception);
-        }
-
-        if (!is_array($data) || array_keys($data) !== ['passed'] || !is_array($data['passed'])) {
-            throw new ChallengeStateException('The challenge progress file must contain only a passed list.');
-        }
-
-        $passed = [];
-        foreach ($data['passed'] as $name) {
-            if (!is_string($name) || !self::validChallengeId($name) || in_array($name, $passed, true)) {
-                throw new ChallengeStateException('The challenge progress file contains an invalid passed challenge ID.');
-            }
-            $passed[] = $name;
-        }
-
-        return $passed;
+        return ProgressManager::getPassedChallenges();
     }
 
     public static function markPassed(string $challengeName): void
@@ -257,16 +233,7 @@ final class ChallengeManager
             throw new ChallengeStateException("Invalid challenge ID '{$challengeName}'.");
         }
 
-        self::withLock(function () use ($challengeName): void {
-            $passed = self::getPassedChallenges();
-            if (!in_array($challengeName, $passed, true)) {
-                $passed[] = $challengeName;
-            }
-            self::atomicWrite(
-                base_path(self::PROGRESS_FILE),
-                json_encode(['passed' => $passed], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR) . "\n",
-            );
-        });
+        ProgressManager::markChallengePassed($challengeName);
     }
 
     /**

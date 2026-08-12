@@ -8,6 +8,7 @@ $router->get("/learn/resources", "learn/resources.php");
 $router->get("/learn/tracks/{section}", "learn/track.php");
 $router->get("/learn/roadmap", "learn/roadmap.php");
 $router->get("/learn/lessons/{lesson}", "learn/lesson.php");
+$router->post("/learn/lessons/{lesson}/complete", "learn/complete.php")->only('csrf');
 $router->get("/learn/challenges/{challenge}", "learn/challenge.php");
 
 // API routes for verification

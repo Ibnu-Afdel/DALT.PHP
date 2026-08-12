@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Core\App;
 use Core\CourseLoader;
 use Core\Request;
+use Core\ProgressManager;
 
 $sectionId = App::resolve(Request::class)->route('section');
 $sections = CourseLoader::getSections();
@@ -19,12 +20,9 @@ $lessons = array_values(array_filter(
 usort($lessons, static fn (array $left, array $right): int => $left['section_order'] <=> $right['section_order']);
 
 $challenges = CourseLoader::getChallenges();
-$completedLessonIds = [];
-foreach ($challenges as $challenge) {
-    if ($challenge['passed']) {
-        $completedLessonIds[$challenge['lesson']] = true;
-    }
-}
+$completedLessonIds = ProgressManager::completedLessonIds($challenges);
+$verifiedLessonIds = ProgressManager::verifiedLessonIds($challenges);
+$lastVisitedLesson = ProgressManager::lastVisitedLesson();
 
 $nextLesson = null;
 foreach ($lessons as $lesson) {
@@ -54,6 +52,8 @@ return view('learn/track.view.php', [
     'section' => $sections[$sectionId],
     'lessons' => $lessons,
     'completedLessonIds' => $completedLessonIds,
+    'verifiedLessonIds' => $verifiedLessonIds,
+    'lastVisitedLesson' => $lastVisitedLesson,
     'nextLesson' => $nextLesson,
     'recommendedKnowledge' => $recommendedKnowledge,
 ]);

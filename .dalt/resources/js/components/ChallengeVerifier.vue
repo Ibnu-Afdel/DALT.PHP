@@ -34,8 +34,8 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <div class="min-w-0">
-            <h3 class="text-xl font-bold">All checks passed</h3>
-            <p class="mt-2 overflow-wrap-anywhere text-emerald-200">{{ result.message }}</p>
+            <h3 class="text-xl font-bold">Challenge passed ✓</h3>
+            <p class="mt-2 overflow-wrap-anywhere text-emerald-200">{{ result.lesson_title || lessonTitle }} verified. You successfully applied the lesson in practice.</p>
             <p v-if="result.timestamp" class="mt-3 text-sm text-emerald-300">Verified {{ formatTimestamp(result.timestamp) }}</p>
           </div>
         </div>
@@ -47,7 +47,10 @@
             <span class="min-w-0 overflow-wrap-anywhere">{{ test.message }}</span>
           </li>
         </ul>
-        <a href="/learn" class="mt-6 inline-flex rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500">Choose another challenge</a>
+        <a v-if="result.next_lesson" :href="`/learn/lessons/${result.next_lesson.id}`" class="mt-6 inline-flex rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500">Continue to {{ result.next_lesson.title }} →</a>
+        <a v-else-if="nextLessonId" :href="`/learn/lessons/${nextLessonId}`" class="mt-6 inline-flex rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500">Continue to {{ nextLessonTitle }} →</a>
+        <a v-else :href="`/learn/tracks/${trackId}`" class="mt-6 inline-flex rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500">Back to learning path</a>
+        <a :href="`/learn/lessons/${result.lesson_id || ''}`" class="ml-4 mt-6 inline-flex text-sm font-semibold text-emerald-200 hover:text-white">Back to lesson</a>
       </div>
 
       <div v-else-if="result.status === 'not_loaded'" class="rounded-xl border border-amber-500/50 bg-amber-950/30 p-6 text-amber-100">
@@ -68,8 +71,8 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <div class="min-w-0">
-            <h3 class="text-xl font-bold">Checks still failing</h3>
-            <p class="mt-2 overflow-wrap-anywhere text-red-200">{{ result.message }}</p>
+            <h3 class="text-xl font-bold">Challenge not yet passed</h3>
+            <p class="mt-2 overflow-wrap-anywhere text-red-200">{{ result.message }} Your work has been kept; inspect the checks below, then retry.</p>
             <p v-if="result.timestamp" class="mt-3 text-sm text-red-300">Tested {{ formatTimestamp(result.timestamp) }}</p>
           </div>
         </div>
@@ -97,6 +100,7 @@
             </div>
           </li>
         </ul>
+        <a :href="`/learn/lessons/${result.lesson_id || ''}`" class="mt-5 inline-flex text-sm font-semibold text-red-100 underline hover:text-white">Review the related lesson</a>
       </div>
     </div>
 
@@ -117,7 +121,11 @@ const props = defineProps({
   challengeId: {
     type: String,
     required: true
-  }
+  },
+  lessonTitle: { type: String, default: '' },
+  nextLessonId: { type: String, default: '' },
+  nextLessonTitle: { type: String, default: '' },
+  trackId: { type: String, default: '' }
 })
 
 const isVerifying = ref(false)
