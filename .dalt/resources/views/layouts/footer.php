@@ -15,7 +15,7 @@
         <nav class="space-y-2 text-sm" aria-label="Learning links">
           <a href="/" class="block text-gray-400 hover:text-[#93DA97] transition-colors">Home</a>
           <a href="/learn" class="block text-gray-400 hover:text-[#93DA97] transition-colors">Course Dashboard</a>
-          <a href="/learn/start" class="block text-gray-400 hover:text-[#93DA97] transition-colors">Start Learning</a>
+          <a href="/learn" class="block text-gray-400 hover:text-[#93DA97] transition-colors">Start Learning</a>
         </nav>
       </section>
 

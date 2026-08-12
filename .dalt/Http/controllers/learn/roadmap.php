@@ -26,25 +26,10 @@ $content = preg_replace('/\A# DALT\.PHP Competency Roadmap\R+/', '', $content, 1
 $lessons = CourseLoader::getLessons();
 $passedChallenges = ChallengeManager::getPassedChallenges();
 
-// Groups a lesson under a coarse branch for the graph, mirroring the branches the
-// written roadmap doc already describes (foundation / docker / postgres / operations).
-// A closure, not a top-level function: this file is require()'d per request, and a
-// named function declaration would fatal with "cannot redeclare" the second time.
-$inferLessonSection = static function (string $lessonId): string {
-    if (str_contains($lessonId, 'docker')) {
-        return 'docker';
-    }
-    if (str_contains($lessonId, 'postgres')) {
-        return 'postgres';
-    }
-    if ($lessonId === '17-observability') {
-        return 'operations';
-    }
-
-    return 'foundation';
-};
-
-$nodes = array_map(static function (array $lesson) use ($passedChallenges, $inferLessonSection): array {
+// Section grouping (foundation / docker / postgres / operations) comes from
+// CourseLoader::inferSection() — shared with the learning shell's sidebar so the
+// graph and the sidebar tree never drift into two separately hand-written groupings.
+$nodes = array_map(static function (array $lesson) use ($passedChallenges): array {
     $challenge = CourseLoader::getChallengesForLesson($lesson['id'])[0] ?? null;
 
     return [
@@ -52,7 +37,7 @@ $nodes = array_map(static function (array $lesson) use ($passedChallenges, $infe
         'order' => $lesson['order'],
         'title' => $lesson['title'],
         'description' => $lesson['description'],
-        'section' => $inferLessonSection($lesson['id']),
+        'section' => CourseLoader::inferSection($lesson['id']),
         'prerequisites' => $lesson['prerequisites'],
         'challenge_id' => $challenge['id'] ?? null,
         'challenge_title' => $challenge['title'] ?? null,

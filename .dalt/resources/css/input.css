@@ -1,14 +1,56 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
+
+/*
+ * Color tokens — see docs/redesign/DESIGN_SYSTEM.md → Color.
+ * Dark-first: :root carries the dark values (this app has no theme
+ * toggle yet), overridden under prefers-color-scheme: light.
+ */
+:root {
+  --bg: #0a0d12;
+  --surface: #11161d;
+  --accent: #93da97;
+  --info: #6ea8e0;
+  --warning: #e3a548;
+  --danger: #e2685b;
+
+  /* Typography — see docs/redesign/DESIGN_SYSTEM.md → Typography. */
+  --font-body: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", monospace;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f7f6f2;
+    --surface: #ffffff;
+    --accent: #2f7a3d;
+    --info: #2b5f96;
+    --warning: #a5680a;
+    --danger: #b23b30;
+  }
+}
 
 @layer base {
   :focus-visible {
-    outline: 3px solid #93da97;
+    outline: 3px solid var(--accent);
     outline-offset: 3px;
   }
 
   html {
     scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-body);
+  }
+
+  code,
+  pre,
+  kbd,
+  samp {
+    font-family: var(--font-mono);
   }
 }
 
@@ -19,7 +61,7 @@
   z-index: 100;
   transform: translateY(-160%);
   border-radius: 0.5rem;
-  background: #93da97;
+  background: var(--accent);
   color: #0f1117;
   padding: 0.75rem 1rem;
   font-weight: 700;

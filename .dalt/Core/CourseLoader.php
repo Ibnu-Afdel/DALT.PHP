@@ -179,6 +179,27 @@ final class CourseLoader
         ));
     }
 
+    /**
+     * Groups a lesson under a coarse branch, mirroring the branches the written
+     * competency roadmap already describes (foundation / docker / postgres / operations).
+     * Shared by the roadmap graph and the learning shell's sidebar so the two never
+     * drift into two separately hand-written groupings of the same lessons.
+     */
+    public static function inferSection(string $lessonId): string
+    {
+        if (str_contains($lessonId, 'docker')) {
+            return 'docker';
+        }
+        if (str_contains($lessonId, 'postgres')) {
+            return 'postgres';
+        }
+        if ($lessonId === '17-observability') {
+            return 'operations';
+        }
+
+        return 'foundation';
+    }
+
     private static function root(?string $courseRoot): string
     {
         return rtrim($courseRoot ?? base_path(self::COURSE_PATH), '/\\');

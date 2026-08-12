@@ -46,7 +46,7 @@ test('the real front controller serves guided learning when the platform is inst
         ->and($response->statusCode)->toBe(200)
         ->and($response->error)->toBeNull()
         ->and($response->stderr)->toBe('')
-        ->and($response->body)->toContain('Interactive Learning');
+        ->and($response->body)->toContain('Keep building your backend instincts.');
 });
 
 test('the real front controller serves catalog lessons and their validated challenge relationship', function () {

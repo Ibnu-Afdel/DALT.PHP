@@ -13,7 +13,7 @@
             <section class="footer-group" aria-label="Learn">
                 <h4>Learn</h4>
                 <a class="footer-link" href="/">Home</a>
-                <a class="footer-link" href="/learn/start">Start Learning</a>
+                <a class="footer-link" href="/learn">Start Learning</a>
                 <a class="footer-link" href="/learn">Course Dashboard</a>
             </section>
 

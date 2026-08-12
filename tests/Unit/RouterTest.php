@@ -117,9 +117,9 @@ test('it dispatches controller files through the response boundary', function ()
 
 test('it falls back to optional dalt controllers after checking the application root', function () {
     $router = new Router();
-    $router->get('/learn/start', 'learn/start.php');
+    $router->get('/learn', 'learn/index.php');
 
-    $response = $router->route('/learn/start', 'GET', new Request());
+    $response = $router->route('/learn', 'GET', new Request());
 
     expect($response->status())->toBe(200)
         ->and($response->content())->toContain('<title>DALT.PHP');

@@ -27,10 +27,18 @@ $prerequisites = array_values(array_intersect_key(
     array_flip($lesson['prerequisites']),
 ));
 
+// Linear "previous · next" pager, strictly by `order` — see DESIGN_SYSTEM.md →
+// "Lesson / challenge pager". CourseLoader::getLesson() already resolves the
+// neighboring IDs; this just attaches their titles for the pager labels.
+$previousLesson = $lesson['prev'] !== null ? $lessonsById[$lesson['prev']] : null;
+$nextLesson = $lesson['next'] !== null ? $lessonsById[$lesson['next']] : null;
+
 return view('learn/lesson.view.php', [
     'lessonId' => $lessonId,
     'lesson' => $lesson,
     'content' => $content,
     'relatedChallengeId' => $relatedChallengeId,
     'prerequisites' => $prerequisites,
+    'previousLesson' => $previousLesson,
+    'nextLesson' => $nextLesson,
 ]);

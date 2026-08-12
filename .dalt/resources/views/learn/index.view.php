@@ -1,160 +1,62 @@
 <?php require base_path('.dalt/resources/views/layouts/head.php') ?>
-<?php require base_path('.dalt/resources/views/layouts/nav.php') ?>
+<?php require base_path('.dalt/resources/views/layouts/learn-nav.php') ?>
 
-<main class="flex-1 bg-[#0f1117] text-gray-300 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px]" id="app" tabindex="-1">
-  <!-- Header -->
-  <section class="border-b border-[#1e293b] bg-[#161b22]/50 py-12">
-    <div class="max-w-7xl mx-auto px-6">
-      <div class="flex items-center gap-3 mb-4 text-sm font-medium">
-        <a href="/" class="text-gray-500 hover:text-gray-300 transition-colors">Home</a>
-        <span class="text-gray-700">/</span>
-        <span class="text-gray-300">Learn</span>
-      </div>
-      <h1 class="text-4xl font-bold text-gray-50 mb-3 tracking-tight">Interactive Learning</h1>
-      <p class="text-lg text-gray-400">Master backend architecture through lessons and hands-on debugging challenges.</p>
-      <a href="/learn/roadmap" class="mt-6 inline-flex items-center gap-2 rounded-lg border border-[#93DA97]/30 bg-[#93DA97]/10 px-4 py-2.5 text-sm font-bold text-[#93DA97] transition-colors hover:bg-[#93DA97]/20">
-        Open competency roadmap
-        <span aria-hidden="true">→</span>
-      </a>
-    </div>
-  </section>
+<?php
+$sectionLabels = ['foundation' => 'Foundation', 'docker' => 'Docker', 'postgres' => 'PostgreSQL', 'operations' => 'Operations'];
+$sectionDescriptions = ['foundation' => 'Understand how a request becomes a response.', 'docker' => 'Package and run your application reliably.', 'postgres' => 'Build confidence with real database systems.', 'operations' => 'Observe and maintain a running application.'];
+$sectionOrder = ['foundation', 'docker', 'postgres', 'operations'];
+$lessonsBySection = array_fill_keys($sectionOrder, []);
+foreach ($lessons as $lesson) {
+    $lessonsBySection[\Core\CourseLoader::inferSection($lesson['id'])][] = $lesson;
+}
+$completedCount = count($completedLessonIds);
+$totalLessons = count($lessons);
+$progress = $totalLessons > 0 ? (int) round(($completedCount / $totalLessons) * 100) : 0;
+?>
 
-  <div class="max-w-7xl mx-auto px-6 py-12">
-    <!-- Lessons Section -->
-    <section class="mb-16">
-      <div class="flex items-center justify-between mb-6 border-b border-[#1e293b] pb-4">
+<main class="min-h-[calc(100vh-8rem)] bg-[#0a0d12] text-gray-300" id="app" tabindex="-1">
+  <div class="mx-auto max-w-5xl px-5 py-10 sm:px-6 sm:py-16">
+    <header class="max-w-2xl">
+      <p class="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#93DA97]">DALT.PHP learning</p>
+      <h1 class="mt-4 text-4xl font-bold tracking-tight text-gray-50 sm:text-5xl">Keep building your backend instincts.</h1>
+      <p class="mt-5 text-lg leading-8 text-gray-400">One clear path for learning how DALT.PHP works, then proving it with practical debugging challenges.</p>
+    </header>
+
+    <section class="mt-12 overflow-hidden rounded-2xl border border-[#93DA97]/25 bg-[#11161d]" aria-labelledby="continue-title">
+      <div class="grid gap-8 p-7 sm:p-9 lg:grid-cols-[1fr_14rem] lg:items-end">
         <div>
-          <h2 class="text-2xl font-bold text-gray-100 flex items-center gap-2">
-            <svg class="w-5 h-5 text-[#93DA97]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-            </svg>
-            Lessons
-          </h2>
-          <p class="text-gray-500 text-sm mt-1">Foundational theory for backend systems</p>
+          <p class="text-sm font-semibold text-[#93DA97]"><?= $currentChallenge !== null ? 'Active challenge' : ($completedCount === 0 ? 'Start here' : 'Continue learning') ?></p>
+          <?php if ($currentChallenge !== null): ?>
+            <h2 id="continue-title" class="mt-2 text-2xl font-bold tracking-tight text-gray-50"><?= htmlspecialchars($currentChallenge['title']) ?></h2>
+            <p class="mt-3 max-w-xl leading-7 text-gray-400">Your challenge is ready. Continue debugging, then run verification when you are ready.</p>
+            <a href="/learn/challenges/<?= htmlspecialchars($currentChallenge['id']) ?>" class="mt-6 inline-flex items-center rounded-lg bg-[#93DA97] px-4 py-2.5 text-sm font-bold text-[#0a0d12] transition-colors hover:bg-[#b5edb8]">Continue challenge <span class="ml-2" aria-hidden="true">→</span></a>
+          <?php elseif ($nextLesson !== null): ?>
+            <h2 id="continue-title" class="mt-2 text-2xl font-bold tracking-tight text-gray-50"><?= htmlspecialchars($nextLesson['title']) ?></h2>
+            <p class="mt-3 max-w-xl leading-7 text-gray-400"><?= htmlspecialchars($nextLesson['description']) ?></p>
+            <a href="/learn/lessons/<?= htmlspecialchars($nextLesson['id']) ?>" class="mt-6 inline-flex items-center rounded-lg bg-[#93DA97] px-4 py-2.5 text-sm font-bold text-[#0a0d12] transition-colors hover:bg-[#b5edb8]"><?= $completedCount === 0 ? 'Start Lesson 1' : 'Open next lesson' ?> <span class="ml-2" aria-hidden="true">→</span></a>
+          <?php endif; ?>
         </div>
-        <div class="text-xs font-mono bg-[#161b22] border border-gray-800 px-2 py-1 rounded text-gray-400">
-          <?= count($lessons) ?> available
+        <div class="border-t border-[#93DA97]/15 pt-6 lg:border-l lg:border-t-0 lg:pl-7 lg:pt-0">
+          <p class="font-mono text-xs uppercase tracking-wider text-gray-500">Course progress</p>
+          <p class="mt-2 text-3xl font-bold text-gray-100"><?= $completedCount ?><span class="text-lg font-medium text-gray-500"> / <?= $totalLessons ?></span></p>
+          <div class="mt-4 h-2 overflow-hidden rounded-full bg-[#0a0d12]" role="progressbar" aria-label="Course progress" aria-valuemin="0" aria-valuemax="<?= $totalLessons ?>" aria-valuenow="<?= $completedCount ?>"><div class="h-full rounded-full bg-[#93DA97]" style="width: <?= $progress ?>%"></div></div>
+          <p class="mt-2 text-sm text-gray-500"><?= $progress ?>% complete</p>
         </div>
       </div>
+    </section>
 
-      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <?php foreach ($lessons as $index => $lesson): ?>
-          <a href="/learn/lessons/<?= $lesson['id'] ?>" class="block bg-[#161b22] rounded-xl border border-gray-800 p-6 hover:border-[#93DA97]/50 hover:bg-[#1a202c] transition-all group">
-            <div class="flex items-start justify-between mb-4">
-              <div class="text-3xl" aria-hidden="true"><?= $lesson['icon'] ?></div>
-              <div class="px-2.5 py-1 bg-gray-800/50 border border-gray-700 text-gray-300 text-xs uppercase tracking-wider font-semibold rounded">
-                Lesson <?= $index + 1 ?>
-              </div>
-            </div>
-            <h3 class="text-lg font-bold mb-2 text-gray-200 group-hover:text-[#93DA97] transition-colors">
-              <?= htmlspecialchars($lesson['title']) ?>
-            </h3>
-            <p class="text-gray-500 text-sm mb-4 line-clamp-2">
-              <?= htmlspecialchars($lesson['description']) ?>
-            </p>
-            <div class="flex items-center text-[#93DA97] text-sm font-medium mt-auto">
-              <span>Read lesson</span>
-              <svg class="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-              </svg>
-            </div>
-          </a>
+    <section class="mt-14" aria-labelledby="path-title">
+      <div class="flex flex-wrap items-end justify-between gap-4 border-b border-[#1e293b] pb-5"><div><h2 id="path-title" class="text-2xl font-bold text-gray-100">Your course path</h2><p class="mt-1 text-sm text-gray-500">Move through the foundations first, then deepen your practice.</p></div><a href="/learn/roadmap" class="text-sm font-semibold text-[#93DA97] hover:text-[#b5edb8]">View roadmap <span aria-hidden="true">→</span></a></div>
+      <ol class="mt-2 divide-y divide-[#1e293b]">
+        <?php foreach ($sectionOrder as $position => $section): ?>
+          <?php $sectionLessons = $lessonsBySection[$section]; $sectionComplete = count(array_filter($sectionLessons, fn (array $lesson): bool => isset($completedLessonIds[$lesson['id']]))); $finished = $sectionLessons !== [] && $sectionComplete === count($sectionLessons); ?>
+          <li><a href="/learn/resources?section=<?= $section ?>" class="group flex items-center gap-4 py-5 transition-colors hover:bg-[#11161d] sm:px-4"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border <?= $finished ? 'border-[#93DA97]/40 bg-[#93DA97]/10 text-[#93DA97]' : 'border-gray-700 text-gray-500' ?> font-mono text-xs"><?= $finished ? '✓' : str_pad((string) ($position + 1), 2, '0', STR_PAD_LEFT) ?></span><span class="min-w-0 flex-1"><span class="block font-semibold text-gray-200 group-hover:text-[#93DA97]"><?= $sectionLabels[$section] ?></span><span class="mt-1 block text-sm text-gray-500"><?= $sectionDescriptions[$section] ?></span></span><span class="hidden font-mono text-xs text-gray-500 sm:block"><?= $sectionComplete ?>/<?= count($sectionLessons) ?> lessons</span><span class="text-gray-600 group-hover:text-[#93DA97]" aria-hidden="true">→</span></a></li>
         <?php endforeach; ?>
-      </div>
+      </ol>
     </section>
 
-    <!-- Challenges Section -->
-    <section>
-      <div class="flex items-center justify-between mb-6 border-b border-[#1e293b] pb-4">
-        <div>
-          <h2 class="text-2xl font-bold text-gray-100 flex items-center gap-2">
-            <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
-            </svg>
-            Challenges
-          </h2>
-          <p class="text-gray-500 text-sm mt-1">Debug broken code and verify solutions</p>
-        </div>
-        <div class="text-xs font-mono bg-[#161b22] border border-gray-800 px-2 py-1 rounded text-gray-400">
-          <?= count($challenges) ?> available
-        </div>
-      </div>
-
-      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <?php foreach ($challenges as $challenge): ?>
-          <?php $isActive = $activeChallenge === $challenge['id']; ?>
-          <a href="/learn/challenges/<?= $challenge['id'] ?>" class="block bg-[#161b22] rounded-xl border <?= $isActive ? 'border-amber-500/60' : ($challenge['passed'] ? 'border-emerald-500/40' : 'border-gray-800') ?> p-6 hover:border-[#93DA97]/50 hover:bg-[#1a202c] transition-all group">
-            <div class="flex items-start justify-between mb-3">
-              <div class="text-3xl" aria-hidden="true"><?= $challenge['icon'] ?></div>
-              <?php
-
-                // Map logical colors to dark-mode-friendly tailwind classes to avoid purge issues
-                $colorMap = [
-                  'red' => 'bg-red-500/10 text-red-400 border-red-500/20',
-                  'blue' => 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-                  'purple' => 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-                  'green' => 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-                  'yellow' => 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-                ];
-                $color = $challenge['color'] ?? 'gray';
-                $mappedClass = $colorMap[$color] ?? 'bg-gray-800 text-gray-300 border-gray-700';
-              ?>
-              <span class="px-2.5 py-1 border text-xs uppercase tracking-wider font-semibold rounded <?= $mappedClass ?>">
-                <?= $isActive ? 'Active' : ($challenge['passed'] ? 'Completed' : htmlspecialchars($challenge['difficulty'])) ?>
-              </span>
-            </div>
-            <h3 class="text-lg font-bold mb-2 text-gray-200 group-hover:text-[#93DA97] transition-colors">
-              <?= htmlspecialchars($challenge['title']) ?>
-            </h3>
-            <p class="text-gray-500 text-sm mb-4 line-clamp-2">
-              <?= htmlspecialchars($challenge['description']) ?>
-            </p>
-            <div class="flex items-center justify-between mt-auto">
-              <span class="text-xs bg-[#0d1117] border border-gray-800 px-2 py-1 rounded text-gray-400 flex items-center gap-1.5">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                </svg>
-                <?= $challenge['bugs'] ?> bug<?= $challenge['bugs'] > 1 ? 's' : '' ?>
-              </span>
-              <div class="flex items-center text-[#93DA97] text-sm font-medium">
-                <span><?= $isActive ? 'Continue' : ($challenge['passed'] ? 'Review' : 'Open') ?></span>
-                <svg class="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-                </svg>
-              </div>
-            </div>
-          </a>
-        <?php endforeach; ?>
-      </div>
-    </section>
-
-    <!-- Getting Started -->
-    <section class="mt-16 bg-[#161b22] border border-blue-500/20 rounded-xl p-8 relative overflow-hidden">
-      <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-      <div class="flex items-start gap-4">
-        <div class="text-3xl text-yellow-400">
-          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
-          </svg>
-        </div>
-        <div>
-          <h3 class="text-xl font-bold text-gray-100 mb-2">New to DALT?</h3>
-          <p class="text-gray-400 mb-5 max-w-3xl">
-            Start with Lesson 1 to understand the request lifecycle, then follow each lesson's prerequisites and linked challenges.
-            Each challenge has hints and automatic verification to guide you in your terminal and browser.
-          </p>
-          <div class="flex flex-wrap gap-3">
-            <a href="/learn/lessons/01-request-lifecycle" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-bold shadow-sm">
-              Start with Lesson 1
-            </a>
-            <a href="https://github.com/Ibnu-Afdel/DALT.PHP/blob/main/TESTING_GUIDE.md" target="_blank" rel="noopener noreferrer" class="px-4 py-2 bg-[#0d1117] text-gray-300 border border-gray-700 rounded-lg hover:bg-[#1e293b] hover:text-white transition-colors text-sm font-medium">
-              Read Testing Guide
-            </a>
-          </div>
-        </div>
-      </div>
-    </section>
+    <section class="mt-12 flex flex-col justify-between gap-5 rounded-xl border border-[#1e293b] bg-[#11161d] p-6 sm:flex-row sm:items-center"><div><h2 class="font-semibold text-gray-100">Want to browse everything?</h2><p class="mt-1 text-sm text-gray-500">All lessons and debugging challenges live in one resource library.</p></div><a href="/learn/resources" class="inline-flex shrink-0 items-center justify-center rounded-lg border border-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-200 transition-colors hover:border-[#93DA97]/50 hover:text-[#93DA97]">Open resources <span class="ml-2" aria-hidden="true">→</span></a></section>
   </div>
 </main>
 
-<?php require base_path('.dalt/resources/views/layouts/footer.php') ?>
+<?php require base_path('.dalt/resources/views/layouts/learn-end.php') ?>

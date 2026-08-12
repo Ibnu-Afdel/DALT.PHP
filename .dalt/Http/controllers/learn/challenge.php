@@ -21,10 +21,20 @@ $content = file_get_contents($readmePath);
 
 $activeChallenge = ChallengeManager::getActiveChallenge();
 
+// Linear "previous · next" pager, strictly by `order` — see DESIGN_SYSTEM.md →
+// "Lesson / challenge pager". CourseLoader::getChallenges() is already sorted by
+// order; find this challenge's position and take its immediate neighbors.
+$allChallenges = CourseLoader::getChallenges();
+$challengeIndex = array_search($challengeId, array_column($allChallenges, 'id'), true);
+$previousChallenge = $challengeIndex > 0 ? $allChallenges[$challengeIndex - 1] : null;
+$nextChallenge = $challengeIndex < count($allChallenges) - 1 ? $allChallenges[$challengeIndex + 1] : null;
+
 return view('learn/challenge.view.php', [
     'challengeId' => $challengeId,
     'challenge' => $challenge,
     'content' => $content,
     'isActive' => $activeChallenge === $challengeId,
     'activeChallenge' => $activeChallenge,
+    'previousChallenge' => $previousChallenge,
+    'nextChallenge' => $nextChallenge,
 ]);

@@ -1,5 +1,5 @@
 <?php require base_path('.dalt/resources/views/layouts/head.php') ?>
-<?php require base_path('.dalt/resources/views/layouts/nav.php') ?>
+<?php require base_path('.dalt/resources/views/layouts/learn-nav.php') ?>
 
 <!-- Challenge Content Data (outside Vue app) -->
 <script type="application/json" id="challenge-content-data">
@@ -13,7 +13,7 @@
       <div class="flex items-center gap-3 mb-4 text-sm font-medium">
         <a href="/" class="text-gray-500 hover:text-gray-300 transition-colors">Home</a>
         <span class="text-gray-700">/</span>
-        <a href="/learn" class="text-gray-500 hover:text-gray-300 transition-colors">Learn</a>
+        <a href="/learn/resources" class="text-gray-500 hover:text-gray-300 transition-colors">Resources</a>
         <span class="text-gray-700">/</span>
         <span class="text-gray-300">Challenges</span>
       </div>
@@ -42,11 +42,11 @@
   <div class="max-w-5xl mx-auto px-6 py-12">
     <!-- Quick Actions -->
     <div class="mb-8 flex flex-wrap gap-4">
-      <a href="/learn" class="px-4 py-2 bg-[#161b22] border border-gray-700 text-gray-300 rounded-lg hover:bg-[#1e293b] hover:border-gray-600 transition-colors text-sm font-medium flex items-center gap-2">
+      <a href="/learn/resources" class="px-4 py-2 bg-[#161b22] border border-gray-700 text-gray-300 rounded-lg hover:bg-[#1e293b] hover:border-gray-600 transition-colors text-sm font-medium flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
         </svg>
-        Back to Learn
+        Back to resources
       </a>
       <a href="/learn/lessons/<?= $challenge['lesson'] ?>" class="px-4 py-2 bg-[#161b22] border border-gray-700 text-gray-300 rounded-lg hover:bg-[#1e293b] hover:border-gray-600 transition-colors text-sm font-medium flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -76,6 +76,28 @@
             </noscript>
           </challenge-verifier>
         </div>
+
+        <!-- Pager — linear by `order`, not the prerequisite graph. See DESIGN_SYSTEM.md → "Lesson / challenge pager". -->
+        <?php if ($previousChallenge !== null || $nextChallenge !== null): ?>
+          <nav class="flex flex-wrap items-center gap-4" aria-label="Challenge pager">
+            <?php if ($previousChallenge !== null): ?>
+              <a href="/learn/challenges/<?= $previousChallenge['id'] ?>" class="px-4 py-2 bg-[#161b22] border border-gray-700 text-gray-300 rounded-lg hover:bg-[#1e293b] hover:border-gray-600 transition-colors text-sm font-medium flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Previous — <?= htmlspecialchars($previousChallenge['title']) ?>
+              </a>
+            <?php endif; ?>
+            <?php if ($nextChallenge !== null): ?>
+              <a href="/learn/challenges/<?= $nextChallenge['id'] ?>" class="px-4 py-2 bg-[#161b22] border border-gray-700 text-gray-300 rounded-lg hover:bg-[#1e293b] hover:border-gray-600 transition-colors text-sm font-medium flex items-center gap-2 <?= $previousChallenge === null ? '' : 'ml-auto' ?>">
+                Next — <?= htmlspecialchars($nextChallenge['title']) ?>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                </svg>
+              </a>
+            <?php endif; ?>
+          </nav>
+        <?php endif; ?>
       </div>
 
       <!-- Sidebar -->
@@ -152,4 +174,4 @@
   </div>
 </main>
 
-<?php require base_path('.dalt/resources/views/layouts/footer.php') ?>
+<?php require base_path('.dalt/resources/views/layouts/learn-end.php') ?>

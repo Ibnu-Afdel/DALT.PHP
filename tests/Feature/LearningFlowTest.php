@@ -92,15 +92,19 @@ function p05Manager(string $root, string $action, string $argument = ''): array
 test('learning pages expose navigation state prerequisites and no-script content', function () {
     $client = new ApplicationTestClient();
     $index = $client->request('GET', '/learn');
+    $resources = $client->request('GET', '/learn/resources');
     $roadmap = $client->request('GET', '/learn/roadmap');
     $lesson = $client->request('GET', '/learn/lessons/11-dalt-db-layer');
     $challenge = $client->request('GET', '/learn/challenges/db-missing-pagination');
 
     expect($index->statusCode)->toBe(200)
         ->and($index->body)->toContain('Skip to main content')
+        ->and($index->body)->toContain('Keep building your backend instincts')
+        ->and($resources->statusCode)->toBe(200)
+        ->and($resources->body)->toContain('Learning resources')
         ->and($roadmap->statusCode)->toBe(200)
-        ->and($roadmap->body)->toContain('Competency Roadmap')
-        ->and($roadmap->body)->toContain('Recommended foundation path')
+        ->and($roadmap->body)->toContain('Competency roadmap')
+        ->and($roadmap->body)->toContain('The graph')
         ->and($roadmap->body)->toContain('Roadmap')
         ->and($lesson->statusCode)->toBe(200)
         ->and($lesson->body)->toContain('Recommended prerequisites')
@@ -144,9 +148,12 @@ test('browser verification records progress only after a real pass', function ()
         expect(p05Manager($root, 'start', 'broken-routing')['result'])->toBeTrue();
         $client = new ApplicationTestClient($root);
         $activeDashboard = $client->request('GET', '/learn');
+        $activeResources = $client->request('GET', '/learn/resources');
         $activeChallenge = $client->request('GET', '/learn/challenges/broken-routing');
         expect($activeDashboard->body)->toContain('Active')
             ->and($activeDashboard->body)->toContain('Continue')
+            ->and($activeResources->body)->toContain('Active')
+            ->and($activeResources->body)->toContain('Continue')
             ->and($activeChallenge->body)->toContain('Status')
             ->and($activeChallenge->body)->toContain('Active');
 
@@ -188,7 +195,7 @@ PHP);
             ->toBe(['passed' => ['broken-routing']]);
 
         expect(p05Manager($root, 'stop')['result'])->toBeTrue();
-        $completedDashboard = $client->request('GET', '/learn');
+        $completedDashboard = $client->request('GET', '/learn/resources');
         expect($completedDashboard->body)->toContain('Completed')
             ->and($completedDashboard->body)->toContain('Review');
 
