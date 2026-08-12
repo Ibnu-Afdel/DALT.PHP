@@ -1,14 +1,32 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Core\Middleware;
 
-class Auth
+use Closure;
+use Core\Authenticator;
+use Core\Request;
+use Core\Response;
+
+final class Auth implements MiddlewareInterface
 {
-    public function handle()
+    private readonly Authenticator $auth;
+
+    public function __construct()
     {
-        // BUG: Checking wrong session key - should be 'user' not 'authenticated'
-        if(!($_SESSION['authenticated'] ?? false)){
-            header('location: /' );
-            exit();
+        $this->auth = new Authenticator();
+    }
+
+    /** @param Closure(Request): Response $next */
+    public function handle(Request $request, Closure $next): Response
+    {
+        if (!($_SESSION['authenticated'] ?? false)) {
+            $this->auth->rememberIntended($request);
+
+            return Response::redirect('/login');
         }
+
+        return $next($request);
     }
 }

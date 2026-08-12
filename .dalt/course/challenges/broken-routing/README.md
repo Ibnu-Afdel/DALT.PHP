@@ -1,148 +1,88 @@
 # Challenge: Broken Routing
 
-## Difficulty: Beginner
+**Difficulty:** Beginner · **Bugs:** 2 · **Lesson:** [02 — Routing](../../lessons/02-routing/README.md)
 
-## Setup Instructions
-
-1. **Backup your current routes:**
-   ```bash
-   cp routes/routes.php routes/routes.php.backup
-   ```
-
-2. **Copy the broken routes file:**
-   ```bash
-   cp challenges/broken-routing/routes/routes.php routes/routes.php
-   ```
-
-3. **Copy the controller files:**
-   ```bash
-   cp -r challenges/broken-routing/Http/controllers/posts Http/controllers/
-   ```
-
-4. **Start the server:**
-   ```bash
-   php artisan serve
-   ```
-
-5. **Test the broken routes:**
-   - Visit http://localhost:8000/posts (should work)
-   - Visit http://localhost:8000/posts/create (broken!)
-   - Visit http://localhost:8000/posts/1 (should work)
-   - Visit http://localhost:8000/posts/1/edit (broken!)
-
-## Concept: How Routing Works
-
-The router matches incoming URLs to route patterns in the order they're defined. When a URL matches a pattern, the router:
-1. Extracts parameters (e.g., `{id}` from `/posts/123`)
-2. Injects them into `$_GET`
-3. Executes the controller
-
-**Key Point:** Route order matters! Specific routes must come before generic routes.
-
-## The Bugs
-
-### Bug #1: Route Order Problem
-
-**Symptom:** Visiting `/posts/create` shows the post detail page instead of the create form.
-
-**What's happening:**
-```php
-$router->get('/posts/{id}', 'posts/show.php');
-$router->get('/posts/create', 'posts/create.php'); // Never matches!
-```
-
-The router matches `/posts/create` against `/posts/{id}` first, treating "create" as an ID.
-
-**Why it's broken:** Generic routes with parameters should come AFTER specific routes.
-
-### Bug #2: Missing Route Registration
-
-**Symptom:** Visiting `/posts/1/edit` returns 404 Not Found.
-
-**What's happening:**
-```php
-// $router->get('/posts/{id}/edit', 'posts/edit.php'); // Commented out!
-```
-
-The route exists in the controller but is not registered in `routes.php`.
-
-**Why it's broken:** Routes must be explicitly registered to work.
-
-## Learning Objectives
-
-After fixing this challenge, you will understand:
-- Why route order matters
-- How the router matches patterns
-- How to debug 404 errors
-- How route parameters work
-
-## Debugging Hints
-
-1. **Check route order** - Look at `routes/routes.php` line by line
-2. **Trace the matching** - Add `dd($this->routes)` in `Router::route()` to see all routes
-3. **Test specific before generic** - Move `/posts/create` before `/posts/{id}`
-4. **Find commented routes** - Search for `//` in `routes.php`
-
-## Files to Investigate
-
-- `routes/routes.php` - Route definitions (this is where the bugs are!)
-- `framework/Core/Router.php` - Route matching logic (read `matchUri()` method)
-- `Http/controllers/posts/` - Controllers expecting these routes
-
-## How to Fix
-
-### Fix #1: Correct Route Order
-
-Move specific routes before generic ones:
-```php
-// ✅ CORRECT ORDER
-$router->get('/posts/create', 'posts/create.php');  // Specific first
-$router->get('/posts/{id}', 'posts/show.php');      // Generic after
-```
-
-### Fix #2: Uncomment Missing Route
-
-Find and uncomment the edit route:
-```php
-$router->get('/posts/{id}/edit', 'posts/edit.php');
-```
-
-## Success Criteria
-
-When fixed correctly:
-- ✅ `/posts` shows all posts
-- ✅ `/posts/create` shows the create form
-- ✅ `/posts/1` shows post #1
-- ✅ `/posts/1/edit` shows the edit form
-- ✅ No 404 errors on valid routes
-
-## Testing Your Fix
+## Start
 
 ```bash
-# Test all routes
-curl http://localhost:8000/posts
-curl http://localhost:8000/posts/create
-curl http://localhost:8000/posts/1
-curl http://localhost:8000/posts/1/edit
+php artisan challenge:start broken-routing
+php artisan serve
 ```
 
-All should return 200 OK with the correct page.
+The command backs up your files and copies the broken versions in. `php artisan challenge:stop` restores them when you are done — never copy or delete these files by hand.
 
-## Cleanup
+## Observe the symptoms first
 
-After completing the challenge:
+Do this before opening `routes/routes.php`.
+
 ```bash
-# Restore original routes
-cp routes/routes.php.backup routes/routes.php
-
-# Remove challenge controllers (optional)
-rm -rf Http/controllers/posts
+curl -i http://localhost:8000/posts          # works
+curl -i http://localhost:8000/posts/1        # works
+curl -i http://localhost:8000/posts/create   # wrong page, not a 404
+curl -i http://localhost:8000/posts/1/edit   # 404
 ```
 
-## Related Lesson
+Two different failures. Note that `/posts/create` does **not** 404 — it returns a page, just not the one you asked for. That distinction is the whole first bug.
 
-**Lesson 02: Routing System** - Study this before attempting the challenge.
+Write down what each result implies about how the router reached its decision.
 
-## Next Challenge
+## Hints
 
-After mastering routing, try **Challenge: Broken Middleware**
+Work down this list only as far as you need.
+
+<details>
+<summary>Hint 1 — where to look</summary>
+
+Both defects are in `routes/routes.php`. `framework/Core/Router.php` is correct and does not need changing. Read it to understand *why* the route table produces these results.
+</details>
+
+<details>
+<summary>Hint 2 — the one that returns the wrong page</summary>
+
+`/posts/create` reached a handler, so some pattern matched it. Read the route table from the top and stop at the first entry that could match the string `/posts/create`. What does the router capture as the parameter?
+</details>
+
+<details>
+<summary>Hint 3 — the one that 404s</summary>
+
+A 404 means no entry matched at all. The controller file for this URL exists on disk. Check whether anything ever told the router about it.
+</details>
+
+<details>
+<summary>Hint 4 — the concepts</summary>
+
+- The route table is an ordered list and the first method-and-URI match wins. A placeholder such as `{id}` happily matches ordinary words, so a generic pattern placed above a specific one will shadow it forever.
+- A controller file existing on disk means nothing on its own. Routing is explicit registration, not filesystem discovery.
+</details>
+
+## Success criteria
+
+- `/posts` lists posts
+- `/posts/create` shows the create form
+- `/posts/1` shows post 1
+- `/posts/1/edit` shows the edit form
+- An unregistered path still returns 404
+
+## Verify
+
+```bash
+php artisan challenge:verify
+```
+
+Then confirm the behavior yourself — the checks are a completion signal, not proof:
+
+```bash
+curl -i http://localhost:8000/posts/create   # expect the create form
+curl -i http://localhost:8000/posts/1/edit   # expect the edit form
+```
+
+## Finish
+
+```bash
+php artisan challenge:stop
+```
+
+## Related
+
+- **Lesson 02: Routing** — read this first
+- **Next challenge:** Broken Middleware

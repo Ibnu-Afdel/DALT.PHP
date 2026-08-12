@@ -3,8 +3,6 @@
 $db = \Core\App::resolve(\Core\Database::class);
 $id = $_GET['id'] ?? 1;
 
-// This uses parameter binding correctly, but will fail because
-// Database::query() doesn't pass $params to execute()
 $post = $db->query('SELECT * FROM posts WHERE id = :id', [
     'id' => $id
 ])->find();
@@ -25,8 +23,8 @@ $post = $db->query('SELECT * FROM posts WHERE id = :id', [
 <body>
     <?php if (!$post): ?>
         <div class="error">
-            <h1>Query Failed!</h1>
-            <p>The query uses parameter binding correctly, but Database::query() doesn't pass parameters to execute().</p>
+            <h1>No post found</h1>
+            <p>This controller binds <code>:id</code> correctly and the row exists. Something between this call and the database is losing the value.</p>
         </div>
     <?php else: ?>
         <div class="post">

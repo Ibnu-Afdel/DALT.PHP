@@ -1,28 +1,31 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Core\Middleware;
 
-class Csrf
+use Closure;
+use Core\Request;
+use Core\Response;
+
+final class Csrf implements MiddlewareInterface
 {
-    public function handle(): void
+    private const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
+
+    /** @param Closure(Request): Response $next */
+    public function handle(Request $request, Closure $next): Response
     {
-        $method = $_POST['_method'] ?? $_SERVER['REQUEST_METHOD'];
-        $method = strtoupper($method);
-        
-        // Only validate for non-GET
-        if ($method === 'GET') {
-            return;
+        if (in_array($request->method(), self::SAFE_METHODS, true)) {
+            return $next($request);
         }
 
         $sessionToken = $_SESSION['_csrf'] ?? null;
-        $formToken = $_POST['_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
+        $requestToken = $request->input('_token') ?? $request->server('HTTP_X_CSRF_TOKEN');
 
-        // BUG: Using == instead of TIMING_SAFE_COMPARISON - timing attack vulnerability
-        // BUG: Logic inverted - rejects when tokens MATCH instead of when they DON'T match
-        if ($sessionToken == $formToken) {
-            http_response_code(419);
-            echo 'CSRF token mismatch';
-            exit;
+        if ($sessionToken == $requestToken) {
+            return Response::text('CSRF token mismatch', 419);
         }
+
+        return $next($request);
     }
 }

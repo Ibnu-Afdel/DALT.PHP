@@ -1,189 +1,95 @@
 # Challenge: Broken Database
 
-## Difficulty: Beginner
+**Difficulty:** Medium · **Bugs:** 2 · **Lesson:** [05 — Database](../../lessons/05-database/README.md)
 
-## Setup Instructions
+## Start
 
-1. **Backup your current Database class:**
-   ```bash
-   cp framework/Core/Database.php framework/Core/Database.php.backup
-   ```
-
-2. **Copy the broken Database class:**
-   ```bash
-   cp challenges/broken-database/framework/Core/Database.php framework/Core/
-   ```
-
-3. **Copy the controller files:**
-   ```bash
-   cp -r challenges/broken-database/Http/controllers/posts Http/controllers/
-   ```
-
-4. **Add routes (append to routes/routes.php):**
-   ```bash
-   cat challenges/broken-database/routes/routes.php >> routes/routes.php
-   ```
-
-5. **Start the server:**
-   ```bash
-   php artisan serve
-   ```
-
-6. **Test the broken database:**
-   - Visit http://localhost:8000/posts (SQL injection vulnerability!)
-   - Visit http://localhost:8000/posts/1 (query fails!)
-
-## Concept: How Database Queries Work
-
-The Database class wraps PDO for executing SQL queries safely:
-
-1. **Prepare statement** - SQL with placeholders
-2. **Bind parameters** - Values safely escaped
-3. **Execute query** - Run against database
-4. **Fetch results** - Get data back
-
-**Critical:** Always use parameter binding to prevent SQL injection!
-
-## The Bugs
-
-### Bug #1: SQL Injection Vulnerability
-
-**Symptom:** User input is concatenated directly into SQL query.
-
-**What's happening:**
-```php
-// BROKEN - SQL injection!
-$query = "SELECT * FROM posts WHERE id = " . $_GET['id'];
-$this->statement = $this->connection->prepare($query);
-$this->statement->execute();
-
-// CORRECT - parameter binding
-$query = "SELECT * FROM posts WHERE id = :id";
-$this->statement = $this->connection->prepare($query);
-$this->statement->execute(['id' => $_GET['id']]);
-```
-
-**Why it's dangerous:**
-```
-Normal: ?id=1 → SELECT * FROM posts WHERE id = 1
-Attack: ?id=1 OR 1=1 → SELECT * FROM posts WHERE id = 1 OR 1=1 (returns all!)
-```
-
-### Bug #2: Parameters Not Passed to execute()
-
-**Symptom:** Queries with parameters fail or return no results.
-
-**What's happening:**
-```php
-// BROKEN - params ignored
-public function query($query, $params = [])
-{
-    $this->statement = $this->connection->prepare($query);
-    $this->statement->execute(); // Missing $params!
-    return $this;
-}
-
-// CORRECT
-public function query($query, $params = [])
-{
-    $this->statement = $this->connection->prepare($query);
-    $this->statement->execute($params); // Pass params!
-    return $this;
-}
-```
-
-## Learning Objectives
-
-After fixing this challenge, you will understand:
-- Why SQL injection is dangerous
-- How parameter binding prevents attacks
-- How PDO prepared statements work
-- Why parameters must be passed to execute()
-- How to debug database queries
-
-## Debugging Hints
-
-1. **Check the query** - Add `dd($query, $params)` before prepare()
-2. **Test SQL injection** - Try `?id=1 OR 1=1` in the URL
-3. **Verify parameters** - Add `dd($this->statement)` after execute()
-4. **Check PDO errors** - Look for PDO exceptions
-
-## Files to Investigate
-
-- `framework/Core/Database.php` - Query execution (Bugs are here!)
-- `Http/controllers/posts/show.php` - Uses parameter binding
-- `Http/controllers/posts/index.php` - Vulnerable to SQL injection
-
-## How to Fix
-
-### Fix #1: Remove SQL Injection Vulnerability
-
-Never concatenate user input into queries:
-```php
-// In Http/controllers/posts/index.php
-// BROKEN
-$search = $_GET['search'] ?? '';
-$query = "SELECT * FROM posts WHERE title LIKE '%" . $search . "%'";
-$posts = $db->query($query)->get();
-
-// FIXED
-$search = $_GET['search'] ?? '';
-$query = "SELECT * FROM posts WHERE title LIKE :search";
-$posts = $db->query($query, ['search' => "%$search%"])->get();
-```
-
-### Fix #2: Pass Parameters to execute()
-
-```php
-// In framework/Core/Database.php
-public function query($query, $params = [])
-{
-    $this->statement = $this->connection->prepare($query);
-    $this->statement->execute($params); // Fixed: pass $params
-    return $this;
-}
-```
-
-## Success Criteria
-
-When fixed correctly:
-- ✅ All queries use parameter binding
-- ✅ No SQL injection vulnerabilities
-- ✅ Queries with parameters work correctly
-- ✅ Search functionality works safely
-
-## Testing Your Fix
-
-### Test SQL Injection Protection:
 ```bash
-# Should only return post 1
-curl "http://localhost:8000/posts/1"
-
-# Should NOT return all posts (injection blocked)
-curl "http://localhost:8000/posts?search=1' OR '1'='1"
+php artisan challenge:start broken-database
+php artisan migrate
+php artisan serve
 ```
 
-### Test Parameter Binding:
+`php artisan challenge:stop` restores everything when you are done — never copy or delete these files by hand.
+
+## Observe the symptoms first
+
+Two separate failures live in this challenge, and they pull in opposite directions: one query refuses to find anything, the other finds far too much.
+
+**Symptom A — a row that exists cannot be found.**
+
+Visit `/posts/1`. The post is in the database and the controller binds `:id` correctly, yet the page reports no post. Notice there is no error and no exception; the query simply returns nothing.
+
+**Symptom B — search returns rows it should not.**
+
+Visit `/posts` and search for something ordinary, then try:
+
+```
+/posts?search=1' OR '1'='1
+```
+
+Every post comes back regardless of its title. Try `/posts?search='` on its own and read what happens.
+
+Before opening any file, write down what each symptom implies about where the submitted value ends up.
+
+## Hints
+
+Work down this list only as far as you need.
+
+<details>
+<summary>Hint 1 — where each bug lives</summary>
+
+Symptom A is in `framework/Core/Database.php`. Symptom B is in `app/Http/controllers/posts/index.php`. They are independent; fix them one at a time.
+</details>
+
+<details>
+<summary>Hint 2 — narrowing symptom A</summary>
+
+Read `Database::query()` line by line. The statement is prepared with a named placeholder, and then executed. Compare what `query()` was *given* with what it actually hands to the database. Then ask why this fails silently instead of raising an error — what does the driver do with a placeholder nobody supplied?
+
+Check what a write does too: insert a row through a bound parameter and read the column back.
+</details>
+
+<details>
+<summary>Hint 3 — narrowing symptom B</summary>
+
+Look at how the search term reaches the SQL string in `posts/index.php`, and compare it with how `/posts/{id}` passes its value. One builds a string; the other passes data. Only one of those can be parsed as SQL.
+</details>
+
+<details>
+<summary>Hint 4 — the concepts</summary>
+
+- A prepared statement carries placeholders *and* values. Sending only the statement leaves the placeholders unfilled, and SQLite treats an unsupplied parameter as `NULL` rather than as an error — so writes store nothing and comparisons never match, with no exception to point at.
+- Concatenating user input into SQL means the value is part of the statement before the database ever parses it, so quotes and operators inside it become syntax. Passing it as a bound parameter means the statement is parsed first and the value can only ever be data. `LIKE` wildcards belong in the bound value, not in the SQL.
+</details>
+
+## Success criteria
+
+- `/posts/1` shows the post.
+- A row inserted through a bound parameter stores the real value, not `NULL`.
+- Searching for an ordinary word returns only matching posts.
+- `?search=1' OR '1'='1` returns no matches instead of every post.
+- No user input is concatenated into a SQL string.
+
+## Verify
+
 ```bash
-# Should work correctly
-curl "http://localhost:8000/posts?search=test"
+php artisan challenge:verify
 ```
 
-## Cleanup
+Then confirm the behavior yourself — the checks are a completion signal, not proof:
 
-After completing the challenge:
 ```bash
-# Restore original Database class
-cp framework/Core/Database.php.backup framework/Core/Database.php
-
-# Remove challenge controllers (optional)
-rm -rf Http/controllers/posts
+curl -s "http://localhost:8000/posts?search=1'%20OR%20'1'='1" | grep -c '<div class="post">'
 ```
 
-## Related Lesson
+## Finish
 
-**Lesson 05: Database System** - Study this before attempting the challenge.
+```bash
+php artisan challenge:stop
+```
 
-## Next Challenge
+## Related
 
-After mastering database security, try **Challenge: Broken Session**
+- **Lesson 05: Database** — read this first
+- **Next:** Lesson 06 — Docker Basics

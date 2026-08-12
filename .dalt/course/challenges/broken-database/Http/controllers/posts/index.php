@@ -2,10 +2,8 @@
 
 $db = \Core\App::resolve(\Core\Database::class);
 
-// BUG: SQL injection vulnerability - user input concatenated directly!
 $search = $_GET['search'] ?? '';
 if ($search) {
-    // DANGEROUS: No parameter binding!
     $query = "SELECT * FROM posts WHERE title LIKE '%" . $search . "%'";
     $posts = $db->query($query)->get();
 } else {
