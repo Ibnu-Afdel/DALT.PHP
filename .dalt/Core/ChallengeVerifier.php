@@ -14,10 +14,14 @@ final class ChallengeVerifier
         'file_contains',
         'file_not_contains',
         'function_call',
+        'handler_result',
         'route_exists',
         'route_order',
         'session_key',
     ];
+
+    /** handler_result executes a controller, so only controllers are eligible. */
+    private const HANDLER_RESULT_PATH = '~\AHttp/controllers/[a-z0-9][a-z0-9-]*(?:/[a-z0-9][a-z0-9-]*)*\.php\z~D';
 
     /**
      * class_contract loads learner code, so it is restricted to declaration-only
@@ -147,7 +151,7 @@ final class ChallengeVerifier
         }
         $config['hint'] = trim($config['hint'] ?? 'Review the challenge README and the failed check.');
 
-        if (in_array($type, ['class_contract', 'file_contains', 'file_not_contains', 'function_call', 'session_key'], true)) {
+        if (in_array($type, ['class_contract', 'file_contains', 'file_not_contains', 'function_call', 'handler_result', 'session_key'], true)) {
             $this->requireString($config, 'file', $name);
             $this->assertAllowedSourcePath($config['file']);
             $this->assertSpecificationSource($config['file']);
@@ -166,6 +170,16 @@ final class ChallengeVerifier
             if ($config['implements'] === [] && $config['methods'] === []) {
                 throw new RuntimeException("Check '{$name}' must assert at least one interface or method.");
             }
+        }
+        if ($type === 'handler_result') {
+            if (preg_match(self::HANDLER_RESULT_PATH, $config['file']) !== 1) {
+                throw new RuntimeException("Check '{$name}' may only execute a controller under Http/controllers.");
+            }
+            $config['seed'] = $this->validSqlList($config, $name);
+            $config['query'] = $this->validScalarMap($config, 'query', $name);
+            $config['input'] = $this->validScalarMap($config, 'input', $name);
+            $config['route'] = $this->validScalarMap($config, 'route', $name);
+            $config['expect'] = $this->validExpectation($config, $name);
         }
         if (in_array($type, ['file_contains', 'file_not_contains'], true)) {
             $this->requireString($config, 'search', $name);
@@ -248,6 +262,79 @@ final class ChallengeVerifier
         return $result;
     }
 
+    /** @param array<string, mixed> $config @return list<string> */
+    private function validSqlList(array $config, string $name): array
+    {
+        $values = $config['seed'] ?? [];
+
+        if (!is_array($values) || $values === []) {
+            throw new RuntimeException("Check '{$name}' requires a non-empty 'seed' list so the result is reproducible.");
+        }
+
+        $result = [];
+        foreach ($values as $value) {
+            if (!is_string($value) || trim($value) === '') {
+                throw new RuntimeException("Check '{$name}' requires 'seed' to contain non-empty SQL strings.");
+            }
+            $result[] = $value;
+        }
+
+        return $result;
+    }
+
+    /** @param array<string, mixed> $config @return array<string, string> */
+    private function validScalarMap(array $config, string $field, string $name): array
+    {
+        $values = $config[$field] ?? [];
+
+        if (!is_array($values)) {
+            throw new RuntimeException("Check '{$name}' requires '{$field}' to be a map of scalar values.");
+        }
+
+        $result = [];
+        foreach ($values as $key => $value) {
+            if (!is_string($key) || $key === '' || !is_scalar($value)) {
+                throw new RuntimeException("Check '{$name}' has an invalid entry in '{$field}'.");
+            }
+            $result[$key] = (string) $value;
+        }
+
+        return $result;
+    }
+
+    /** @param array<string, mixed> $config @return array<string, mixed> */
+    private function validExpectation(array $config, string $name): array
+    {
+        $expect = $config['expect'] ?? null;
+
+        if (!is_array($expect) || $expect === []) {
+            throw new RuntimeException("Check '{$name}' requires an 'expect' block describing the response.");
+        }
+
+        $allowed = ['status', 'count', 'count_key', 'contains', 'not_contains'];
+        foreach (array_keys($expect) as $key) {
+            if (!in_array($key, $allowed, true)) {
+                throw new RuntimeException("Check '{$name}' has an unsupported expectation '{$key}'.");
+            }
+        }
+        if (isset($expect['status']) && (!is_int($expect['status']) || $expect['status'] < 100 || $expect['status'] > 599)) {
+            throw new RuntimeException("Check '{$name}' has an invalid expected status.");
+        }
+        if (isset($expect['count']) && (!is_int($expect['count']) || $expect['count'] < 0)) {
+            throw new RuntimeException("Check '{$name}' has an invalid expected count.");
+        }
+        foreach (['count_key', 'contains', 'not_contains'] as $field) {
+            if (isset($expect[$field]) && (!is_string($expect[$field]) || $expect[$field] === '')) {
+                throw new RuntimeException("Check '{$name}' has an invalid '{$field}' expectation.");
+            }
+        }
+        if (isset($expect['count_key']) && !isset($expect['count'])) {
+            throw new RuntimeException("Check '{$name}' sets 'count_key' without a 'count'.");
+        }
+
+        return $expect;
+    }
+
     /** @param array<string, mixed> $config */
     private function requireString(array $config, string $field, string $name): void
     {
@@ -261,6 +348,7 @@ final class ChallengeVerifier
     {
         return match ($config['type']) {
             'class_contract' => $this->testClassContract($config),
+            'handler_result' => $this->testHandlerResult($config),
             'route_exists' => $this->testRouteExists($config),
             'route_order' => $this->testRouteOrder($config),
             'file_contains' => $this->testFileContains($config, true),
@@ -509,6 +597,94 @@ final class ChallengeVerifier
         }
 
         return ['passed' => true, 'message' => "{$config['class']} satisfies the expected contract."];
+    }
+
+    /**
+     * Runs the controller against a seeded throwaway database and checks the
+     * response it actually produced. A fix written into dead code changes the
+     * source and leaves this unchanged, which is the whole point.
+     *
+     * @param array<string, mixed> $config
+     * @return array{passed: bool, message: string}
+     */
+    private function testHandlerResult(array $config): array
+    {
+        $path = $this->resolveTargetPath($config['file']);
+        $probe = __DIR__ . DIRECTORY_SEPARATOR . 'probe-handler-result.php';
+        $this->assertRegularFile($probe, 'handler result probe');
+
+        $spec = json_encode([
+            'seed' => $config['seed'],
+            'query' => $config['query'],
+            'input' => $config['input'],
+            'route' => $config['route'],
+        ]);
+
+        $command = escapeshellarg(PHP_BINARY)
+            . ' ' . escapeshellarg($probe)
+            . ' ' . escapeshellarg($this->projectRoot)
+            . ' ' . escapeshellarg($path)
+            . ' ' . escapeshellarg((string) $spec)
+            . ' 2>/dev/null';
+
+        $output = shell_exec($command);
+        $report = is_string($output) ? json_decode(trim($output), true) : null;
+
+        if (!is_array($report) || !isset($report['ok'])) {
+            return [
+                'passed' => false,
+                'message' => "Running {$config['file']} produced no usable result. It may have exited, printed something unexpected, or failed fatally.",
+            ];
+        }
+        if ($report['ok'] !== true) {
+            return [
+                'passed' => false,
+                'message' => is_string($report['error'] ?? null) ? $report['error'] : 'The handler could not be executed.',
+            ];
+        }
+
+        return $this->compareExpectation($config['expect'], (int) $report['status'], (string) $report['body']);
+    }
+
+    /** @param array<string, mixed> $expect @return array{passed: bool, message: string} */
+    private function compareExpectation(array $expect, int $status, string $body): array
+    {
+        if (isset($expect['status']) && $status !== $expect['status']) {
+            return ['passed' => false, 'message' => "Expected status {$expect['status']}, the handler returned {$status}."];
+        }
+        if (isset($expect['contains']) && !str_contains($body, $expect['contains'])) {
+            return ['passed' => false, 'message' => "The response is missing '{$expect['contains']}'. It returned: " . $this->preview($body)];
+        }
+        if (isset($expect['not_contains']) && str_contains($body, $expect['not_contains'])) {
+            return ['passed' => false, 'message' => "The response should not contain '{$expect['not_contains']}', but it does."];
+        }
+        if (isset($expect['count'])) {
+            $decoded = json_decode($body, true);
+            $rows = isset($expect['count_key']) ? ($decoded[$expect['count_key']] ?? null) : $decoded;
+
+            if (!is_array($rows)) {
+                $where = isset($expect['count_key'])
+                    ? "a JSON list under the key '{$expect['count_key']}'"
+                    : 'a JSON list';
+
+                return ['passed' => false, 'message' => "Expected {$where}. The response was: " . $this->preview($body)];
+            }
+            if (count($rows) !== $expect['count']) {
+                return [
+                    'passed' => false,
+                    'message' => "Expected {$expect['count']} row(s), the handler returned " . count($rows) . '.',
+                ];
+            }
+        }
+
+        return ['passed' => true, 'message' => 'The handler produced the expected response.'];
+    }
+
+    private function preview(string $body): string
+    {
+        $normalized = trim(preg_replace('/\s+/', ' ', $body) ?? $body);
+
+        return mb_strlen($normalized) > 120 ? mb_substr($normalized, 0, 117) . '...' : $normalized;
     }
 
     private function resolveTargetPath(string $sourcePath): string

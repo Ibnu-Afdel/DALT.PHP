@@ -10,6 +10,34 @@
  */
 
 return [
+    // Executable checks. The source checks below describe the shape of the fix;
+    // these two confirm the endpoints actually behave.
+    'lookup_finds_an_existing_user' => [
+        'type' => 'handler_result',
+        'file' => 'Http/controllers/users/show.php',
+        'seed' => [
+            'CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT, created_at TEXT)',
+            "INSERT INTO users VALUES (7, 'Alice', 'alice@example.com', '2026-01-01')",
+        ],
+        'route' => ['id' => '7'],
+        'query' => ['id' => '7'],
+        'expect' => ['status' => 200, 'contains' => 'alice@example.com'],
+        'hint' => 'User 7 exists, so this must return the row rather than a 404. Check the column the WHERE clause names.',
+    ],
+
+    'search_does_not_match_an_injected_condition' => [
+        'type' => 'handler_result',
+        'file' => 'Http/controllers/users/index.php',
+        'seed' => [
+            'CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT, created_at TEXT)',
+            "INSERT INTO users VALUES (1, 'Alice', 'alice@example.com', '2026-01-01')",
+            "INSERT INTO users VALUES (2, 'Bob', 'bob@example.com', '2026-01-02')",
+        ],
+        'query' => ['search' => "' OR '1'='1"],
+        'expect' => ['status' => 200, 'count' => 0],
+        'hint' => 'That search term matches no real email, so a safely bound query returns nothing. If it returns every user, the value is being parsed as SQL.',
+    ],
+
     'search_is_not_interpolated' => [
         'type' => 'file_not_contains',
         'file' => 'Http/controllers/users/index.php',

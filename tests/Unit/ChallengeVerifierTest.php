@@ -245,8 +245,11 @@ test('every shipped specification is valid and rejects its broken source fixture
             ->and($result['failed'], $id)->toBeGreaterThan(0);
     }
 
+    // A floor, not an exact count. Adding checks to a challenge is the change we
+    // want people making freely; an exact total turns every such edit into an
+    // unrelated test failure. The floor still catches silent deletion.
     expect($directories)->toHaveCount(20)
-        ->and($total)->toBe(91);
+        ->and($total)->toBeGreaterThanOrEqual(95);
 });
 
 test('class contract checks load the learner class and report what it really declares', function (
@@ -326,3 +329,88 @@ test('class contract checks refuse targets that execute on require', function ()
         removeVerifierFixture($root);
     }
 });
+
+test('handler result checks execute the controller and judge what it returned', function (
+    string $body,
+    bool $expectedPass,
+    string $expectedFragment,
+) {
+    $root = base_path();
+    $dir = sys_get_temp_dir() . '/dalt-hr-' . bin2hex(random_bytes(6));
+    mkdir($dir . '/.dalt/course/challenges/example/Http/controllers/db/posts', 0700, true);
+    symlink($root . '/vendor', $dir . '/vendor');
+    symlink($root . '/framework', $dir . '/framework');
+    file_put_contents($dir . '/.dalt/course/challenges/example/Http/controllers/db/posts/index.php', $body);
+    writeVerifierTests($dir, [
+        'returns_every_post_with_author' => [
+            'type' => 'handler_result',
+            'file' => 'Http/controllers/db/posts/index.php',
+            'seed' => [
+                'CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)',
+                'CREATE TABLE posts (id INTEGER PRIMARY KEY, user_id INT, title TEXT)',
+                "INSERT INTO users VALUES (5, 'Alice')",
+                "INSERT INTO posts VALUES (1, 5, 'first')",
+            ],
+            'expect' => ['status' => 200, 'count' => 1, 'contains' => 'Alice'],
+            'hint' => 'Join on the foreign key.',
+        ],
+    ]);
+
+    try {
+        $result = (new ChallengeVerifier('.dalt/course/challenges/example', false, $dir))->verify();
+
+        expect($result['status'])->toBe($expectedPass ? 'pass' : 'fail')
+            ->and($result['results'][0]['message'])->toContain($expectedFragment);
+    } finally {
+        removeVerifierFixture($dir);
+    }
+})->with([
+    'correct join' => [
+        "<?php\n\$db = \\Core\\App::resolve(\\Core\\Database::class);\nreturn \$db->query('SELECT posts.id, users.name AS author FROM posts LEFT JOIN users ON posts.user_id = users.id')->get();\n",
+        true,
+        'expected response',
+    ],
+    'dead code carrying the right words' => [
+        "<?php\n\$db = \\Core\\App::resolve(\\Core\\Database::class);\n\$unused = 'LEFT JOIN users ON posts.user_id = users.id';\nreturn \$db->query('SELECT posts.id, users.name AS author FROM posts JOIN users ON posts.id = users.id')->get();\n",
+        false,
+        "missing 'Alice'",
+    ],
+    'handler that throws' => [
+        "<?php\nthrow new RuntimeException('boom');\n",
+        false,
+        'handler threw',
+    ],
+]);
+
+test('handler result checks refuse non-controller targets and malformed expectations', function (array $check, string $fragment) {
+    $root = verifierFixture();
+    writeVerifierFixture($root, '.dalt/course/challenges/example/framework/Core/Widget.php', '<?php');
+    writeVerifierFixture($root, '.dalt/course/challenges/example/Http/controllers/posts/index.php', '<?php');
+    writeVerifierTests($root, ['bad' => $check]);
+
+    try {
+        $result = (new ChallengeVerifier('.dalt/course/challenges/example', false, $root))->verify();
+
+        expect($result['status'])->toBe('error')
+            ->and($result['message'])->toContain($fragment);
+    } finally {
+        removeVerifierFixture($root);
+    }
+})->with([
+    'class file target' => [
+        ['type' => 'handler_result', 'file' => 'framework/Core/Widget.php', 'seed' => ['SELECT 1'], 'expect' => ['status' => 200]],
+        'may only execute a controller',
+    ],
+    'no seed' => [
+        ['type' => 'handler_result', 'file' => 'Http/controllers/posts/index.php', 'expect' => ['status' => 200]],
+        "non-empty 'seed' list",
+    ],
+    'no expectation' => [
+        ['type' => 'handler_result', 'file' => 'Http/controllers/posts/index.php', 'seed' => ['SELECT 1']],
+        "requires an 'expect' block",
+    ],
+    'unknown expectation' => [
+        ['type' => 'handler_result', 'file' => 'Http/controllers/posts/index.php', 'seed' => ['SELECT 1'], 'expect' => ['body' => 'x']],
+        'unsupported expectation',
+    ],
+]);

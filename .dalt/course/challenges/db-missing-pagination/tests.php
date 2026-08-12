@@ -10,6 +10,24 @@
  */
 
 return [
+    // Executable check: 25 users exist, so a paginated endpoint must return 10.
+    // Writing LIMIT into the file is not the same as the query applying one.
+    'page_returns_only_one_page_of_rows' => [
+        'type' => 'handler_result',
+        'file' => 'Http/controllers/db/users/index.php',
+        'seed' => [
+            'CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT, created_at TEXT)',
+            "INSERT INTO users (name, email, created_at) SELECT 'u' || value, 'u' || value || '@e.com', '2026-01-01'"
+                . ' FROM (WITH RECURSIVE c(value) AS (SELECT 1 UNION ALL SELECT value + 1 FROM c WHERE value < 25) SELECT value FROM c)',
+        ],
+        'expect' => [
+            'status' => 200,
+            'count' => 10,
+            'count_key' => 'data',
+        ],
+        'hint' => 'With 25 users seeded and a default limit of 10, the endpoint should return 10 rows under "data".',
+    ],
+
     'query_limits_rows' => [
         'type' => 'file_contains',
         'file' => 'Http/controllers/db/users/index.php',
