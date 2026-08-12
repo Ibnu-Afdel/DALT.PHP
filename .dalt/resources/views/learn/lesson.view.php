@@ -18,7 +18,7 @@
           <span class="[&>svg]:h-6 [&>svg]:w-6"><?= $lesson['icon'] ?></span>
         </div>
         <div class="min-w-0">
-          <p class="font-mono text-xs text-gray-500">Lesson <?= $lesson['order'] ?></p>
+          <p class="font-mono text-xs text-gray-500"><?= htmlspecialchars($sections[$lesson['section']]['title']) ?> · <?= $lesson['section_order'] ?> of <?= $sectionLessonCount ?></p>
           <h1 class="mt-3 text-4xl font-bold tracking-tight text-gray-50 sm:text-5xl"><?= htmlspecialchars($lesson['title']) ?></h1>
           <p class="mt-5 max-w-2xl text-lg leading-8 text-gray-400"><?= htmlspecialchars($lesson['description']) ?></p>
         </div>
@@ -56,12 +56,12 @@
     <?php if ($previousLesson !== null || $nextLesson !== null): ?>
       <nav class="mt-10 grid gap-3 sm:grid-cols-2" aria-label="Lesson pager">
         <?php if ($previousLesson !== null): ?>
-          <a href="/learn/lessons/<?= $previousLesson['id'] ?>" class="group rounded-xl border border-[#1e293b] p-4 transition-colors hover:border-gray-600 hover:bg-[#11161d]"><span class="text-xs font-medium text-gray-500">← Previous lesson</span><span class="mt-1 block font-semibold text-gray-200 group-hover:text-[#93DA97]"><?= htmlspecialchars($previousLesson['title']) ?></span></a>
+          <a href="/learn/lessons/<?= $previousLesson['id'] ?>" class="group rounded-xl border border-[#1e293b] p-4 transition-colors hover:border-gray-600 hover:bg-[#11161d]"><span class="text-xs font-medium text-gray-500">← Previous in <?= htmlspecialchars($sections[$lesson['section']]['title']) ?></span><span class="mt-1 block font-semibold text-gray-200 group-hover:text-[#93DA97]"><?= htmlspecialchars($previousLesson['title']) ?></span></a>
         <?php else: ?>
           <span aria-hidden="true"></span>
         <?php endif; ?>
         <?php if ($nextLesson !== null): ?>
-          <a href="/learn/lessons/<?= $nextLesson['id'] ?>" class="group rounded-xl border border-[#1e293b] p-4 transition-colors hover:border-gray-600 hover:bg-[#11161d] <?= $previousLesson === null ? 'sm:col-start-2' : '' ?>"><span class="text-xs font-medium text-gray-500">Next lesson →</span><span class="mt-1 block font-semibold text-gray-200 group-hover:text-[#93DA97]"><?= htmlspecialchars($nextLesson['title']) ?></span></a>
+          <a href="/learn/lessons/<?= $nextLesson['id'] ?>" class="group rounded-xl border border-[#1e293b] p-4 transition-colors hover:border-gray-600 hover:bg-[#11161d] <?= $previousLesson === null ? 'sm:col-start-2' : '' ?>"><span class="text-xs font-medium text-gray-500">Next in <?= htmlspecialchars($sections[$lesson['section']]['title']) ?> →</span><span class="mt-1 block font-semibold text-gray-200 group-hover:text-[#93DA97]"><?= htmlspecialchars($nextLesson['title']) ?></span></a>
         <?php endif; ?>
       </nav>
     <?php endif; ?>

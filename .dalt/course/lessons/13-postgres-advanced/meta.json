@@ -2,6 +2,8 @@
   "title": "PostgreSQL Advanced",
   "description": "Window functions, CTEs, JSONB storage and querying, full-text search with tsvector, and how to apply each in DALT.PHP controllers.",
   "order": 13,
+  "section": "postgres",
+  "section_order": 3,
   "icon": "database",
   "color": "purple",
   "prerequisites": ["10-postgres-intermediate"]

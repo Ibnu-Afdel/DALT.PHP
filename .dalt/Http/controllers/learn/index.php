@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 $lessons = \Core\CourseLoader::getLessons();
+$sections = \Core\CourseLoader::getSections();
 $challenges = \Core\CourseLoader::getChallenges();
 $activeChallenge = \Core\ChallengeManager::getActiveChallenge();
 
@@ -37,4 +38,5 @@ return view('learn/index.view.php', [
     'completedLessonIds' => $completedLessonIds,
     'nextLesson' => $nextLesson,
     'currentChallenge' => $currentChallenge,
+    'sections' => $sections,
 ]);

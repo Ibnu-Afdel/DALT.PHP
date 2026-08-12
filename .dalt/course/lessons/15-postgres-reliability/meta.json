@@ -2,6 +2,8 @@
   "title": "PostgreSQL Reliability",
   "description": "Backups, restore processes, migrations as code, and handling failed migrations.",
   "order": 15,
+  "section": "postgres",
+  "section_order": 4,
   "icon": "shield",
   "color": "green",
   "prerequisites": ["10-postgres-intermediate"]

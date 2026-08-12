@@ -47,6 +47,8 @@ function lessonMetadata(int $order, array $overrides = []): array
         'title' => "Lesson {$order}",
         'description' => 'A complete lesson description.',
         'order' => $order,
+        'section' => 'foundation',
+        'section_order' => $order,
         'icon' => 'routing',
         'color' => 'blue',
         'prerequisites' => [],
@@ -168,6 +170,43 @@ test('challenges must link to a discovered lesson and direct lookup cannot trave
     }
 });
 
+test('catalog validation requires known sections and unique section-local order', function (string $case) {
+    $root = courseFixture();
+
+    if ($case === 'unknown section') {
+        addCourseItem($root, 'lessons', 'first', lessonMetadata(1, ['section' => 'unknown']));
+    } elseif ($case === 'duplicate section order') {
+        addCourseItem($root, 'lessons', 'first', lessonMetadata(1));
+        addCourseItem($root, 'lessons', 'second', lessonMetadata(2, ['section_order' => 1]));
+    } else {
+        $metadata = lessonMetadata(1);
+        unset($metadata['section']);
+        addCourseItem($root, 'lessons', 'first', $metadata);
+    }
+
+    try {
+        CourseLoader::getLessons($root);
+    } finally {
+        removeCourseFixture($root);
+    }
+})->with(['unknown section', 'duplicate section order', 'missing section'])
+    ->throws(CourseMetadataException::class);
+
+test('lesson neighbors stay inside their explicit section order', function () {
+    $root = courseFixture();
+    try {
+        addCourseItem($root, 'lessons', 'foundation-one', lessonMetadata(1, ['section_order' => 1]));
+        addCourseItem($root, 'lessons', 'docker-one', lessonMetadata(2, ['section' => 'docker', 'section_order' => 1]));
+        addCourseItem($root, 'lessons', 'foundation-two', lessonMetadata(3, ['section_order' => 2]));
+
+        expect(CourseLoader::getLesson('foundation-one', $root)['next'])->toBe('foundation-two')
+            ->and(CourseLoader::getLesson('docker-one', $root)['prev'])->toBeNull()
+            ->and(CourseLoader::getLesson('docker-one', $root)['next'])->toBeNull();
+    } finally {
+        removeCourseFixture($root);
+    }
+});
+
 test('the shipped course is complete and its full inventory is deterministic', function () {
     $lessons = CourseLoader::getLessons();
     $challenges = CourseLoader::getChallenges();
@@ -175,5 +214,8 @@ test('the shipped course is complete and its full inventory is deterministic', f
     expect($lessons)->toHaveCount(17)
         ->and($challenges)->toHaveCount(20)
         ->and(array_column($lessons, 'order'))->toBe(range(1, 17))
+        ->and(array_column(array_filter($lessons, fn (array $lesson): bool => $lesson['section'] === 'foundation'), 'section_order'))->toBe(range(1, 6))
+        ->and(array_column(array_filter($lessons, fn (array $lesson): bool => $lesson['section'] === 'docker'), 'section_order'))->toBe(range(1, 5))
+        ->and(array_column(array_filter($lessons, fn (array $lesson): bool => $lesson['section'] === 'postgres'), 'section_order'))->toBe(range(1, 5))
         ->and(array_column($challenges, 'order'))->toBe(range(1, 20));
 });

@@ -2,12 +2,9 @@
 <?php require base_path('.dalt/resources/views/layouts/learn-nav.php') ?>
 
 <?php
-$sectionLabels = ['foundation' => 'Foundation', 'docker' => 'Docker', 'postgres' => 'PostgreSQL', 'operations' => 'Operations'];
-$sectionDescriptions = ['foundation' => 'Understand how a request becomes a response.', 'docker' => 'Package and run your application reliably.', 'postgres' => 'Build confidence with real database systems.', 'operations' => 'Observe and maintain a running application.'];
-$sectionOrder = ['foundation', 'docker', 'postgres', 'operations'];
-$lessonsBySection = array_fill_keys($sectionOrder, []);
+$lessonsBySection = array_fill_keys(array_keys($sections), []);
 foreach ($lessons as $lesson) {
-    $lessonsBySection[\Core\CourseLoader::inferSection($lesson['id'])][] = $lesson;
+    $lessonsBySection[$lesson['section']][] = $lesson;
 }
 $completedCount = count($completedLessonIds);
 $totalLessons = count($lessons);
@@ -19,7 +16,7 @@ $progress = $totalLessons > 0 ? (int) round(($completedCount / $totalLessons) * 
     <header class="max-w-2xl">
       <p class="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#93DA97]">DALT.PHP learning</p>
       <h1 class="mt-4 text-4xl font-bold tracking-tight text-gray-50 sm:text-5xl">Keep building your backend instincts.</h1>
-      <p class="mt-5 text-lg leading-8 text-gray-400">One clear path for learning how DALT.PHP works, then proving it with practical debugging challenges.</p>
+      <p class="mt-5 text-lg leading-8 text-gray-400">Pick up where you left off, or choose a subject to study at your own pace.</p>
     </header>
 
     <section class="mt-12 overflow-hidden rounded-2xl border border-[#93DA97]/25 bg-[#11161d]" aria-labelledby="continue-title">
@@ -33,7 +30,7 @@ $progress = $totalLessons > 0 ? (int) round(($completedCount / $totalLessons) * 
           <?php elseif ($nextLesson !== null): ?>
             <h2 id="continue-title" class="mt-2 text-2xl font-bold tracking-tight text-gray-50"><?= htmlspecialchars($nextLesson['title']) ?></h2>
             <p class="mt-3 max-w-xl leading-7 text-gray-400"><?= htmlspecialchars($nextLesson['description']) ?></p>
-            <a href="/learn/lessons/<?= htmlspecialchars($nextLesson['id']) ?>" class="mt-6 inline-flex items-center rounded-lg bg-[#93DA97] px-4 py-2.5 text-sm font-bold text-[#0a0d12] transition-colors hover:bg-[#b5edb8]"><?= $completedCount === 0 ? 'Start Lesson 1' : 'Open next lesson' ?> <span class="ml-2" aria-hidden="true">→</span></a>
+            <a href="/learn/lessons/<?= htmlspecialchars($nextLesson['id']) ?>" class="mt-6 inline-flex items-center rounded-lg bg-[#93DA97] px-4 py-2.5 text-sm font-bold text-[#0a0d12] transition-colors hover:bg-[#b5edb8]">Continue learning <span class="ml-2" aria-hidden="true">→</span></a>
           <?php endif; ?>
         </div>
         <div class="border-t border-[#93DA97]/15 pt-6 lg:border-l lg:border-t-0 lg:pl-7 lg:pt-0">
@@ -46,11 +43,11 @@ $progress = $totalLessons > 0 ? (int) round(($completedCount / $totalLessons) * 
     </section>
 
     <section class="mt-14" aria-labelledby="path-title">
-      <div class="flex flex-wrap items-end justify-between gap-4 border-b border-[#1e293b] pb-5"><div><h2 id="path-title" class="text-2xl font-bold text-gray-100">Your course path</h2><p class="mt-1 text-sm text-gray-500">Move through the foundations first, then deepen your practice.</p></div><a href="/learn/roadmap" class="text-sm font-semibold text-[#93DA97] hover:text-[#b5edb8]">View roadmap <span aria-hidden="true">→</span></a></div>
+      <div class="flex flex-wrap items-end justify-between gap-4 border-b border-[#1e293b] pb-5"><div><h2 id="path-title" class="text-2xl font-bold text-gray-100">Learning paths</h2><p class="mt-1 text-sm text-gray-500">Choose a subject to explore in a clear, self-paced sequence.</p></div><a href="/learn/roadmap" class="text-sm font-semibold text-[#93DA97] hover:text-[#b5edb8]">View roadmap <span aria-hidden="true">→</span></a></div>
       <ol class="mt-2 divide-y divide-[#1e293b]">
-        <?php foreach ($sectionOrder as $position => $section): ?>
-          <?php $sectionLessons = $lessonsBySection[$section]; $sectionComplete = count(array_filter($sectionLessons, fn (array $lesson): bool => isset($completedLessonIds[$lesson['id']]))); $finished = $sectionLessons !== [] && $sectionComplete === count($sectionLessons); ?>
-          <li><a href="/learn/resources?section=<?= $section ?>" class="group flex items-center gap-4 py-5 transition-colors hover:bg-[#11161d] sm:px-4"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border <?= $finished ? 'border-[#93DA97]/40 bg-[#93DA97]/10 text-[#93DA97]' : 'border-gray-700 text-gray-500' ?> font-mono text-xs"><?= $finished ? '✓' : str_pad((string) ($position + 1), 2, '0', STR_PAD_LEFT) ?></span><span class="min-w-0 flex-1"><span class="block font-semibold text-gray-200 group-hover:text-[#93DA97]"><?= $sectionLabels[$section] ?></span><span class="mt-1 block text-sm text-gray-500"><?= $sectionDescriptions[$section] ?></span></span><span class="hidden font-mono text-xs text-gray-500 sm:block"><?= $sectionComplete ?>/<?= count($sectionLessons) ?> lessons</span><span class="text-gray-600 group-hover:text-[#93DA97]" aria-hidden="true">→</span></a></li>
+        <?php foreach ($sections as $sectionId => $section): ?>
+          <?php $sectionLessons = $lessonsBySection[$sectionId]; $sectionComplete = count(array_filter($sectionLessons, fn (array $lesson): bool => isset($completedLessonIds[$lesson['id']]))); $finished = $sectionLessons !== [] && $sectionComplete === count($sectionLessons); ?>
+          <li><a href="/learn/tracks/<?= $sectionId ?>" class="group flex items-center gap-4 py-5 transition-colors hover:bg-[#11161d] sm:px-4"><span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border <?= $finished ? 'border-[#93DA97]/40 bg-[#93DA97]/10 text-[#93DA97]' : 'border-gray-700 text-gray-500' ?> font-mono text-xs"><?= $finished ? '✓' : str_pad((string) $section['display_order'], 2, '0', STR_PAD_LEFT) ?></span><span class="min-w-0 flex-1"><span class="block font-semibold text-gray-200 group-hover:text-[#93DA97]"><?= htmlspecialchars($section['title']) ?></span><span class="mt-1 block text-sm text-gray-500"><?= htmlspecialchars($section['description']) ?></span></span><span class="hidden font-mono text-xs text-gray-500 sm:block"><?= $sectionComplete ?> / <?= count($sectionLessons) ?></span><span class="text-gray-600 group-hover:text-[#93DA97]" aria-hidden="true">→</span></a></li>
         <?php endforeach; ?>
       </ol>
     </section>

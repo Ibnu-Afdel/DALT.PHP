@@ -26,9 +26,6 @@ $content = preg_replace('/\A# DALT\.PHP Competency Roadmap\R+/', '', $content, 1
 $lessons = CourseLoader::getLessons();
 $passedChallenges = ChallengeManager::getPassedChallenges();
 
-// Section grouping (foundation / docker / postgres / operations) comes from
-// CourseLoader::inferSection() — shared with the learning shell's sidebar so the
-// graph and the sidebar tree never drift into two separately hand-written groupings.
 $nodes = array_map(static function (array $lesson) use ($passedChallenges): array {
     $challenge = CourseLoader::getChallengesForLesson($lesson['id'])[0] ?? null;
 
@@ -37,7 +34,7 @@ $nodes = array_map(static function (array $lesson) use ($passedChallenges): arra
         'order' => $lesson['order'],
         'title' => $lesson['title'],
         'description' => $lesson['description'],
-        'section' => CourseLoader::inferSection($lesson['id']),
+        'section' => $lesson['section'],
         'prerequisites' => $lesson['prerequisites'],
         'challenge_id' => $challenge['id'] ?? null,
         'challenge_title' => $challenge['title'] ?? null,

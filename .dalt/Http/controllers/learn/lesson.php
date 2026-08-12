@@ -22,6 +22,8 @@ $content = file_get_contents($readmePath);
 $relatedChallenges = array_values(CourseLoader::getChallengesForLesson($lessonId));
 $relatedChallengeId = !empty($relatedChallenges) ? $relatedChallenges[0]['id'] : null;
 $lessonsById = array_column(CourseLoader::getLessons(), null, 'id');
+$sections = CourseLoader::getSections();
+$sectionLessonCount = count(array_filter($lessonsById, static fn (array $candidate): bool => $candidate['section'] === $lesson['section']));
 $prerequisites = array_values(array_intersect_key(
     $lessonsById,
     array_flip($lesson['prerequisites']),
@@ -41,4 +43,6 @@ return view('learn/lesson.view.php', [
     'prerequisites' => $prerequisites,
     'previousLesson' => $previousLesson,
     'nextLesson' => $nextLesson,
+    'sections' => $sections,
+    'sectionLessonCount' => $sectionLessonCount,
 ]);

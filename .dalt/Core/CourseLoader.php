@@ -25,8 +25,20 @@ final class CourseLoader
 
     private const COLORS = ['blue', 'green', 'purple', 'red', 'yellow', 'orange', 'gray'];
     private const DIFFICULTIES = ['Easy', 'Medium', 'Hard'];
-    private const LESSON_FIELDS = ['title', 'description', 'order', 'icon', 'color', 'prerequisites'];
+    private const LESSON_FIELDS = ['title', 'description', 'order', 'section', 'section_order', 'icon', 'color', 'prerequisites'];
     private const CHALLENGE_FIELDS = ['title', 'description', 'order', 'difficulty', 'bugs', 'lesson', 'color'];
+    private const SECTIONS = [
+        'foundation' => ['id' => 'foundation', 'title' => 'Foundation', 'description' => 'Understand how backend requests and application fundamentals fit together.', 'display_order' => 1],
+        'docker' => ['id' => 'docker', 'title' => 'Docker', 'description' => 'Package and run applications reliably.', 'display_order' => 2],
+        'postgres' => ['id' => 'postgres', 'title' => 'PostgreSQL', 'description' => 'Learn to work confidently with PostgreSQL from first connection to advanced usage.', 'display_order' => 3],
+        'operations' => ['id' => 'operations', 'title' => 'Operations', 'description' => 'Understand how to observe and operate a running backend system.', 'display_order' => 4],
+    ];
+
+    /** @return array<string, array{id: string, title: string, description: string, display_order: int}> */
+    public static function getSections(): array
+    {
+        return self::SECTIONS;
+    }
 
     /** @return list<array<string, mixed>> */
     public static function getLessons(?string $courseRoot = null): array
@@ -37,6 +49,10 @@ final class CourseLoader
             $meta = self::loadMetadata($directory, "lessons/{$id}", self::LESSON_FIELDS);
             self::requireTextFields($meta, "lessons/{$id}", ['title', 'description', 'icon', 'color']);
             self::requirePositiveInteger($meta, "lessons/{$id}", 'order');
+            self::requirePositiveInteger($meta, "lessons/{$id}", 'section_order');
+            if (!is_string($meta['section'] ?? null) || !isset(self::SECTIONS[$meta['section']])) {
+                self::invalid("lessons/{$id}", 'section', 'must name a supported learning section');
+            }
 
             if (!isset(self::ICONS[$meta['icon']])) {
                 self::invalid("lessons/{$id}", 'icon', 'must name a supported icon');
@@ -68,6 +84,7 @@ final class CourseLoader
         }
 
         self::sortAndValidateOrder($lessons, 'lessons');
+        self::validateSectionOrder($lessons);
         $byId = array_column($lessons, null, 'id');
 
         foreach ($lessons as $lesson) {
@@ -154,10 +171,16 @@ final class CourseLoader
         }
 
         $lessons = self::getLessons($courseRoot);
-        foreach ($lessons as $index => $lesson) {
+        foreach ($lessons as $lesson) {
             if ($lesson['id'] === $id) {
-                $lesson['prev'] = $lessons[$index - 1]['id'] ?? null;
-                $lesson['next'] = $lessons[$index + 1]['id'] ?? null;
+                $sectionLessons = array_values(array_filter(
+                    $lessons,
+                    static fn (array $candidate): bool => $candidate['section'] === $lesson['section'],
+                ));
+                usort($sectionLessons, static fn (array $left, array $right): int => [$left['section_order'], $left['id']] <=> [$right['section_order'], $right['id']]);
+                $index = array_search($id, array_column($sectionLessons, 'id'), true);
+                $lesson['prev'] = $index > 0 ? $sectionLessons[$index - 1]['id'] : null;
+                $lesson['next'] = $index < count($sectionLessons) - 1 ? $sectionLessons[$index + 1]['id'] : null;
 
                 return $lesson;
             }
@@ -177,27 +200,6 @@ final class CourseLoader
             self::getChallenges($courseRoot),
             static fn (array $challenge): bool => $challenge['lesson'] === $lessonId,
         ));
-    }
-
-    /**
-     * Groups a lesson under a coarse branch, mirroring the branches the written
-     * competency roadmap already describes (foundation / docker / postgres / operations).
-     * Shared by the roadmap graph and the learning shell's sidebar so the two never
-     * drift into two separately hand-written groupings of the same lessons.
-     */
-    public static function inferSection(string $lessonId): string
-    {
-        if (str_contains($lessonId, 'docker')) {
-            return 'docker';
-        }
-        if (str_contains($lessonId, 'postgres')) {
-            return 'postgres';
-        }
-        if ($lessonId === '17-observability') {
-            return 'operations';
-        }
-
-        return 'foundation';
     }
 
     private static function root(?string $courseRoot): string
@@ -317,6 +319,20 @@ final class CourseLoader
                 );
             }
             $orders[$item['order']] = $item['id'];
+        }
+    }
+
+    /** @param list<array<string, mixed>> $lessons */
+    private static function validateSectionOrder(array $lessons): void
+    {
+        $orders = [];
+        foreach ($lessons as $lesson) {
+            $section = $lesson['section'];
+            $order = $lesson['section_order'];
+            if (isset($orders[$section][$order])) {
+                self::invalid("lessons/{$lesson['id']}", 'section_order', "duplicates {$orders[$section][$order]} in {$section}");
+            }
+            $orders[$section][$order] = $lesson['id'];
         }
     }
 

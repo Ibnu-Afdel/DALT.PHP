@@ -2,6 +2,8 @@
   "title": "Middleware",
   "description": "Master request filtering and authentication",
   "order": 3,
+  "section": "foundation",
+  "section_order": 3,
   "icon": "middleware",
   "color": "purple",
   "prerequisites": ["02-routing"]

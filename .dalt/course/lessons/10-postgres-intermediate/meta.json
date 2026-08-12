@@ -2,6 +2,8 @@
   "title": "PostgreSQL Core",
   "description": "JOINs, aggregations, indexes, transactions, and constraints — everything you need for real database work.",
   "order": 10,
+  "section": "postgres",
+  "section_order": 2,
   "icon": "database",
   "color": "green",
   "prerequisites": ["09-postgres-first-contact"]

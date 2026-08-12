@@ -2,6 +2,8 @@
   "title": "Request Lifecycle",
   "description": "Learn how HTTP requests flow through a web framework",
   "order": 1,
+  "section": "foundation",
+  "section_order": 1,
   "icon": "lifecycle",
   "color": "blue",
   "prerequisites": []

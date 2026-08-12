@@ -2,6 +2,8 @@
   "title": "Docker Compose",
   "description": "Orchestrate PHP, PostgreSQL, and Nginx as one stack with a single command",
   "order": 8,
+  "section": "docker",
+  "section_order": 3,
   "icon": "docker",
   "color": "purple",
   "prerequisites": ["07-dockerfile"]

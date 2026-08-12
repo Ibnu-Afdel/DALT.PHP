@@ -93,6 +93,8 @@ test('learning pages expose navigation state prerequisites and no-script content
     $client = new ApplicationTestClient();
     $index = $client->request('GET', '/learn');
     $resources = $client->request('GET', '/learn/resources');
+    $dockerTrack = $client->request('GET', '/learn/tracks/docker');
+    $postgresTrack = $client->request('GET', '/learn/tracks/postgres');
     $roadmap = $client->request('GET', '/learn/roadmap');
     $lesson = $client->request('GET', '/learn/lessons/11-dalt-db-layer');
     $challenge = $client->request('GET', '/learn/challenges/db-missing-pagination');
@@ -101,7 +103,14 @@ test('learning pages expose navigation state prerequisites and no-script content
         ->and($index->body)->toContain('Skip to main content')
         ->and($index->body)->toContain('Keep building your backend instincts')
         ->and($resources->statusCode)->toBe(200)
-        ->and($resources->body)->toContain('Learning resources')
+        ->and($resources->body)->toContain('All resources')
+        ->and($resources->body)->toContain('/learn/resources?section=docker')
+        ->and($dockerTrack->statusCode)->toBe(200)
+        ->and($dockerTrack->body)->toContain('Your Docker path')
+        ->and($dockerTrack->body)->toContain('Docker Basics')
+        ->and($dockerTrack->body)->not->toContain('PostgreSQL First Contact')
+        ->and($postgresTrack->statusCode)->toBe(200)
+        ->and($postgresTrack->body)->toContain('You can still start PostgreSQL now.')
         ->and($roadmap->statusCode)->toBe(200)
         ->and($roadmap->body)->toContain('Competency roadmap')
         ->and($roadmap->body)->toContain('The graph')
@@ -115,6 +124,24 @@ test('learning pages expose navigation state prerequisites and no-script content
         ->and($challenge->body)->toContain('php artisan challenge:verify')
         ->and($challenge->body)->toContain('markdown-fallback')
         ->and($challenge->body)->toContain('meta name="csrf-token"');
+});
+
+test('learning paths and resource filters keep navigation intentions separate', function () {
+    $client = new ApplicationTestClient();
+    $dashboard = $client->request('GET', '/learn');
+    $dockerResources = $client->request('GET', '/learn/resources?section=docker', ['section' => 'docker']);
+    $routing = $client->request('GET', '/learn/lessons/02-routing');
+
+    expect($dashboard->body)->toContain('/learn/tracks/docker')
+        ->and($dashboard->body)->toContain('/learn/tracks/postgres')
+        ->and($dashboard->body)->not->toContain('/learn/resources?section=docker')
+        ->and($dockerResources->body)->toContain('Package and run applications reliably.')
+        ->and($dockerResources->body)->toContain('5 lessons')
+        ->and($dockerResources->body)->not->toContain('Foundational theory for backend systems')
+        ->and($routing->body)->toContain('Previous in Foundation')
+        ->and($routing->body)->toContain('Next in Foundation')
+        ->and($routing->body)->toContain('/learn/lessons/03-middleware')
+        ->and($routing->body)->not->toContain('/learn/lessons/04-authentication\" class="group rounded-xl');
 });
 
 test('verification requires csrf and maps unknown and inactive challenges', function () {

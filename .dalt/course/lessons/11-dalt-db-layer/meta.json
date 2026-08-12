@@ -2,6 +2,8 @@
   "title": "DALT Database Layer",
   "description": "How DALT's query methods map to PDO, writing paginated endpoints, and handling transactions from PHP.",
   "order": 11,
+  "section": "foundation",
+  "section_order": 6,
   "icon": "database",
   "color": "blue",
   "prerequisites": ["05-database", "10-postgres-intermediate"]

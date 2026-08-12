@@ -2,6 +2,8 @@
   "title": "Database",
   "description": "Work with databases safely and efficiently",
   "order": 5,
+  "section": "foundation",
+  "section_order": 5,
   "icon": "database",
   "color": "yellow",
   "prerequisites": ["01-request-lifecycle"]
