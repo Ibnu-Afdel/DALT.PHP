@@ -6,6 +6,7 @@
     </a>
     <nav class="flex items-center gap-4 sm:gap-6 text-sm" aria-label="Primary navigation">
       <a href="/learn" class="font-medium hover:text-[#93DA97] transition-colors" <?= urlIs('/learn') ? 'aria-current="page"' : '' ?>>Learn</a>
+      <a href="/learn/roadmap" class="font-medium hover:text-[#93DA97] transition-colors" <?= urlIs('/learn/roadmap') ? 'aria-current="page"' : '' ?>>Roadmap</a>
       <?php if (file_exists(base_path('storage/framework/examples/auth.json'))): ?>
         <?php if (\Core\Session::has('user')): ?>
           <form action="/session" method="POST" class="inline">

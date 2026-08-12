@@ -92,11 +92,16 @@ function p05Manager(string $root, string $action, string $argument = ''): array
 test('learning pages expose navigation state prerequisites and no-script content', function () {
     $client = new ApplicationTestClient();
     $index = $client->request('GET', '/learn');
+    $roadmap = $client->request('GET', '/learn/roadmap');
     $lesson = $client->request('GET', '/learn/lessons/11-dalt-db-layer');
     $challenge = $client->request('GET', '/learn/challenges/db-missing-pagination');
 
     expect($index->statusCode)->toBe(200)
         ->and($index->body)->toContain('Skip to main content')
+        ->and($roadmap->statusCode)->toBe(200)
+        ->and($roadmap->body)->toContain('Competency Roadmap')
+        ->and($roadmap->body)->toContain('Recommended foundation path')
+        ->and($roadmap->body)->toContain('Roadmap')
         ->and($lesson->statusCode)->toBe(200)
         ->and($lesson->body)->toContain('Recommended prerequisites')
         ->and($lesson->body)->toContain('markdown-fallback')

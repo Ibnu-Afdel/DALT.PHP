@@ -12,6 +12,10 @@
       </div>
       <h1 class="text-4xl font-bold text-gray-50 mb-3 tracking-tight">Interactive Learning</h1>
       <p class="text-lg text-gray-400">Master backend architecture through lessons and hands-on debugging challenges.</p>
+      <a href="/learn/roadmap" class="mt-6 inline-flex items-center gap-2 rounded-lg border border-[#93DA97]/30 bg-[#93DA97]/10 px-4 py-2.5 text-sm font-bold text-[#93DA97] transition-colors hover:bg-[#93DA97]/20">
+        Open competency roadmap
+        <span aria-hidden="true">→</span>
+      </a>
     </div>
   </section>
 
