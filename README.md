@@ -69,6 +69,8 @@ After learning with PHP, these concepts transfer to any backend language. You'll
 
 ## 📖 Documentation
 
+**[Framework Reference](documentation/framework-reference.md)** — the public API, with every documented behavior verified against the framework.
+
 Full documentation at: **[daltphp.com/docs](https://dalt.ibnuafdel.com/docs)**
 
 - [What is DALT?](https://dalt.ibnuafdel.com/docs/introduction/what-is-dalt) - Understanding the learning framework
