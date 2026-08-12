@@ -1,391 +1,297 @@
-# Lesson 04: Authentication System
+# Lesson 04: Authentication — Proving and Remembering Who Someone Is
 
-## Overview
+## What you will be able to do
 
-Authentication allows users to log in and access protected resources. Understanding how authentication works is crucial for debugging login issues and session problems.
+By the end of this lesson, you can:
 
-## Learning Objectives
+- describe the identity DALT stores in the session, and why it refuses anything less;
+- explain why the session ID is rotated *before* authenticated state is written;
+- trace a login attempt from form submission to redirect;
+- explain how a rejected login reaches the form again with errors and old input;
+- describe how an intended destination is remembered without creating an open redirect;
+- read authentication state through `Authenticator` instead of `$_SESSION`.
 
-By the end of this lesson, you will understand:
-- How user registration works
-- How login authentication works
-- How sessions store user data
-- How logout destroys sessions
-- How to debug authentication issues
+## Recommended prerequisites
 
-## Authentication Components
+- [Lesson 01: Request Lifecycle](../01-request-lifecycle/README.md) — sessions and flash data
+- [Lesson 03: Middleware](../03-middleware/README.md) — the `auth` and `guest` guards
 
-### 1. Authenticator Class (`framework/Core/Authenticator.php`)
+The authentication example is optional. Install it with:
 
-The Authenticator handles login and logout:
+```bash
+php artisan example:install auth
+```
+
+## Predict before reading the source
+
+| Situation | What happens |
+|---|---|
+| `login(['email' => 'a@b.com'])` with no ID | throws `InvalidArgumentException` |
+| Correct password, user row has `id = 0` | login fails; 0 is not a valid identity |
+| Login succeeds | session ID is rotated, then identity is stored |
+| Login fails validation | redirect back with `errors` and `old` flashed |
+| Guest visits `/dashboard`, then logs in | returns to `/dashboard`, not `/` |
+| Guest POSTs to `/dashboard/update`, then logs in | returns to `/`; only GET/HEAD are remembered |
+
+## 1. Identity is a validated shape, not whatever the database returned
 
 ```php
-class Authenticator
-{
-    public function attempt($email, $password)
-    {
-        // Query database for user
-        $user = App::resolve(Database::class)
-            ->query('SELECT * FROM users WHERE email = :email', [
-                'email' => $email
-            ])->find();
+private const USER_KEY = 'user';
 
-        if ($user) {
-            // Verify password
-            if (password_verify($password, $user['password'])) {
-                $this->login(['email' => $email]);
-                return true;
-            }
-        }
+public function login(array $user): void
+{
+    $identity = $this->identityFrom($user);
+
+    if ($identity === null) {
+        throw new InvalidArgumentException(
+            'An authenticated user requires a positive integer ID and non-empty email.',
+        );
+    }
+
+    Session::regenerate();
+    Session::put(self::USER_KEY, $identity);
+}
+```
+
+`identityFrom()` accepts only a positive integer ID and a non-empty email, returning `['id' => int, 'email' => string]`. A numeric string ID such as `"42"` is converted to `42`; `0`, `-1`, a missing ID, or a blank email all produce `null`.
+
+Two consequences:
+
+- **The session never holds a partial user.** Every later read can assume both fields exist.
+- **The password hash is never stored in the session**, because `identityFrom()` copies only the two fields it validated.
+
+Storing an email alone is not enough. Emails change and are not a stable key; the integer ID is the identity.
+
+## 2. Rotate the session ID before recording privilege
+
+The ordering in `login()` is deliberate:
+
+```php
+// Rotate before privilege is recorded so the old session never
+// contains authenticated state.
+Session::regenerate();
+Session::put(self::USER_KEY, $identity);
+```
+
+This defends against **session fixation**. An attacker who plants a known session ID in a victim's browser wants that ID to become an authenticated session. Rotating first means the ID the attacker knows is abandoned while still anonymous, and the identity is written only into the fresh one.
+
+Reverse these two lines and the code still "works" in every manual test — the user logs in and sees the dashboard. That is what makes the bug dangerous: only the attacker notices the difference.
+
+## 3. `attempt()` verifies credentials
+
+```php
+public function attempt(string $email, string $password): bool
+{
+    $user = $this->database()->query(
+        'SELECT id, email, password FROM users WHERE email = :email',
+        ['email' => $email],
+    )->find();
+
+    if (!is_array($user) || !$this->hasValidCredentials($user, $password)) {
         return false;
     }
 
-    public function login($user)
-    {
-        $_SESSION['user'] = ['email' => $user['email']];
-        session_regenerate_id(true);
-    }
+    $this->login($user);
 
-    public function logout()
-    {
-        Session::destroy();
-    }
+    return true;
 }
 ```
 
-## Registration Flow
+Details worth naming:
 
-### Step 1: User Submits Registration Form
+- **The column list is explicit**, not `SELECT *`. The query returns exactly what authentication needs.
+- **The email is a bound parameter**, so a crafted email cannot alter the query.
+- **`hasValidCredentials()` requires three things**: a string hash, a valid identity, and `password_verify($password, $hash)`.
+- **One boolean is returned.** The caller learns whether authentication succeeded, never *why*. "No such email" and "wrong password" are indistinguishable to an attacker enumerating accounts.
 
-```html
-<form method="POST" action="/register">
-    <?= csrf_field() ?>
-    <input type="email" name="email" required>
-    <input type="password" name="password" required>
-    <button type="submit">Register</button>
-</form>
-```
+## 4. Registration hashes, then defers to the login form
 
-### Step 2: Controller Validates Input
+From `.dalt/stubs/auth/Http/controllers/registration/store.php`:
 
 ```php
-// Http/controllers/registration/store.php
-
-$email = $_POST['email'];
-$password = $_POST['password'];
-
-// Validate
 $errors = [];
-if (!Validator::email($email)) {
-    $errors['email'] = 'Invalid email';
-}
-if (!Validator::string($password, 7, 255)) {
-    $errors['password'] = 'Password must be at least 7 characters';
-}
+if (!Validator::string($name)) $errors['name'] = 'Name is required';
+if (!Validator::email($email)) $errors['email'] = 'Valid email required';
+if (!Validator::string($password, 8, 72)) $errors['password'] = 'Password must be between 8 and 72 characters';
+if ($password !== $confirm) $errors['password_confirmation'] = 'Passwords do not match';
 
 if (!empty($errors)) {
-    return view('registration/create.view.php', ['errors' => $errors]);
+    ValidationException::throw($errors, ['name' => $name, 'email' => $email]);
 }
 ```
 
-### Step 3: Hash Password and Store User
+Then:
 
 ```php
-$db = App::resolve(Database::class);
-
-// Hash password
-$hashedPassword = password_hash($password, PASSWORD_BCRYPT);
-
-// Insert user
-$db->query('INSERT INTO users (email, password) VALUES (:email, :password)', [
-    'email' => $email,
-    'password' => $hashedPassword
-]);
+$hashed = password_hash($password, PASSWORD_DEFAULT);
 ```
 
-### Step 4: Log User In
+`PASSWORD_DEFAULT` follows PHP's current recommendation rather than pinning one algorithm forever. The 72-character maximum is not arbitrary — bcrypt silently ignores bytes past 72, so accepting longer input would mean the tail of a long password is never checked.
+
+Note what the old input excludes: `['name' => $name, 'email' => $email]`. **A password is never flashed back.**
+
+## 5. Failure travels through one exception boundary
+
+`ValidationException::throw()` does not render a view. It throws, and `public/index.php` catches it:
+
+```php
+try {
+    $response = $router->route($uri, $method, $request);
+} catch (ValidationException $exception) {
+    Session::flash('errors', $exception->errors);
+    Session::flash('old', $exception->old);
+    $response = redirect($router->previousUrl());
+}
+```
+
+So every validation failure follows the same path: flash `errors`, flash `old`, redirect back. The form re-renders on the *next* request and reads the flashed data — which is exactly the request-start flash aging from Lesson 01.
+
+The exception constructor is strict: an empty error array, a non-string field name, or a non-string message each throw `InvalidArgumentException`. A malformed error bag fails at the throw site rather than producing a blank form later.
+
+## 6. Login returns the user where they were going
 
 ```php
 $auth = new Authenticator();
-$auth->login(['email' => $email]);
-
-redirect('/');
-```
-
-## Login Flow
-
-### Step 1: User Submits Login Form
-
-```html
-<form method="POST" action="/login">
-    <?= csrf_field() ?>
-    <input type="email" name="email" required>
-    <input type="password" name="password" required>
-    <button type="submit">Login</button>
-</form>
-```
-
-### Step 2: Controller Attempts Authentication
-
-```php
-// Http/controllers/session/store.php
-
-$email = $_POST['email'];
-$password = $_POST['password'];
-
-$auth = new Authenticator();
-
 if ($auth->attempt($email, $password)) {
-    redirect('/');
-} else {
-    $errors = ['email' => 'Invalid credentials'];
-    return view('session/create.view.php', ['errors' => $errors]);
+    return redirect($auth->intended());
 }
+
+ValidationException::throw(['email' => 'Invalid credentials'], ['email' => $email]);
 ```
 
-### Step 3: Authenticator Verifies Credentials
+The destination was recorded earlier by the `auth` middleware:
 
 ```php
-public function attempt($email, $password)
+public function rememberIntended(Request $request): void
 {
-    // 1. Find user by email
-    $user = App::resolve(Database::class)
-        ->query('SELECT * FROM users WHERE email = :email', [
-            'email' => $email
-        ])->find();
-
-    // 2. Check if user exists
-    if ($user) {
-        // 3. Verify password
-        if (password_verify($password, $user['password'])) {
-            // 4. Log user in
-            $this->login(['email' => $email]);
-            return true;
-        }
+    if (!in_array($request->method(), ['GET', 'HEAD'], true)) {
+        return;
     }
-    
-    return false;
+
+    $target = $request->server('REQUEST_URI');
+
+    if (is_string($target) && self::isSafeLocalPath($target)) {
+        Session::put(self::INTENDED_KEY, $target);
+    }
 }
 ```
 
-### Step 4: Session Stores User Data
+Two guards matter:
+
+- **Only GET and HEAD are remembered.** Replaying a POST after login would repeat a state-changing action the user never re-confirmed.
+- **Only safe local paths are stored.** `isSafeLocalPath()` rejects anything with a scheme, host, user, password, port, or fragment, anything starting with `//`, backslashes, and control characters. Without this, `?intended=https://evil.example` would turn your login form into an **open redirect** that lends your domain's credibility to an attacker's page.
+
+`intended()` reads the value, forgets it, and falls back to `/`. The fallback is validated too — `intended('https://evil.test/')` throws `InvalidArgumentException`.
+
+## 7. Read state through the Authenticator
 
 ```php
-public function login($user)
-{
-    // Store user in session
-    $_SESSION['user'] = ['email' => $user['email']];
-    
-    // Regenerate session ID for security
-    session_regenerate_id(true);
-}
-```
-
-## Session Management
-
-### How Sessions Work
-
-1. **Session Start** - `session_start()` in `public/index.php`
-2. **Session Storage** - Data stored in `$_SESSION` superglobal
-3. **Session Cookie** - Browser receives session ID cookie
-4. **Session Persistence** - Data persists across requests
-
-### Session Data Structure
-
-```php
-$_SESSION = [
-    'user' => [
-        'email' => 'user@example.com'
-    ],
-    '_csrf' => 'abc123...',
-    '_flash' => [
-        'errors' => [...],
-        'old' => [...]
-    ]
-];
-```
-
-### Checking Authentication Status
-
-```php
-// Check if user is logged in
-if ($_SESSION['user'] ?? false) {
-    // User is authenticated
-} else {
-    // User is not authenticated
-}
-```
-
-## Logout Flow
-
-### Step 1: User Clicks Logout
-
-```html
-<form method="POST" action="/logout">
-    <?= csrf_field() ?>
-    <button type="submit">Logout</button>
-</form>
-```
-
-### Step 2: Controller Calls Logout
-
-```php
-// Http/controllers/session/destroy.php
-
 $auth = new Authenticator();
-$auth->logout();
 
-redirect('/');
+$auth->check();   // bool: is someone logged in?
+$auth->guest();   // bool: the negation
+$auth->user();    // ['id' => int, 'email' => string] or null
+$auth->id();      // int or null
 ```
 
-### Step 3: Session Destroyed
+Prefer these over `$_SESSION['user']`. `user()` re-validates the stored shape on every read, so a session corrupted by other code returns `null` rather than a half-user that fails deep inside a controller.
+
+## 8. Logout destroys the session
 
 ```php
-public function logout()
+public function logout(): void
 {
     Session::destroy();
 }
-
-// In Session::destroy()
-public static function destroy()
-{
-    $cookieName = session_name();
-    static::flush();  // Clear $_SESSION
-    
-    if (session_status() === PHP_SESSION_ACTIVE) {
-        session_destroy();  // Destroy session file
-    }
-    
-    // Delete session cookie
-    $params = session_get_cookie_params();
-    setcookie($cookieName, '', time() - 3600, 
-        $params['path'], $params['domain'], 
-        $params['secure'], $params['httponly']);
-}
 ```
 
-## Password Security
+`Session::destroy()` clears `$_SESSION`, destroys the native session, and expires the cookie with the same path, domain, secure, httponly, and samesite attributes it was set with. Clearing `$_SESSION` alone would leave a live session file and a valid cookie.
 
-### Hashing Passwords
-
-**Never store plain text passwords!**
+## The installed routes
 
 ```php
-// ❌ WRONG
-$password = $_POST['password'];
-$db->query('INSERT INTO users (password) VALUES (:password)', [
-    'password' => $password  // Plain text!
-]);
-
-// ✅ CORRECT
-$hashedPassword = password_hash($_POST['password'], PASSWORD_BCRYPT);
-$db->query('INSERT INTO users (password) VALUES (:password)', [
-    'password' => $hashedPassword  // Hashed!
-]);
-```
-
-### Verifying Passwords
-
-```php
-// ❌ WRONG
-if ($password === $user['password']) {
-    // This won't work with hashed passwords!
-}
-
-// ✅ CORRECT
-if (password_verify($password, $user['password'])) {
-    // Correctly verifies hashed password
-}
-```
-
-## Protecting Routes with Auth Middleware
-
-```php
-// Require authentication
-$router->get('/dashboard', 'dashboard.php')->only('auth');
-
-// Require guest (not authenticated)
+$router->get('/register', 'registration/create.php')->only('guest');
+$router->post('/register', 'registration/store.php')->only(['guest', 'csrf']);
 $router->get('/login', 'session/create.php')->only('guest');
+$router->post('/session', 'session/store.php')->only(['guest', 'csrf']);
+$router->delete('/session', 'session/destroy.php')->only(['auth', 'csrf']);
 ```
 
-## Common Authentication Issues
+Logging in creates a session resource, so it is a `POST /session`. Logging out deletes it, so it is a `DELETE /session` — reached from an HTML form through the `_method` override from Lesson 02. Every state-changing route carries `csrf`, and each carries `guest` or `auth` so it cannot be reached from the wrong state.
 
-### Issue 1: Login Succeeds But User Not Authenticated
-**Cause:** Session not started or session data not saved  
-**Debug:** Check `session_start()` in `public/index.php`
+## Debugging checklist
 
-### Issue 2: Password Verification Always Fails
-**Cause:** Password not hashed during registration  
-**Debug:** Check if `password_hash()` is used
+- **`InvalidArgumentException: An authenticated user requires...`:** `login()` received a row without a positive integer ID or with a blank email.
+- **Login reports success but the next request is anonymous:** something wrote to the session after `regenerate()` rotated it, or the session cookie is not being returned.
+- **Correct password always rejected:** confirm the stored value is a hash, not plain text, and that registration did not truncate past 72 bytes.
+- **Blank form after a failed submit:** the view is not reading the flashed `errors` and `old`.
+- **Always redirected to `/` after login:** the intended URL was a POST, or failed `isSafeLocalPath()`.
+- **Redirect loop between `/login` and a guarded page:** a route carries `auth` when it should carry `guest`.
 
-### Issue 3: User Logged Out After Refresh
-**Cause:** Session not persisting  
-**Debug:** Check session configuration and cookie settings
+## Trace exercise
 
-### Issue 4: Can't Access Protected Routes
-**Cause:** Auth middleware not working  
-**Debug:** Check `$_SESSION['user']` exists
+Read in order and write down what each contributes:
 
-### Issue 5: Logout Doesn't Work
-**Cause:** Session not properly destroyed  
-**Debug:** Check `Session::destroy()` implementation
+1. `.dalt/stubs/auth/routes/auth.php`
+2. `.dalt/stubs/auth/Http/controllers/session/store.php`
+3. `framework/Core/Authenticator.php`
+4. `framework/Core/Session.php` — `regenerate()` and `destroy()`
+5. `framework/Core/ValidationException.php`
+6. `public/index.php` — the `ValidationException` catch
 
-## Debugging Authentication
+Then run:
 
-### Technique 1: Check Session Data
+```bash
+composer test -- --filter='Auth|Validation|Session'
+```
+
+## Checkpoint
+
+Close the source files and answer from memory:
+
+1. Name the two fields stored as identity and give three inputs `identityFrom()` rejects.
+2. Explain what breaks if `Session::regenerate()` runs *after* `Session::put()`, and why manual testing will not reveal it.
+3. `attempt()` returns only `true` or `false`. Explain what an attacker learns from that, and what they would learn from distinct messages.
+4. Trace a failed registration from `ValidationException::throw()` to the re-rendered form, naming every step.
+5. Explain why only GET and HEAD requests are remembered as an intended destination.
+6. Explain what an open redirect is and which method prevents it here.
+
+## Challenge: Broken Authentication
+
+```bash
+php artisan challenge:start broken-auth
+php artisan migrate
+php artisan challenge:verify
+php artisan challenge:stop
+```
+
+## Laravel bridge
+
+Compared against Laravel 13.x ([laravel.com/docs/13.x/authentication](https://laravel.com/docs/13.x/authentication), consulted 2026-08-12).
+
+Laravel's controller does the same four steps:
+
 ```php
-// In controller
-dd($_SESSION);
+if (Auth::attempt($credentials)) {
+    $request->session()->regenerate();
+
+    return redirect()->intended('dashboard');
+}
+
+return back()->withErrors([...])->onlyInput('email');
 ```
 
-### Technique 2: Verify Password Hash
-```php
-// After registration
-dd($hashedPassword);
-```
+| Laravel 13.x | DALT |
+|---|---|
+| `Auth::attempt($credentials)` | `(new Authenticator())->attempt($email, $password)` |
+| `session()->regenerate()` called by the controller after attempt | `Session::regenerate()` called inside `login()` before storing identity |
+| `redirect()->intended('dashboard')` | `redirect($auth->intended())` |
+| `back()->withErrors()->onlyInput('email')` | `ValidationException::throw($errors, $old)` caught in the front controller |
+| guards, providers, `Authenticatable`, hashing driver config | one `Authenticator` on one `users` table |
 
-### Technique 3: Test Password Verification
-```php
-// In login controller
-dd([
-    'input_password' => $password,
-    'stored_hash' => $user['password'],
-    'verify_result' => password_verify($password, $user['password'])
-]);
-```
+The one real divergence is worth noticing: Laravel leaves session regeneration to the controller, so forgetting that line is a real application bug. DALT moves it inside `login()`, where it cannot be forgotten. Same defence, different place to put the responsibility.
 
-### Technique 4: Trace Login Flow
-```php
-// In Authenticator::attempt()
-dd($user, password_verify($password, $user['password']));
-```
+## Next steps
 
-## Key Files
-
-- **`framework/Core/Authenticator.php`** - Login/logout logic
-- **`framework/Core/Session.php`** - Session management
-- **`framework/Core/Middleware/Auth.php`** - Authentication guard
-- **`framework/Core/Middleware/Guest.php`** - Guest guard
-
-## Practice Exercise
-
-1. Register a new user
-2. Add `dd($_SESSION)` after login
-3. Observe the session data
-4. Logout and verify session is destroyed
-
-## Next Steps
-
-- **Lesson 05: Database** - How queries work
-- **Challenge: Broken Auth** - Debug authentication issues
-
-## Summary
-
-Authentication in DALT.PHP:
-1. **Registration** - Hash password, store user, log in
-2. **Login** - Verify credentials, store in session
-3. **Session** - Persist user data across requests
-4. **Logout** - Destroy session and cookie
-5. **Protection** - Use auth middleware on routes
-
-Understanding authentication is essential for building secure applications and debugging login issues.
+- **Lesson 05: Database** — the query layer `attempt()` depends on
+- **Challenge: Broken Authentication** — find a login flow that authenticates the wrong people

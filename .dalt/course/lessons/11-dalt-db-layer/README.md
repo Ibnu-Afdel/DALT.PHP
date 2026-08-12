@@ -1,301 +1,225 @@
-# Lesson 11: DALT Database Layer
+# Lesson 11: DALT Database Layer — Queries Inside Controllers
 
-## From Raw SQL to Controller Code
+## From raw SQL to controller code
 
-In the last two lessons you wrote SQL directly in `psql`. Now you need to run those same queries from PHP controllers and return the results as JSON. DALT's database layer handles the PDO connection, prepared statements, and result fetching — you just write the SQL and pass the params.
+In the last two lessons you wrote SQL directly in `psql`. Now you need to run those same queries from PHP controllers and return the results as JSON. DALT's database layer handles the PDO connection, prepared statements, and result fetching — you write the SQL and pass the parameters.
 
-This lesson covers every method on the `Database` object, shows how to wire the JOIN and aggregation queries from Lesson 10 into real controllers, adds pagination to list endpoints, and returns the raw PDO connection when you need transactions.
+## What you will be able to do
 
-## Learning Objectives
+- resolve the shared `Database` instance from the container;
+- choose correctly between `get()`, `find()`, and `findOrFail()`;
+- return JSON by returning data, not by printing it;
+- write a paginated endpoint with bound `LIMIT` and `OFFSET`;
+- run a transaction through `getConnection()` and roll it back safely.
 
-- Resolve the `Database` instance from the container
-- Use `->get()`, `->find()`, and `->findOrFail()` correctly
-- Write paginated queries with `LIMIT` and `OFFSET`
-- Build a JSON response from a controller
-- Use `$db->getConnection()` for transactions with `rollBack()`
+## Recommended prerequisites
 
----
+- [Lesson 02: Routing](../02-routing/README.md) — the response boundary this lesson depends on
+- [Lesson 05: Database](../05-database/README.md) — the connection and fetch contract
+- [Lesson 10: PostgreSQL Core](../10-postgres-intermediate/README.md) — the JOINs used here
 
-## Resolving the Database
+## Predict before reading
 
-Every controller that needs the database starts with this line:
+| Controller ends with | Response |
+|---|---|
+| `return ['a' => 1];` | JSON, status 200 |
+| `echo json_encode(['a' => 1]);` | JSON-ish, but see section 3 |
+| `return Response::json(['error' => 'nope'], 404);` | JSON, status 404 |
+| `echo json_encode($x); exit;` | body reaches the client, middleware never finishes |
+| `findOrFail()` with no matching row | `HttpException` → 404 page |
+
+## 1. Resolving the database
 
 ```php
 $db = \Core\App::resolve(\Core\Database::class);
 ```
 
-`App::resolve` is DALT's IoC container. It returns the singleton `Database` instance, which wraps a PDO connection. The `Database` class is defined in `framework/Core/Database.php`.
+`Database` is registered as a **singleton**, so every resolution in a request returns the same instance over one connection. Resolving it is also what opens the connection — a controller that never resolves it never connects.
 
----
-
-## The Three Fetch Methods
-
-### `->get()` — multiple rows
-
-Returns an array of associative arrays. Returns an empty array if no rows match (never returns false).
+## 2. The three fetch methods
 
 ```php
-$users = $db->query(
-    'SELECT id, name, email FROM users ORDER BY created_at DESC'
-)->get();
+// Many rows — [] when nothing matches, never false
+$users = $db->query('SELECT id, name, email FROM users ORDER BY created_at DESC')->get();
 
-// $users is: [['id' => 1, 'name' => 'Alice', 'email' => '...'], ...]
+// One row, or false
+$user = $db->query('SELECT id, name FROM users WHERE id = :id', ['id' => $id])->find();
+
+// One row, or a 404
+$user = $db->query('SELECT id, name FROM users WHERE id = :id', ['id' => $id])->findOrFail();
 ```
 
-With parameters:
+`findOrFail()` calls `abort()`, which throws `Core\HttpException` with status 404. It does not print anything or stop the process — the front controller catches the exception and renders it. That is why nothing after the call runs, and why the failure still passes through the normal response path.
 
-```php
-$posts = $db->query(
-    'SELECT id, title, created_at FROM posts WHERE user_id = :user_id ORDER BY created_at DESC',
-    ['user_id' => $userId]
-)->get();
-```
+## 3. Return the data; do not print it
 
-### `->find()` — one row or false
-
-Returns a single associative array, or `false` if no row matches. Use this when you're looking up a specific record and want to handle the not-found case yourself.
-
-```php
-$user = $db->query(
-    'SELECT id, name, email FROM users WHERE id = :id',
-    ['id' => $id]
-)->find();
-
-if (!$user) {
-    http_response_code(404);
-    echo json_encode(['error' => 'User not found']);
-    exit;
-}
-```
-
-### `->findOrFail()` — one row or 404
-
-Like `->find()`, but throws a 404 automatically if no row is found. Use this when a missing record is always an error (e.g., a show endpoint).
-
-```php
-$user = $db->query(
-    'SELECT id, name, email FROM users WHERE id = :id',
-    ['id' => $id]
-)->findOrFail();
-// Never reaches here if no user found — 404 is thrown
-```
-
----
-
-## Wiring JOIN Queries into Controllers
-
-Take the JOIN from Lesson 10 and put it in a controller:
+This is the part most commonly written the old way. A controller's **return value** becomes the response:
 
 ```php
 <?php
 
 $db = \Core\App::resolve(\Core\Database::class);
 
-$posts = $db->query(
+return $db->query(
     'SELECT posts.id, posts.title, posts.created_at, users.name AS author
      FROM posts
      LEFT JOIN users ON posts.user_id = users.id
      ORDER BY posts.created_at DESC'
 )->get();
-
-header('Content-Type: application/json');
-echo json_encode($posts);
 ```
 
-Routes file:
+An array is normalized to a JSON response with status 200. No `header()`, no `json_encode()`, no `echo`.
+
+When you need a different status or extra headers, return a `Response`:
 
 ```php
-$router->get('/posts', 'posts/index.php');
+use Core\Response;
+
+return Response::json(['error' => 'User not found'], 404);
 ```
 
-Visit `GET /posts` and you get a JSON array of posts with the author name embedded.
+### Why not `header()` and `echo`
 
----
+Three concrete reasons, all covered by the routing lesson:
 
-## Pagination with LIMIT and OFFSET
+- **Printed output overrides the return value.** `Response::fromHandler()` buffers the handler; if anything was printed, that output becomes the body and the returned value is discarded. A stray `echo` turns a JSON endpoint into an HTML one.
+- **`exit` skips the outward path.** Middleware transforms the response on the way back out, and the front controller sends it exactly once. `exit` abandons both. The bytes may still reach the browser through PHP's shutdown flush, which is precisely what makes this bug hard to see.
+- **Status and headers belong to the `Response`.** `http_response_code()` mutates global state that the response object does not know about.
 
-Returning all rows from a large table in one response is a common beginner mistake. At 10 rows it's fine. At 100,000 rows it kills memory and response time.
+The rule: build a value, return it, and let the boundary send it.
 
-The fix: accept `?page=` and `?limit=` query params and use `LIMIT` and `OFFSET` in the query.
+## 4. Pagination with bound LIMIT and OFFSET
+
+Returning every row of a large table is a common mistake. Accept `?page=` and `?limit=`, and bind both:
 
 ```php
 <?php
 
 $db = \Core\App::resolve(\Core\Database::class);
 
-$page  = max(1, (int)($_GET['page']  ?? 1));
-$limit = max(1, min(100, (int)($_GET['limit'] ?? 10)));
+$page   = max(1, (int) ($_GET['page'] ?? 1));
+$limit  = max(1, min(100, (int) ($_GET['limit'] ?? 10)));
 $offset = ($page - 1) * $limit;
 
-$users = $db->query(
-    'SELECT id, name, email, created_at FROM users ORDER BY created_at DESC LIMIT :limit OFFSET :offset',
-    ['limit' => $limit, 'offset' => $offset]
-)->get();
-
-header('Content-Type: application/json');
-echo json_encode([
-    'data'  => $users,
+return [
+    'data' => $db->query(
+        'SELECT id, name, email, created_at FROM users ORDER BY created_at DESC LIMIT :limit OFFSET :offset',
+        ['limit' => $limit, 'offset' => $offset],
+    )->get(),
     'page'  => $page,
     'limit' => $limit,
-]);
+];
 ```
 
-How `LIMIT` and `OFFSET` work:
+- `LIMIT 10` returns at most 10 rows; `OFFSET 20` skips the first 20.
+- `($page - 1) * $limit` converts a 1-based page number into an offset.
+- **Cap the limit.** `min(100, ...)` stops a client from requesting `?limit=1000000`.
+- **Cast and clamp before binding.** `(int)` and `max(1, ...)` mean a negative or non-numeric page cannot reach the query.
 
-- `LIMIT 10` — return at most 10 rows
-- `OFFSET 0` — skip 0 rows (page 1)
-- `OFFSET 10` — skip 10 rows (page 2)
-- `OFFSET 20` — skip 20 rows (page 3)
+Binding `LIMIT` and `OFFSET` works on both supported drivers, whether the values are passed as integers or as strings. This is worth knowing because it is *not* universally true: on some drivers a bound `LIMIT` fails when prepare emulation is off, which is why you will see older tutorials interpolating those two values by hand. In DALT, bind them.
 
-The formula `($page - 1) * $limit` converts a 1-based page number to the correct offset.
+## 5. Transactions
 
-**Always cap the limit.** `min(100, ...)` prevents a client from sending `?limit=1000000` and pulling your entire table.
-
----
-
-## Writing JSON Responses
-
-The pattern for every JSON controller in DALT:
-
-```php
-// Set the content type header before any output
-header('Content-Type: application/json');
-
-// Encode and output — json_encode handles arrays and nested objects
-echo json_encode($data);
-
-// exit to prevent any accidental output after
-exit;
-```
-
-PHP arrays cannot be `echo`ed directly — `echo $array` prints the string "Array". Always use `json_encode`.
-
-For error responses, set the status code before the header:
-
-```php
-http_response_code(404);
-header('Content-Type: application/json');
-echo json_encode(['error' => 'Not found']);
-exit;
-```
-
----
-
-## Transactions from PHP
-
-When you need multiple writes to succeed or fail together, use `$db->getConnection()` to get the raw PDO object and wrap the queries in a transaction.
+When several writes must succeed or fail together, reach the PDO object:
 
 ```php
 <?php
 
+use Core\Response;
+
 $db  = \Core\App::resolve(\Core\Database::class);
 $pdo = $db->getConnection();
 
-$fromId = $_POST['from_id'] ?? null;
-$toId   = $_POST['to_id']   ?? null;
-$amount = (int)($_POST['amount'] ?? 0);
+$amount = (int) ($_POST['amount'] ?? 0);
 
 try {
     $pdo->beginTransaction();
 
-    $db->query(
-        'UPDATE users SET credits = credits - :amount WHERE id = :id',
-        ['amount' => $amount, 'id' => $fromId]
-    );
+    $db->query('UPDATE users SET credits = credits - :amount WHERE id = :id',
+        ['amount' => $amount, 'id' => $_POST['from_id'] ?? null]);
 
-    $db->query(
-        'UPDATE users SET credits = credits + :amount WHERE id = :id',
-        ['amount' => $amount, 'id' => $toId]
-    );
+    $db->query('UPDATE users SET credits = credits + :amount WHERE id = :id',
+        ['amount' => $amount, 'id' => $_POST['to_id'] ?? null]);
 
     $pdo->commit();
 
-    header('Content-Type: application/json');
-    echo json_encode(['success' => true]);
-} catch (\Exception $e) {
-    $pdo->rollBack();
+    return ['success' => true];
+} catch (\Throwable $exception) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
 
-    http_response_code(500);
-    header('Content-Type: application/json');
-    echo json_encode(['error' => 'Transfer failed']);
+    return Response::json(['error' => 'Transfer failed'], 500);
 }
 ```
 
 Key points:
 
-- `$db->getConnection()` returns the underlying `PDO` object
-- `$pdo->beginTransaction()` starts the transaction
-- `$pdo->commit()` applies all changes atomically
-- `$pdo->rollBack()` in the `catch` undoes everything since `beginTransaction()`
-- Without `rollBack()`, a failed partial transaction leaves your data inconsistent
+- `$db->query()` uses the same connection, so it participates in the transaction started on `$pdo`.
+- `rollBack()` undoes everything since `beginTransaction()`. Verified: a transfer that violates a `CHECK` constraint leaves both balances untouched.
+- **Guard the rollback with `inTransaction()`.** Calling `rollBack()` when no transaction is active throws `PDOException: There is no active transaction`. If `beginTransaction()` itself was what failed, an unguarded `rollBack()` in the `catch` throws a second exception that hides the first.
+- Catch `\Throwable`, not `\Exception`, so a `TypeError` inside the block still triggers the rollback.
 
----
+## Debugging checklist
 
-## Building the Posts + Author Endpoint
+- **JSON endpoint returns HTML:** something printed before the return; find the stray `echo`, `var_dump`, or whitespace outside `?>`.
+- **Status code ignored:** you used `http_response_code()` instead of returning a `Response`.
+- **Middleware after-logic never runs:** a controller called `exit`.
+- **Pagination returns the same rows on every page:** `$offset` was not passed, or `page` was not converted to an offset.
+- **`There is no active transaction`:** `rollBack()` ran without a live transaction; guard with `inTransaction()`.
+- **Partial write survived a failure:** the `catch` returned without rolling back.
+- **`Cannot access offset on bool`:** `find()` returned `false`; use `findOrFail()` or test it.
 
-Here's a complete controller that demonstrates JOIN, pagination, and a JSON response together:
+## Trace exercise
 
-```php
-<?php
+1. `app/Http/controllers/` — an existing endpoint
+2. `framework/Core/Database.php` — `query()`, `get()`, `find()`, `findOrFail()`, `getConnection()`
+3. `framework/Core/Response.php` — `fromHandler()` and `fromHandlerResult()`
+4. `framework/Core/functions.php` — `abort()`
 
-$db = \Core\App::resolve(\Core\Database::class);
+Then run:
 
-$page   = max(1, (int)($_GET['page']  ?? 1));
-$limit  = max(1, min(50, (int)($_GET['limit'] ?? 10)));
-$offset = ($page - 1) * $limit;
-
-$posts = $db->query(
-    'SELECT posts.id, posts.title, posts.created_at, users.name AS author
-     FROM posts
-     LEFT JOIN users ON posts.user_id = users.id
-     ORDER BY posts.created_at DESC
-     LIMIT :limit OFFSET :offset',
-    ['limit' => $limit, 'offset' => $offset]
-)->get();
-
-header('Content-Type: application/json');
-echo json_encode([
-    'data'  => $posts,
-    'page'  => $page,
-    'limit' => $limit,
-]);
+```bash
+composer test -- --filter='Database|Response'
 ```
 
-This is the pattern you'll use in the challenges that follow.
+## Checkpoint
 
----
+Close the source files and answer from memory:
 
-## Summary
+1. Explain what a controller must do to produce a JSON response with status 422.
+2. A controller ends with `echo json_encode($data);` and also `return $data;`. Describe the response and say which one wins.
+3. Explain why `exit` in a controller is a bug even when the correct bytes reach the browser.
+4. Explain what `findOrFail()` actually does when no row matches — name the function it calls and the class it throws.
+5. Give two reasons to cast and clamp `?limit=` before binding it.
+6. Explain why `rollBack()` should be guarded by `inTransaction()`.
 
-| Method | Returns | Use when |
-|---|---|---|
-| `->get()` | array of rows | list endpoints, always succeeds |
-| `->find()` | row or false | you need to handle not-found yourself |
-| `->findOrFail()` | row or 404 | missing record is always an error |
-
-- `LIMIT :limit OFFSET :offset` + `?page=` + `?limit=` is the standard pagination pattern
-- Always set `Content-Type: application/json` before `echo json_encode()`
-- Get the raw PDO via `$db->getConnection()` for transactions
-- `rollBack()` in the `catch` block is not optional — it's what makes the transaction safe
-
-## Your Task
-
-Load the broken pagination controller:
+## Your task
 
 ```bash
 php artisan challenge:start db-missing-pagination
-```
-
-The `GET /db/users` endpoint returns all users with no pagination. Add `LIMIT` and `OFFSET` using `:limit` and `:offset` named parameters, and structure the response as `{"data": [...], "page": 1, "limit": 10}`.
-
-Verify:
-
-```bash
 php artisan challenge:verify
+php artisan challenge:stop
 ```
 
-## Next Steps
+`GET /db/users` currently returns every user. Add bound `LIMIT` and `OFFSET`, and shape the response as `{"data": [...], "page": 1, "limit": 10}`.
 
-- **Challenge: db-missing-pagination** — add LIMIT/OFFSET pagination to a users list endpoint
-- **Challenge: db-broken-join** — fix wrong JOIN type and wrong ON clause
-- **Challenge: db-broken-transaction** — add ROLLBACK to a transfer endpoint
+## Laravel bridge
+
+Compared against Laravel 13.x ([laravel.com/docs/13.x/database](https://laravel.com/docs/13.x/database), consulted 2026-08-12).
+
+| Laravel 13.x | DALT |
+|---|---|
+| returning an array from a controller becomes a JSON response | same |
+| `response()->json($data, 404)` | `Response::json($data, 404)` |
+| `DB::transaction(fn () => ...)` with automatic rollback and retries | manual `beginTransaction`/`commit`/`rollBack` |
+| `paginate()` producing links and totals | manual `LIMIT`/`OFFSET` and your own envelope |
+| `findOrFail()` throwing `ModelNotFoundException` → 404 | `findOrFail()` calling `abort()` → `HttpException` |
+
+Laravel's `DB::transaction()` closure is the same three PDO calls with the rollback guaranteed. Writing them by hand once is what makes the closure version legible.
+
+## Next steps
+
+- **Challenge: db-missing-pagination** — add LIMIT/OFFSET pagination
+- **Challenge: db-broken-join** — fix a wrong JOIN type and ON clause
+- **Challenge: db-broken-transaction** — add the missing rollback

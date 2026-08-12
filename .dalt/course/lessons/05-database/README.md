@@ -1,381 +1,265 @@
-# Lesson 05: Database System
+# Lesson 05: Database — One Connection, Prepared Statements, Three Fetches
 
-## Overview
+## What you will be able to do
 
-The database layer handles all data persistence in DALT.PHP. Understanding how queries work is essential for debugging data-related issues.
+By the end of this lesson, you can:
 
-## Learning Objectives
+- name the drivers DALT supports and predict what happens when you ask for another;
+- explain why the connection is not opened during bootstrap;
+- choose correctly between `find()`, `findOrFail()`, and `get()`;
+- explain why a bound parameter can never become SQL, rather than saying "PDO escapes it";
+- read the PDO attributes DALT sets and say what each one prevents;
+- diagnose a query failure from the exception type alone.
 
-By the end of this lesson, you will understand:
-- How database connections are established
-- How to execute queries safely
-- The difference between `find()`, `findOrFail()`, and `get()`
-- How parameter binding prevents SQL injection
-- Common database issues and how to fix them
+## Recommended prerequisite
 
-## Database Architecture
+Complete [Lesson 01: Request Lifecycle](../01-request-lifecycle/README.md) first — the container and the lazy `Database` registration are introduced there.
 
-### Database Drivers
+## Two drivers, not three
 
-DALT.PHP supports three database drivers:
-- **SQLite** (default) - Zero setup, file-based
-- **PostgreSQL** - Production-ready relational database
-- **MySQL** - Popular relational database
-
-Configuration: `config/database.php`
-
-### Database Connection
-
-The database connection is created during bootstrap:
+DALT supports **SQLite** and **PostgreSQL**. There is no MySQL support:
 
 ```php
-// framework/Core/bootstrap.php
-$container->bind('Core\Database', function () use ($dbConfig) {
-    return DatabaseManager::create($dbConfig['database']);
-});
+new Database(['driver' => 'mysql', ...]);
+// InvalidArgumentException: Unsupported database driver: mysql
 ```
 
-Access it anywhere:
+`Database::driver()` accepts only `sqlite` and `pgsql` and rejects everything else before a connection is attempted. SQLite is the zero-setup default for learning; PostgreSQL is what the Docker and SQL lessons from Lesson 06 onward build on.
+
+## Predict before reading the source
+
+| Call | Result |
+|---|---|
+| `$db->find()` before any `query()` | `LogicException: Run query() before fetching results.` |
+| `find()` when no row matches | `false` |
+| `findOrFail()` when no row matches | aborts with 404 |
+| `get()` when no row matches | `[]` |
+| `query('... id = :id', ['id' => '1 OR 1=1'])` | zero rows, not every row |
+| reading an integer column | PHP `int`, not `"1"` |
+
+## 1. Registration is not connection
+
+`framework/Core/bootstrap.php` registers the database as a **singleton factory**:
+
+```php
+$container->singleton(
+    Database::class,
+    fn (Container $container): Database => DatabaseManager::create(
+        $container->resolve(Config::class)->array('database.database'),
+    ),
+);
+```
+
+Nothing connects here. The closure runs the first time something resolves `Core\Database`:
+
 ```php
 $db = App::resolve(Database::class);
 ```
 
-## Database Class (`framework/Core/Database.php`)
+Because it is a singleton, every later resolution returns that same instance and reuses one connection for the request. A page that never touches the database never opens one — worth remembering when a request renders fine but "the database is down".
 
-The Database class wraps PDO for simpler usage:
+## 2. The connection is configured deliberately
 
 ```php
-class Database {
-    public $connection;  // PDO instance
-    public $statement;   // PDOStatement
-
-    public function query($query, $params = [])
-    {
-        $this->statement = $this->connection->prepare($query);
-        $this->statement->execute($params);
-        return $this;
-    }
-
-    public function find()
-    {
-        return $this->statement->fetch();
-    }
-
-    public function findOrFail()
-    {
-        $result = $this->find();
-        if (!$result) {
-            abort(404);
-        }
-        return $result;
-    }
-
-    public function get()
-    {
-        return $this->statement->fetchAll();
-    }
-}
+$this->connection = new PDO($dsn, $username, $password, [
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_STRINGIFY_FETCHES  => false,
+    PDO::ATTR_EMULATE_PREPARES   => false,
+]);
 ```
 
-## Query Methods
+Each attribute prevents a specific class of bug:
 
-### `query()` - Execute a Query
+| Attribute | Without it |
+|---|---|
+| `FETCH_ASSOC` | every row arrives duplicated under both numeric and named keys |
+| `ERRMODE_EXCEPTION` | failures return `false` silently and surface much later as "call on null" |
+| `STRINGIFY_FETCHES => false` | an `INTEGER` column arrives as `"1"`, and `===` comparisons quietly fail |
+| `EMULATE_PREPARES => false` | PDO interpolates values client-side instead of sending a real prepared statement |
+
+That last row is the important one, and section 4 returns to it.
+
+A failed connection is wrapped, so callers see a consistent type:
 
 ```php
-$db->query('SELECT * FROM posts WHERE id = :id', ['id' => 1]);
+throw new RuntimeException("Database connection failed for {$driver}.", previous: $exception);
 ```
 
-**Returns:** `$this` (for method chaining)
+The original `PDOException` is attached as `previous` — read it for the real cause, because the wrapper deliberately does not put credentials or DSN details into the message.
 
-### `find()` - Fetch One Row
+## 3. Three ways to take results
 
-```php
-$post = $db->query('SELECT * FROM posts WHERE id = :id', ['id' => 1])
-           ->find();
-
-// Result: ['id' => 1, 'title' => 'Hello', 'body' => 'World']
-// Or: false if not found
-```
-
-**Returns:** Associative array or `false`
-
-### `findOrFail()` - Fetch One Row or Abort
+`query()` prepares, executes, and returns `$this`, so fetching chains from it:
 
 ```php
-$post = $db->query('SELECT * FROM posts WHERE id = :id', ['id' => 1])
-           ->findOrFail();
+// One row, or false
+$user = $db->query('SELECT * FROM users WHERE email = :email', ['email' => $email])->find();
 
-// Result: ['id' => 1, 'title' => 'Hello', 'body' => 'World']
-// Or: Aborts with 404 if not found
-```
+// One row, or 404
+$post = $db->query('SELECT * FROM posts WHERE id = :id', ['id' => $id])->findOrFail();
 
-**Returns:** Associative array or aborts
-
-**Use when:** You expect the record to exist (e.g., showing a post)
-
-### `get()` - Fetch All Rows
-
-```php
-$posts = $db->query('SELECT * FROM posts')->get();
-
-// Result: [
-//     ['id' => 1, 'title' => 'First'],
-//     ['id' => 2, 'title' => 'Second'],
-// ]
-```
-
-**Returns:** Array of associative arrays
-
-## Query Examples
-
-### Select One Record
-
-```php
-$user = $db->query('SELECT * FROM users WHERE email = :email', [
-    'email' => 'user@example.com'
-])->find();
-
-if ($user) {
-    echo $user['email'];
-} else {
-    echo 'User not found';
-}
-```
-
-### Select All Records
-
-```php
+// Every row, or []
 $posts = $db->query('SELECT * FROM posts ORDER BY created_at DESC')->get();
-
-foreach ($posts as $post) {
-    echo $post['title'];
-}
 ```
 
-### Insert Record
+Choosing between them is a decision about *whose fault a missing row is*:
+
+- **`find()`** — absence is normal. "Is this email registered?" Handle the `false`.
+- **`findOrFail()`** — absence means the URL is wrong. Showing post 999 that does not exist is a 404, and `findOrFail()` calls `abort()`, which defaults to 404.
+- **`get()`** — an empty list is a normal answer, never an error.
+
+Fetching before querying is a programming error, not a data condition, so it throws:
 
 ```php
-$db->query('INSERT INTO posts (title, body, user_id) VALUES (:title, :body, :user_id)', [
-    'title' => 'New Post',
-    'body' => 'Content here',
-    'user_id' => 1
-]);
+$db->find();
+// LogicException: Run query() before fetching results.
 ```
 
-### Update Record
+## 4. A bound parameter cannot become SQL
+
+The usual explanation — "PDO escapes the value" — is wrong here, and the difference matters.
+
+Because `EMULATE_PREPARES` is `false`, DALT sends the SQL and the values to the database **separately**. The server parses the statement first, with `:id` as a placeholder in the parsed plan, and only then receives the value. There is no string to escape and no moment when the value could be parsed as SQL.
+
+Watch what that means concretely. This table has two rows:
 
 ```php
-$db->query('UPDATE posts SET title = :title WHERE id = :id', [
-    'title' => 'Updated Title',
-    'id' => 1
-]);
+$evil = '1 OR 1=1';
+$db->query('SELECT * FROM t WHERE id = :id', ['id' => $evil])->get();
+// 0 rows
 ```
 
-### Delete Record
+Zero, not two. The database looked for a row whose `id` equals the literal string `"1 OR 1=1"` and found none. The `OR 1=1` was never operative because it was never SQL.
 
-```php
-$db->query('DELETE FROM posts WHERE id = :id', [
-    'id' => 1
-]);
-```
-
-### Complex Query with Joins
-
-```php
-$posts = $db->query('
-    SELECT posts.*, users.email 
-    FROM posts 
-    JOIN users ON posts.user_id = users.id 
-    WHERE posts.published = :published
-    ORDER BY posts.created_at DESC
-', [
-    'published' => 1
-])->get();
-```
-
-## Parameter Binding (SQL Injection Prevention)
-
-### ❌ WRONG - SQL Injection Vulnerable
-
-```php
-// NEVER DO THIS!
-$id = $_GET['id'];
-$db->query("SELECT * FROM posts WHERE id = $id");
-
-// Attacker can inject: ?id=1 OR 1=1
-// Query becomes: SELECT * FROM posts WHERE id = 1 OR 1=1
-// Returns all posts!
-```
-
-### ✅ CORRECT - Parameter Binding
+Now the version to never write:
 
 ```php
 $id = $_GET['id'];
-$db->query('SELECT * FROM posts WHERE id = :id', [
-    'id' => $id
-]);
-
-// PDO escapes the value safely
-// Even if $id = "1 OR 1=1", it's treated as a string
+$db->query("SELECT * FROM posts WHERE id = $id");   // NEVER
 ```
 
-**Always use parameter binding for user input!**
+Here the value is concatenated into the statement *before* the database sees it, so `1 OR 1=1` genuinely becomes part of the query and returns every row.
 
-## Database Configuration
+The rule: user input belongs in the parameter array, never in the SQL string. Table and column names cannot be parameterised — if those must vary, validate them against an allowlist you wrote.
 
-### SQLite (Default)
+## 5. Configuration
 
-```php
-// config/database.php
-return [
-    'database' => [
-        'driver' => 'sqlite',
-        'database' => 'public/database/app.sqlite'
-    ]
-];
-```
-
-### PostgreSQL
+`config/database.php` reads the environment with defaults:
 
 ```php
 return [
     'database' => [
-        'driver' => 'pgsql',
-        'host' => '127.0.0.1',
-        'port' => 5432,
-        'dbname' => 'dalt_php_app',
-        'username' => 'postgres',
-        'password' => '',
-        'charset' => 'utf8'
-    ]
+        'driver'   => env('DB_DRIVER', 'sqlite'),
+        'host'     => env('DB_HOST', '127.0.0.1'),
+        'port'     => (int) env('DB_PORT', 5432),
+        'dbname'   => env('DB_NAME', 'dalt_php_app'),
+        'username' => env('DB_USERNAME', 'postgres'),
+        'password' => env('DB_PASSWORD', ''),
+        'charset'  => env('DB_CHARSET', 'utf8'),
+        'database' => env('DB_DATABASE', base_path('database/app.sqlite')),
+    ],
 ];
 ```
 
-### MySQL
+`database` is the SQLite file; the rest apply to PostgreSQL. Two behaviours are easy to miss:
 
-```php
-return [
-    'database' => [
-        'driver' => 'mysql',
-        'host' => '127.0.0.1',
-        'port' => 3306,
-        'dbname' => 'dalt_php_app',
-        'username' => 'root',
-        'password' => '',
-        'charset' => 'utf8mb4'
-    ]
-];
+- **Relative SQLite paths are resolved against the project root** by `DatabaseManager::normalizedConfig()`, so the file does not move when the working directory changes. `:memory:` and absolute paths are left alone.
+- **PostgreSQL settings are validated before use.** `host`, `dbname`, and `charset` must match a conservative character pattern and `port` must be an integer from 1 to 65535, so a malformed value fails with a clear `InvalidArgumentException` instead of producing a confusing DSN.
+
+`:memory:` is worth knowing for tests — it creates a private database that disappears when the connection closes.
+
+## 6. Migrations are plain SQL
+
+DALT migrations are `.sql` files in `database/migrations/`, applied in filename order:
+
+```sql
+-- database/migrations/001_create_users_table.sql
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
-## Migrations
-
-Migrations create database tables:
-
-```php
-// database/migrations/001_create_users_table.php
-public function up()
-{
-    $this->db->query('
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT NOT NULL UNIQUE,
-            password TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    ');
-}
-```
-
-Run migrations:
 ```bash
 php artisan migrate
 ```
 
-## Common Database Issues
+There is no PHP migration class and no `up()`/`down()` method — you write the DDL you would type into the database. The numeric prefix is what orders them, which Lesson 15 examines when the ordering is wrong.
 
-### Issue 1: Query Returns No Results
-**Cause:** Wrong SQL syntax or no matching records  
-**Debug:** Check SQL query and parameters
+## Debugging checklist
 
-### Issue 2: "Table doesn't exist"
-**Cause:** Migrations not run  
-**Fix:** Run `php artisan migrate`
+The exception type tells you the category before you read the message:
 
-### Issue 3: "Database connection failed"
-**Cause:** Wrong configuration  
-**Debug:** Check `config/database.php`
+- **`InvalidArgumentException: Unsupported database driver`** — `DB_DRIVER` is not `sqlite` or `pgsql`.
+- **`InvalidArgumentException` naming a config key** — a PostgreSQL setting failed validation; check `.env`.
+- **`RuntimeException: Database connection failed`** — the server is unreachable or credentials are wrong; read the `previous` exception.
+- **`LogicException: Run query() before fetching`** — a fetch call without a preceding `query()`.
+- **`PDOException` mentioning a table** — migrations have not run.
+- **"Cannot access array offset on bool"** — `find()` returned `false` and the result was used unchecked; use `findOrFail()` or test it.
+- **A comparison that should match but does not** — you may be comparing across types; DALT returns integers as `int`.
 
-### Issue 4: SQL Injection Vulnerability
-**Cause:** Not using parameter binding  
-**Fix:** Always use `:placeholder` syntax
+## Trace exercise
 
-### Issue 5: "Call to a member function on null"
-**Cause:** `find()` returned `false`, then accessing array key  
-**Fix:** Use `findOrFail()` or check if result exists
+Read in order and write down what each contributes:
 
-## Debugging Database Queries
+1. `config/database.php`
+2. `framework/Core/bootstrap.php` — the singleton registration
+3. `framework/Core/DatabaseManager.php` — path normalization
+4. `framework/Core/Database.php` — DSN building, attributes, fetch methods
+5. `database/migrations/001_create_users_table.sql`
 
-### Technique 1: Dump Query Result
-```php
-$result = $db->query('SELECT * FROM posts')->get();
-dd($result);
-```
+Then run:
 
-### Technique 2: Check PDO Statement
-```php
-$db->query('SELECT * FROM posts WHERE id = :id', ['id' => 1]);
-dd($db->statement);
-```
-
-### Technique 3: Verify Parameters
-```php
-$params = ['id' => $_GET['id']];
-dd($params);
-$db->query('SELECT * FROM posts WHERE id = :id', $params);
-```
-
-### Technique 4: Test Query in SQLite CLI
 ```bash
-sqlite3 public/database/app.sqlite
-sqlite> SELECT * FROM posts;
+composer test -- --filter='Database|Migration'
 ```
 
-## Best Practices
+## Checkpoint
 
-1. **Always use parameter binding** - Never concatenate user input
-2. **Use `findOrFail()` for expected records** - Automatic 404 handling
-3. **Check for `false` with `find()`** - Handle missing records gracefully
-4. **Use transactions for multiple queries** - Ensure data consistency
-5. **Index frequently queried columns** - Improve performance
+Close the source files and answer from memory:
 
-## Key Files
+1. Name the two supported drivers and the exception thrown for any other.
+2. Explain why resolving `Database` twice in one request opens one connection, and when the first one opens.
+3. Give a situation for each of `find()`, `findOrFail()`, and `get()`, justified by whose fault a missing row is.
+4. Explain why `['id' => '1 OR 1=1']` returns zero rows, without using the word "escape".
+5. State what `STRINGIFY_FETCHES => false` changes and one bug it prevents.
+6. Explain why a table name cannot be passed as a bound parameter.
 
-- **`framework/Core/Database.php`** - Query execution
-- **`framework/Core/DatabaseManager.php`** - Connection setup
-- **`config/database.php`** - Database configuration
-- **`database/migrations/`** - Table definitions
+## Challenge: Broken Database
 
-## Practice Exercise
+```bash
+php artisan challenge:start broken-database
+php artisan challenge:verify
+php artisan challenge:stop
+```
 
-1. Create a new migration for a `posts` table
-2. Insert a post using `query()`
-3. Fetch all posts using `get()`
-4. Fetch one post using `findOrFail()`
-5. Update the post
-6. Delete the post
+## Laravel bridge
 
-## Next Steps
+Compared against Laravel 13.x ([laravel.com/docs/13.x/database](https://laravel.com/docs/13.x/database), consulted 2026-08-12).
 
-- **Challenge: Broken Database** - Debug query issues
-- Apply your knowledge to real debugging scenarios
+Laravel's raw layer is the same idea:
 
-## Summary
+```php
+$users = DB::select('select * from users where active = ?', [1]);
+```
 
-The database system in DALT.PHP:
-1. **Connection** - Established during bootstrap
-2. **Query execution** - Via `query()` method with parameter binding
-3. **Result fetching** - `find()`, `findOrFail()`, or `get()`
-4. **Security** - Parameter binding prevents SQL injection
-5. **Configuration** - Supports SQLite, PostgreSQL, MySQL
+| Laravel 13.x | DALT |
+|---|---|
+| `DB::select()` returns `stdClass` objects | `get()` returns associative arrays |
+| positional `?` or named `:name` bindings | named `:name` bindings |
+| MySQL, PostgreSQL, SQLite, SQL Server, MariaDB | SQLite and PostgreSQL |
+| multiple named connections, read/write splitting, pooling | one connection per request |
+| Eloquent ORM and the query builder above raw SQL | raw SQL only |
+| `firstOrFail()` throwing `ModelNotFoundException` → 404 | `findOrFail()` calling `abort()` |
 
-Understanding the database layer is essential for building data-driven applications and debugging query issues.
+DALT stops at the raw layer on purpose. A query builder is a convenience over exactly this mechanism, and it is easier to reason about one once you have written the SQL it generates.
+
+## Next steps
+
+- **Lesson 06: Docker Basics** — running PostgreSQL alongside the app
+- **Challenge: Broken Database** — find a query that returns the wrong rows

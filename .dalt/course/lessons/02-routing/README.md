@@ -213,7 +213,14 @@ The router itself does not call `header()`, `echo`, or `exit`. Handler results b
 | string | HTML response, status 200 |
 | array | JSON response, status 200 |
 | `null` | empty response, status 200 |
-| legacy `echo` output | captured as the response body |
+| anything else | `UnexpectedValueException` |
+
+Echoed output is not another row in that table; it overrides it. `Response::fromHandler()` buffers the handler, and if anything was printed, that output becomes the body:
+
+- printed output plus a returned `Response` keeps the response's status and headers but replaces its body;
+- printed output plus any other return value produces an HTML response, discarding the return value.
+
+This is why a controller that `echo`es a debug line and returns an array sends HTML instead of JSON. Remove the stray output rather than changing the return type.
 
 `redirect('/login')` creates a redirect response. It does not terminate PHP, which allows middleware and the front controller to finish their outward path.
 
@@ -242,6 +249,8 @@ For `GET /posts/create`, inspect the order at step 3. If `/posts/{id}` appears b
 - **A controller cannot be found:** check the relative path and whether the file is below `app/Http/controllers` or an installed platform controller root.
 - **Middleware never runs:** prove that the route matched before debugging the middleware alias or class.
 - **A route works in a browser but not a form:** inspect the submitted method and any allowed `_method` override.
+- **JSON arrives as HTML:** look for output printed before the return value; buffered output replaces the normalized body.
+- **`UnexpectedValueException` from the route boundary:** the handler returned something other than `Response`, string, array, or `null`.
 
 ## Practice exercise
 
@@ -273,6 +282,16 @@ Then run:
 composer test -- --filter='Router|Request|Response'
 ```
 
+## Checkpoint
+
+Close the source files and answer these from memory. If any answer needs the code, reread that part.
+
+1. A request arrives for a URI that appears in the route table, and the response is 404. Name two different causes and the check that distinguishes them.
+2. `/posts/{id}` is registered before `/posts/create`, and `GET /posts/create` reaches the show controller. Explain why this is the router working correctly.
+3. A route pattern contains `.`, `(`, or `+`. Explain why those stay literal instead of behaving as regular-expression operators.
+4. A handler prints one debug line and returns an array. Describe the response the client receives, and why.
+5. Explain why a missing route cannot be repaired inside authentication middleware.
+
 ## Challenge: Broken Routing
 
 After this lesson, start the linked challenge:
@@ -292,4 +311,16 @@ The two bugs are route-table bugs. The matching algorithm is already doing what 
 
 ## Laravel bridge
 
-Laravel also separates route registration, matching, middleware, controller dispatch, and response sending. Its router adds named routes, route groups, constraints, model binding, resource shortcuts, and richer middleware configuration. DALT keeps only the visible core: an ordered list of method/pattern/handler entries, named string parameters, a small middleware pipeline, and one response boundary.
+Compared against Laravel 13.x ([laravel.com/docs/13.x/routing](https://laravel.com/docs/13.x/routing), consulted 2026-08-12).
+
+Laravel also separates route registration, matching, middleware, controller dispatch, and response sending. Its router adds features DALT deliberately omits:
+
+| Laravel 13.x | DALT |
+|---|---|
+| `->name('profile')` and the `route()` URL generator | no named routes; write the URI |
+| `Route::group()` prefixes and shared middleware | repeat the prefix on each route |
+| `->where('id', '[0-9]+')` parameter constraints | every placeholder matches one or more non-`/` characters |
+| implicit model binding (`function (User $user)`) | parameters arrive as strings; load the record yourself |
+| `Route::resource()` shortcuts | register each of the five methods explicitly |
+
+DALT keeps only the visible core: an ordered list of method/pattern/handler entries, named string parameters, a small middleware pipeline, and one response boundary. Each omission is a feature you can now recognize as a convenience layer over this mechanism rather than as magic.
