@@ -5,6 +5,9 @@
 <script type="application/json" id="lesson-content-data">
   <?= json_encode($content, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>
 </script>
+<script type="application/json" id="roadmap-graph-data">
+  <?= json_encode($nodes, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>
+</script>
 
 <main class="flex-1 bg-[#0f1117] text-gray-300 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px]" id="app" tabindex="-1">
   <section class="border-b border-[#1e293b] bg-[#161b22]/50 py-10">
@@ -40,7 +43,7 @@
       <nav class="rounded-xl border border-gray-800 bg-[#161b22] p-5">
         <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-200">On this roadmap</h2>
         <ul class="mt-4 space-y-2 text-sm">
-          <li><a class="block rounded-lg px-3 py-2 text-[#93DA97] hover:bg-[#93DA97]/10" href="#the-graph-at-a-glance">The graph</a></li>
+          <li><a class="block rounded-lg px-3 py-2 text-[#93DA97] hover:bg-[#93DA97]/10" href="#the-graph">Interactive graph</a></li>
           <li><a class="block rounded-lg px-3 py-2 text-gray-400 hover:bg-[#1e293b] hover:text-gray-200" href="#recommended-foundation-path">Foundation</a></li>
           <li><a class="block rounded-lg px-3 py-2 text-gray-400 hover:bg-[#1e293b] hover:text-gray-200" href="#optional-infrastructure-branches">Infrastructure branches</a></li>
           <li><a class="block rounded-lg px-3 py-2 text-gray-400 hover:bg-[#1e293b] hover:text-gray-200" href="#learning-platform-branch">Platform branch</a></li>
@@ -55,13 +58,41 @@
       </a>
     </aside>
 
-    <article class="min-w-0 rounded-xl border border-gray-800 bg-[#161b22] p-6 shadow-lg sm:p-8 lg:p-10">
-      <div class="prose prose-invert max-w-none prose-headings:scroll-mt-24 prose-headings:text-gray-100 prose-a:text-[#93DA97] prose-pre:border prose-pre:border-gray-800 prose-pre:bg-[#0d1117] prose-code:text-[#93DA97]">
-        <lesson-content>
-          <pre class="markdown-fallback"><?= htmlspecialchars($content, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></pre>
-        </lesson-content>
-      </div>
-    </article>
+    <div class="min-w-0 space-y-8">
+      <section id="the-graph" class="scroll-mt-24 rounded-xl border border-gray-800 bg-[#161b22] p-6 shadow-lg sm:p-8">
+        <h2 class="text-xl font-bold text-gray-100">The graph</h2>
+        <p class="mt-1 text-sm text-gray-500">
+          Every lesson, with its real prerequisites and practice challenge. Click a node to open the lesson itself; a
+          node unlocks once every prerequisite is verified or self-marked.
+        </p>
+        <div class="mt-6">
+          <roadmap-graph>
+            <p class="text-sm text-gray-500">Enable JavaScript to browse the roadmap as an interactive graph. The full text version is below.</p>
+          </roadmap-graph>
+        </div>
+      </section>
+
+      <article class="rounded-xl border border-gray-800 bg-[#161b22] shadow-lg">
+        <details class="group">
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-4 p-6 sm:p-8">
+            <div>
+              <h2 class="text-xl font-bold text-gray-100">Full roadmap reference</h2>
+              <p class="mt-1 text-sm text-gray-500">Every node from R00 through the learning-platform and project-ladder branches, in one document.</p>
+            </div>
+            <svg class="h-5 w-5 shrink-0 text-gray-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <div class="border-t border-gray-800 p-6 sm:p-8">
+            <div class="prose prose-invert max-w-none prose-headings:scroll-mt-24 prose-headings:text-gray-100 prose-a:text-[#93DA97] prose-pre:border prose-pre:border-gray-800 prose-pre:bg-[#0d1117] prose-code:text-[#93DA97]">
+              <lesson-content>
+                <pre class="markdown-fallback"><?= htmlspecialchars($content, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></pre>
+              </lesson-content>
+            </div>
+          </div>
+        </details>
+      </article>
+    </div>
   </div>
 </main>
 

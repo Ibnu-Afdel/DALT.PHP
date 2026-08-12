@@ -50,3 +50,6 @@ Thumbs.db
 /docs/CODE_REVIEW_WALKTHROUGH.md
 /docs/NEW_CODE_REVIEW.md
 /docs/
+
+# Local agent-notes pointer file — not meant for other contributors, see AGENTS.md itself
+/AGENTS.md
