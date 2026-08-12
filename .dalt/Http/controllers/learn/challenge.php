@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Core\App;
 use Core\ChallengeManager;
 use Core\CourseLoader;
+use Core\MarkdownRenderer;
 use Core\Request;
 
 $challengeId = App::resolve(Request::class)->route('challenge');
@@ -18,6 +19,10 @@ if (!file_exists($readmePath)) {
     abort(404);
 }
 $content = file_get_contents($readmePath);
+if ($content === false) {
+    abort(500, 'The challenge content could not be read.');
+}
+$renderedContent = (new MarkdownRenderer())->render($content);
 
 $activeChallenge = ChallengeManager::getActiveChallenge();
 
@@ -38,7 +43,7 @@ if ($relatedLesson !== null) {
 return view('learn/challenge.view.php', [
     'challengeId' => $challengeId,
     'challenge' => $challenge,
-    'content' => $content,
+    'renderedContent' => $renderedContent,
     'isActive' => $activeChallenge === $challengeId,
     'activeChallenge' => $activeChallenge,
     'previousChallenge' => $previousChallenge,

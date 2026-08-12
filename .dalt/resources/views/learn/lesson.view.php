@@ -1,11 +1,6 @@
 <?php require base_path('.dalt/resources/views/layouts/head.php') ?>
 <?php require base_path('.dalt/resources/views/layouts/learn-nav.php') ?>
 
-<!-- Lesson content remains progressively enhanced by Vue until Phase 03 moves Markdown rendering server-side. -->
-<script type="application/json" id="lesson-content-data">
-  <?= json_encode($content, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>
-</script>
-
 <main class="min-h-[calc(100vh-8rem)] bg-[#0a0d12] text-gray-300" id="app" tabindex="-1">
   <article class="mx-auto max-w-3xl px-5 py-10 sm:px-6 sm:py-16">
     <a href="/learn/resources" class="inline-flex items-center text-sm font-medium text-gray-500 transition-colors hover:text-[#93DA97]">
@@ -39,9 +34,7 @@
 
     <div class="py-12">
       <div class="prose prose-invert max-w-none prose-headings:scroll-mt-24 prose-headings:text-gray-100 prose-headings:tracking-tight prose-p:text-gray-400 prose-p:leading-8 prose-a:font-medium prose-a:text-[#93DA97] prose-a:no-underline hover:prose-a:text-[#b5edb8] prose-pre:rounded-xl prose-pre:border prose-pre:border-[#1e293b] prose-pre:bg-[#080b0f] prose-code:text-[#d9e3ed]">
-        <lesson-content>
-          <pre class="markdown-fallback"><?= htmlspecialchars($content, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></pre>
-        </lesson-content>
+        <?= $renderedContent ?>
       </div>
     </div>
 

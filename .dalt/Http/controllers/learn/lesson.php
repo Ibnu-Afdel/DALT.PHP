@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Core\App;
 use Core\CourseLoader;
+use Core\MarkdownRenderer;
 use Core\Request;
 use Core\ProgressManager;
 
@@ -19,6 +20,10 @@ if (!file_exists($readmePath)) {
     abort(404);
 }
 $content = file_get_contents($readmePath);
+if ($content === false) {
+    abort(500, 'The lesson content could not be read.');
+}
+$renderedContent = (new MarkdownRenderer())->render($content);
 
 // Find related challenge(s) - first one that links to this lesson
 $relatedChallenges = array_values(CourseLoader::getChallengesForLesson($lessonId));
@@ -43,7 +48,7 @@ $verifiedLessonIds = ProgressManager::verifiedLessonIds($allChallenges);
 return view('learn/lesson.view.php', [
     'lessonId' => $lessonId,
     'lesson' => $lesson,
-    'content' => $content,
+    'renderedContent' => $renderedContent,
     'relatedChallengeId' => $relatedChallengeId,
     'relatedChallenges' => $relatedChallenges,
     'isCompleted' => isset($completedLessonIds[$lessonId]),

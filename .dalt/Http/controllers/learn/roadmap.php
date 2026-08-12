@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Core\ChallengeManager;
 use Core\CourseLoader;
+use Core\MarkdownRenderer;
 
 $roadmapPath = base_path('documentation/competency-roadmap.md');
 
@@ -19,6 +20,7 @@ if ($content === false) {
 
 // The page header owns the title; keep the Markdown body as the canonical content.
 $content = preg_replace('/\A# DALT\.PHP Competency Roadmap\R+/', '', $content, 1) ?? $content;
+$renderedContent = (new MarkdownRenderer())->render($content);
 
 // The graph is a visualization over the lessons themselves — the same prerequisite
 // data and IDs CourseLoader already validates — rather than a separately authored
@@ -43,6 +45,6 @@ $nodes = array_map(static function (array $lesson) use ($passedChallenges): arra
 }, $lessons);
 
 return view('learn/roadmap.view.php', [
-    'content' => $content,
+    'renderedContent' => $renderedContent,
     'nodes' => $nodes,
 ]);

@@ -1,11 +1,6 @@
 <?php require base_path('.dalt/resources/views/layouts/head.php') ?>
 <?php require base_path('.dalt/resources/views/layouts/learn-nav.php') ?>
 
-<!-- Challenge Content Data (outside Vue app) -->
-<script type="application/json" id="challenge-content-data">
-  <?= json_encode($content, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>
-</script>
-
 <main class="flex-1 bg-[#0f1117] text-gray-300 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px]" id="app" tabindex="-1">
   <!-- Header -->
   <section class="border-b border-[#1e293b] bg-[#161b22]/50 py-8">
@@ -60,9 +55,7 @@
       <div class="lg:col-span-2 space-y-6">
         <!-- Challenge Description -->
         <div class="bg-[#161b22] rounded-xl shadow-lg border border-gray-800 p-8 prose prose-invert prose-pre:bg-[#0d1117] prose-pre:border prose-pre:border-gray-800 max-w-none">
-          <challenge-content>
-            <pre class="markdown-fallback"><?= htmlspecialchars($content, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></pre>
-          </challenge-content>
+          <?= $renderedContent ?>
         </div>
 
         <!-- Verification Section -->

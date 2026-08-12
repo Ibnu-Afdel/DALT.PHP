@@ -1,10 +1,6 @@
 <?php require base_path('.dalt/resources/views/layouts/head.php') ?>
 <?php require base_path('.dalt/resources/views/layouts/learn-nav.php') ?>
 
-<!-- Roadmap Content Data (outside Vue app) -->
-<script type="application/json" id="lesson-content-data">
-  <?= json_encode($content, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>
-</script>
 <script type="application/json" id="roadmap-graph-data">
   <?= json_encode($nodes, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?>
 </script>
@@ -44,9 +40,7 @@
           </summary>
           <div class="border-t border-gray-800 p-6 sm:p-8">
             <div class="prose prose-invert max-w-none prose-headings:scroll-mt-24 prose-headings:text-gray-100 prose-a:text-[#93DA97] prose-pre:border prose-pre:border-gray-800 prose-pre:bg-[#0d1117] prose-code:text-[#93DA97]">
-              <lesson-content>
-                <pre class="markdown-fallback"><?= htmlspecialchars($content, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></pre>
-              </lesson-content>
+              <?= $renderedContent ?>
             </div>
           </div>
         </details>

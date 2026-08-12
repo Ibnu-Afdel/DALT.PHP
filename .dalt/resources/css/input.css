@@ -71,12 +71,79 @@
   transform: translateY(0);
 }
 
-.markdown-fallback {
+.prose pre {
   max-width: 100%;
   overflow-x: auto;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font: inherit;
+  white-space: pre;
+}
+
+.prose pre code.hljs {
+  display: block;
+  min-width: max-content;
+  color: #d9e3ed;
+  background: transparent;
+}
+
+.prose .hljs-keyword,
+.prose .hljs-selector-tag,
+.prose .hljs-literal {
+  color: #c4a7e7;
+}
+
+.prose .hljs-string,
+.prose .hljs-attr,
+.prose .hljs-title {
+  color: #93da97;
+}
+
+.prose .hljs-comment,
+.prose .hljs-meta {
+  color: #8b98a9;
+}
+
+.prose .markdown-alert {
+  margin-block: 1.5rem;
+  border: 1px solid color-mix(in srgb, var(--info) 45%, transparent);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--info) 10%, transparent);
+  padding: 1rem 1.125rem;
+  color: #d9e3ed;
+}
+
+.prose .markdown-alert > :first-child {
+  margin-top: 0;
+}
+
+.prose .markdown-alert > :last-child {
+  margin-bottom: 0;
+}
+
+.prose .markdown-alert-tip {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.prose .markdown-alert-warning,
+.prose .markdown-alert-caution {
+  border-color: color-mix(in srgb, var(--warning) 50%, transparent);
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+}
+
+.prose .markdown-alert-important {
+  border-color: color-mix(in srgb, #c4a7e7 45%, transparent);
+  background: color-mix(in srgb, #c4a7e7 10%, transparent);
+}
+
+.prose details {
+  border: 1px solid #334155;
+  border-radius: 0.75rem;
+  padding: 0.875rem 1rem;
+}
+
+.prose summary {
+  cursor: pointer;
+  color: #d9e3ed;
+  font-weight: 600;
 }
 
 @media (prefers-reduced-motion: reduce) {

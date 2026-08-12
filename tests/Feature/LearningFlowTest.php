@@ -117,12 +117,15 @@ test('learning pages expose navigation state prerequisites and no-script content
         ->and($roadmap->body)->toContain('Roadmap')
         ->and($lesson->statusCode)->toBe(200)
         ->and($lesson->body)->toContain('Recommended prerequisites')
-        ->and($lesson->body)->toContain('markdown-fallback')
-        ->and($lesson->body)->toContain('##')
+        ->and($lesson->body)->toContain('<h2>')
+        ->and($lesson->body)->toContain('language-php')
+        ->and($lesson->body)->not->toContain('lesson-content-data')
+        ->and($lesson->body)->not->toContain('markdown-fallback')
         ->and($challenge->statusCode)->toBe(200)
         ->and($challenge->body)->toContain('Browser verification needs JavaScript')
         ->and($challenge->body)->toContain('php artisan challenge:verify')
-        ->and($challenge->body)->toContain('markdown-fallback')
+        ->and($challenge->body)->toContain('<h2>What This Challenge Is</h2>')
+        ->and($challenge->body)->not->toContain('challenge-content-data')
         ->and($challenge->body)->toContain('meta name="csrf-token"');
 });
 
