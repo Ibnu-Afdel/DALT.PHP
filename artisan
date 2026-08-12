@@ -123,7 +123,9 @@ if (count($arguments) < 2 || $arguments[1] === 'help' || $arguments[1] === '--he
     echo "  verify <challenge>      Verify a challenge (legacy, specify by name)\n";
     echo "\nChallenges (use challenge:* for the full workflow):\n";
     echo "  challenge:list          List all available challenges\n";
-    echo "  challenge:start <name>  Load broken files for a challenge into your app\n";
+    echo "  challenge:start <name> [--force]\n";
+    echo "                          Load broken files for a challenge into your app\n";
+    echo "                          Requires confirmation; --force skips the prompt\n";
     echo "  challenge:verify        Verify your fix (checks active challenge)\n";
     echo "  challenge:reset         Reset to buggy baseline (fresh start)\n";
     echo "  challenge:stop          Stop challenge and restore clean app\n";
@@ -503,14 +505,14 @@ SQL;
             echo "Run php artisan challenge:list to see available challenges.\n";
             exit(1);
         }
-        $active = Core\ChallengeManager::getActiveChallenge();
-        if ($active !== null || file_exists(base_path('routes/routes.php'))) {
+        // Starting always replaces tracked skeleton files, so the prompt is
+        // unconditional. fgets() returns false at EOF, which a non-interactive
+        // caller always hits; treat that as a decline rather than a fatal.
+        if (!in_array('--force', array_slice($arguments, 3), true)) {
             echo "\n⚠️  This will overwrite files in framework/, routes/, app/Http/controllers/.\n";
             echo "Continue? [y/N]: ";
-            $handle = fopen('php://stdin', 'r');
-            $line = trim(fgets($handle));
-            fclose($handle);
-            if (strtolower($line) !== 'y' && strtolower($line) !== 'yes') {
+            $confirmation = fgets(STDIN);
+            if (!is_string($confirmation) || !in_array(strtolower(trim($confirmation)), ['y', 'yes'], true)) {
                 echo "Aborted.\n";
                 exit(0);
             }
