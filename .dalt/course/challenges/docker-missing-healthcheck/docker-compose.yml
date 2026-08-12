@@ -3,14 +3,12 @@ services:
     build: .
     ports:
       - "8080:80"
-    # BUG: depends_on array syntax does not wait for health
     depends_on:
       - db
 
   db:
     image: postgres:16-alpine
-    # BUG: No healthcheck block defined
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: supersecret
-      POSTGRES_DB: dalt
+      POSTGRES_DB: dalt_php_app

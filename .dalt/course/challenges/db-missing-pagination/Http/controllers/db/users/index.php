@@ -4,9 +4,6 @@ $db = \Core\App::resolve(\Core\Database::class);
 
 // No pagination — returns every user in the table.
 // On a large dataset this exhausts memory and response time.
-$users = $db->query(
+return $db->query(
     'SELECT id, name, email, created_at FROM users ORDER BY created_at DESC'
 )->get();
-
-header('Content-Type: application/json');
-echo json_encode($users);

@@ -29,6 +29,13 @@ return [
         'hint' => 'Include pdo_pgsql in your docker-php-ext-install command — it\'s the PostgreSQL driver for PDO',
     ],
 
+    'installs_postgres_client_headers' => [
+        'type' => 'file_contains',
+        'file' => 'Dockerfile',
+        'search' => 'postgresql-dev',
+        'hint' => 'docker-php-ext-install compiles pdo_pgsql against libpq-fe.h, which the Alpine PHP image does not ship. Add postgresql-dev with apk in the same RUN, before the helper runs.',
+    ],
+
     'has_cmd' => [
         'type' => 'file_contains',
         'file' => 'Dockerfile',

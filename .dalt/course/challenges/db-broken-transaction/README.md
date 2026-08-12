@@ -1,109 +1,92 @@
 # Challenge: Broken Transaction
 
-## Difficulty: Medium — 2 bugs in 1 file
+**Difficulty:** Medium · **Bugs:** 1 · **Lesson:** [10 — PostgreSQL Core](../../lessons/10-postgres-intermediate/README.md)
 
-## What This Challenge Is
-
-The `POST /db/transfer` endpoint moves credits from one user to another. It correctly opens a transaction with `beginTransaction()` and commits on success, but there is no `try/catch` and no `rollBack()`. If the second `UPDATE` fails (invalid user id, insufficient credits, database error), the first UPDATE is left permanently committed — credits were deducted but never arrived.
-
-Load the broken file:
+## Start
 
 ```bash
 php artisan challenge:start db-broken-transaction
+php artisan migrate
+php artisan serve
 ```
 
-This adds:
-- `app/Http/controllers/db/transfer.php` — `POST /db/transfer`
+`php artisan challenge:stop` restores everything when you are done.
 
-## The Two Bugs
+## Observe the symptom first
 
-### Bug 1 — No try/catch around the transaction body
+`POST /db/transfer` moves credits between two users. It opens a transaction and commits on success, so the happy path works.
 
-```php
-// BROKEN — if either UPDATE throws, the exception propagates uncaught
-// and the transaction is left open with partial state
-$pdo->beginTransaction();
+Now make the second `UPDATE` fail — send a `to_id` that does not exist, or an amount that violates a constraint:
 
-$db->query(
-    'UPDATE users SET credits = credits - :amount WHERE id = :id',
-    ['amount' => $amount, 'id' => $fromId]
-);
-
-$db->query(
-    'UPDATE users SET credits = credits + :amount WHERE id = :id',
-    ['amount' => $amount, 'id' => $toId]
-);
-
-$pdo->commit();
+```bash
+curl -i -X POST http://localhost:8000/db/transfer \
+  -d "from_id=1&to_id=999999&amount=50"
 ```
 
-**Fix:** Wrap everything between `beginTransaction()` and `commit()` in a `try` block.
+You get an uncaught exception and a 500. Then check the balances:
 
-### Bug 2 — No rollBack() in the error path
-
-Without a `catch` block that calls `$pdo->rollBack()`, a failed second query leaves the first update committed. The sender's credits are gone, but the receiver never got them.
-
-```php
-// CORRECT
-try {
-    $pdo->beginTransaction();
-
-    $db->query(
-        'UPDATE users SET credits = credits - :amount WHERE id = :id',
-        ['amount' => $amount, 'id' => $fromId]
-    );
-
-    $db->query(
-        'UPDATE users SET credits = credits + :amount WHERE id = :id',
-        ['amount' => $amount, 'id' => $toId]
-    );
-
-    $pdo->commit();
-
-    header('Content-Type: application/json');
-    echo json_encode(['success' => true]);
-} catch (\Exception $e) {
-    $pdo->rollBack();
-
-    http_response_code(500);
-    header('Content-Type: application/json');
-    echo json_encode(['error' => 'Transfer failed']);
-}
+```bash
+docker compose exec db psql -U postgres -d dalt_php_app -c "SELECT id, credits FROM users ORDER BY id;"
 ```
 
-The `catch` block calls `$pdo->rollBack()`. This undoes the first UPDATE as if it never happened — both accounts stay consistent.
+**The money is still correct.** That is worth sitting with before you read on.
 
-## File to Edit
+## Why the obvious explanation is wrong
 
-- `app/Http/controllers/db/transfer.php`
+The usual story is "the first UPDATE was committed and the credits vanished". That is what happens with **no transaction at all**, where every statement auto-commits — the case Lesson 10 shows.
 
-## Verify Your Solution
+It is not what happens here, because `beginTransaction()` was called. Nothing between it and `commit()` is durable, and when the request dies the connection closes with the transaction still open, so the driver discards it. Verify it yourself: the balances are unchanged.
+
+So if the data is safe, what is actually wrong?
+
+## Hints
+
+<details>
+<summary>Hint 1 — what you are really fixing</summary>
+
+Three things, none of which is data loss in this particular request:
+
+1. The client gets an uncaught exception instead of a controlled error response.
+2. The transaction stays open until the connection tears down, holding row locks that block other writers for longer than necessary.
+3. The code depends on cleanup you did not write. Implicit rollback-at-teardown is driver behavior, not a guarantee you control — and it disappears the moment the connection is persistent or pooled, or the moment anything catches the error and keeps running on a poisoned transaction.
+</details>
+
+<details>
+<summary>Hint 2 — the shape</summary>
+
+Everything between `beginTransaction()` and `commit()` belongs inside a `try`. The `catch` undoes the work explicitly and returns a real response.
+</details>
+
+<details>
+<summary>Hint 3 — one trap in the catch</summary>
+
+`rollBack()` throws `PDOException: There is no active transaction` when none is open — which is exactly the state you are in if `beginTransaction()` was what failed. Guard it, or your error handler throws a second exception that hides the first.
+
+Catch `\Throwable` rather than `\Exception` so a `TypeError` in the block is handled too.
+</details>
+
+## Success criteria
+
+- A successful transfer still returns success and moves the credits.
+- A failing transfer returns a controlled error response, not an uncaught exception.
+- The rollback is explicit, and guarded so it cannot throw on its own.
+- Balances are consistent after a failure.
+
+## Verify
 
 ```bash
 php artisan challenge:verify
 ```
 
-The verifier checks:
-- `beginTransaction` is present (keep it)
-- `commit` is present (keep it)
-- `rollBack` is present (add it)
-- `catch` is present (add the try/catch)
+Then confirm the behavior yourself — the checks are a completion signal, not proof.
 
-## Testing Manually
-
-With `php artisan serve` running:
+## Finish
 
 ```bash
-# Transfer 10 credits from user 1 to user 2
-curl -X POST http://localhost:8000/db/transfer \
-  -d "from_id=1&to_id=2&amount=10"
+php artisan challenge:stop
 ```
 
-To test the error path, send an invalid `to_id` (one that doesn't exist) — the second UPDATE should fail, and you should see the error JSON response with no net change to user 1's balance.
+## Related
 
-## Hints
-
-- `$pdo->rollBack()` undoes everything since `$pdo->beginTransaction()` — both UPDATEs vanish as if neither ran
-- The `catch` block must call `rollBack()` before sending the error response — order matters
-- `beginTransaction()` and `commit()` must stay in the code — they're not the bugs
-- Without `rollBack()` in `catch`, an open failed transaction may leave your connection in an error state for subsequent queries
+- **Lesson 10: PostgreSQL Core** — read this first
+- **Next challenge:** db-broken-join

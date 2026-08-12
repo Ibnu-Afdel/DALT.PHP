@@ -1,2 +1,2 @@
--- BUG: RLS is not enabled on the posts table
--- BUG: No policy exists to isolate tenants
+-- Row-level security for the posts table.
+-- Currently empty: isolation is being done in PHP instead of by the database.

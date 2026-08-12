@@ -1,12 +1,12 @@
 <?php
 
+use Core\Response;
+
 $db = \Core\App::resolve(\Core\Database::class);
 
 // Pretend we got the user from the session
 $user = ['id' => 1];
 
-// BUG: The metadata column is missing from the INSERT statement
-// BUG: The :metadata parameter is not passed
 $db->query(
     'INSERT INTO posts (title, body, user_id) VALUES (:title, :body, :user_id)',
     [
@@ -16,6 +16,4 @@ $db->query(
     ]
 );
 
-header('Content-Type: application/json');
-http_response_code(201);
-echo json_encode(['success' => true]);
+return Response::json(['success' => true], 201);

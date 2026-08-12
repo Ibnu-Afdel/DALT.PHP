@@ -1,4 +1,3 @@
--- BUG: this first migration contains the posts table, which depends on users.
 CREATE TABLE IF NOT EXISTS posts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,

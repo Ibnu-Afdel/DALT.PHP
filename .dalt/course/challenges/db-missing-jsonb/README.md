@@ -1,60 +1,104 @@
-# Challenge: db-missing-jsonb
+# Challenge: Missing JSONB Metadata
 
-## The Problem
+**Difficulty:** Easy · **Bugs:** 2 · **Lesson:** [13 — PostgreSQL Advanced](../../lessons/13-postgres-advanced/README.md)
 
-The `POST /posts` endpoint accepts a `metadata` JSON field in the request body. However, the query that inserts the post ignores it, and the query that fetches the posts doesn't return it.
+## Prerequisites
 
-The `posts` table already has a `metadata JSONB` column. Your job is to wire it up in the controller so the data is saved and returned.
+This challenge runs against **PostgreSQL** and expects the `metadata` column you add during the Lesson 13 hands-on. Nothing here creates it, because `JSONB` has no SQLite equivalent and a migration for it would break `php artisan migrate` on the default driver.
 
-## What You Need to Fix
+Confirm it exists first:
 
-Load this challenge:
+```bash
+docker compose exec db psql -U postgres -d dalt_php_app -c "\d posts"
+```
+
+If `metadata` is missing, add it:
+
+```sql
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS metadata JSONB;
+CREATE INDEX IF NOT EXISTS idx_posts_metadata ON posts USING GIN(metadata);
+```
+
+## Start
 
 ```bash
 php artisan challenge:start db-missing-jsonb
+php artisan serve
 ```
 
-Three files are copied into your project:
+`php artisan challenge:stop` restores everything when you are done.
 
-- `Http/controllers/posts/store.php` — inserts a post
-- `Http/controllers/posts/index.php` — lists posts
-- `routes/routes.php` — registers the endpoints
+## Observe the symptom first
 
-Open `Http/controllers/posts/store.php`. The query looks like this:
+Create a post with metadata attached:
 
-```php
-$db->query(
-    'INSERT INTO posts (title, body, user_id) VALUES (:title, :body, :user_id)',
-    [
-        'title'   => $_POST['title'] ?? '',
-        'body'    => $_POST['body'] ?? '',
-        'user_id' => $user['id'],
-    ]
-);
+```bash
+curl -s -X POST http://localhost:8000/posts \
+  -d 'title=Hello&body=World&metadata={"tags":["docker"],"featured":true}'
 ```
 
-Open `Http/controllers/posts/index.php`. The query looks like this:
+It reports success. Now read the posts back:
 
-```php
-$posts = $db->query(
-    'SELECT id, title, created_at FROM posts ORDER BY created_at DESC'
-)->get();
+```bash
+curl -s http://localhost:8000/posts
 ```
 
-## What You Must Do
+The post is there. The metadata is not. Check the database directly:
 
-1. **Update the INSERT query**: Add the `metadata` column to the `INSERT INTO` statement and pass the `:metadata` parameter.
-2. **Update the parameter array**: Pass `$_POST['metadata'] ?? null` to the `:metadata` parameter in the `$db->query` call in `store.php`.
-3. **Update the SELECT query**: Add the `metadata` column to the `SELECT` statement in `index.php`.
+```bash
+docker compose exec db psql -U postgres -d dalt_php_app -c "SELECT id, title, metadata FROM posts;"
+```
+
+That last result tells you which of the two controllers is at fault — and whether it is one problem or two.
 
 ## Hints
 
-- `INSERT INTO posts (title, body, user_id, metadata) VALUES (:title, :body, :user_id, :metadata)`
-- The value for `:metadata` can be `null` if the user didn't provide it, or the raw JSON string from `$_POST['metadata']`.
-- In `index.php`, just add `metadata` to the list of columns selected.
+<details>
+<summary>Hint 1 — narrowing it down</summary>
+
+The column is `NULL` in the database, not merely absent from the response. That means the write lost the data, so fixing the read alone will not help. Check whether the read would have shown it even if the data were there.
+</details>
+
+<details>
+<summary>Hint 2 — the write</summary>
+
+Look at the `INSERT` in `store.php`. A bound parameter only reaches the database if it appears in **both** the column list and the parameter array. Compare the columns named in the statement with the keys passed alongside it.
+</details>
+
+<details>
+<summary>Hint 3 — the read</summary>
+
+`index.php` selects an explicit column list rather than `*`. A column you never asked for cannot appear in the result.
+</details>
+
+<details>
+<summary>Hint 4 — the type</summary>
+
+`JSONB` accepts a JSON string and parses it on the way in. A request that omits metadata should store `NULL`, not the string `"null"` and not an empty string — Postgres will reject invalid JSON outright.
+</details>
+
+## Success criteria
+
+- Posting with a `metadata` object stores it, and `psql` shows real JSONB, not `NULL`.
+- `GET /posts` returns the metadata alongside each post.
+- Posting without metadata still succeeds and stores `NULL`.
+- The value is passed as a bound parameter.
 
 ## Verify
 
 ```bash
 php artisan challenge:verify
 ```
+
+Then confirm the round trip yourself with the two `curl` commands above.
+
+## Finish
+
+```bash
+php artisan challenge:stop
+```
+
+## Related
+
+- **Lesson 13: PostgreSQL Advanced** — read this first
+- **Next:** Lesson 14 — Docker Production Patterns

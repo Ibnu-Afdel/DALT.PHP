@@ -1,7 +1,7 @@
 FROM php:8.2-fpm-alpine
 
 WORKDIR /var/www/html
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl postgresql-dev
 RUN docker-php-ext-install pdo pdo_pgsql
 
 # Composer installed directly in final image (bad practice)

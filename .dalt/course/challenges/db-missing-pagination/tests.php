@@ -1,45 +1,47 @@
 <?php
 
 /**
- * Missing Pagination Challenge — Test Specification
+ * Static checks for the missing pagination on GET /db/users.
  *
- * Verifies that the users list endpoint uses LIMIT/OFFSET
- * with named parameters and returns a JSON response.
+ * These deliberately do not require json_encode(): a controller returns its
+ * data and the route boundary normalizes it (Lesson 02, Lesson 11). Requiring
+ * the printed form would reject the correct solution.
+ * Runtime assertions are pending the challenge-verifier work (DALT-0062).
  */
 
 return [
-    'uses_limit' => [
-        'type'   => 'file_contains',
-        'file'   => 'Http/controllers/db/users/index.php',
+    'query_limits_rows' => [
+        'type' => 'file_contains',
+        'file' => 'Http/controllers/db/users/index.php',
         'search' => 'LIMIT',
-        'hint'   => 'Add LIMIT to the SQL query — use LIMIT :limit and pass the value in the params array',
+        'hint' => 'Add a LIMIT clause so the endpoint cannot return the whole table.',
     ],
 
-    'uses_offset' => [
-        'type'   => 'file_contains',
-        'file'   => 'Http/controllers/db/users/index.php',
+    'query_skips_earlier_pages' => [
+        'type' => 'file_contains',
+        'file' => 'Http/controllers/db/users/index.php',
         'search' => 'OFFSET',
-        'hint'   => 'Add OFFSET to the SQL query — use OFFSET :offset and calculate it as ($page - 1) * $limit',
+        'hint' => 'Add an OFFSET clause so later pages skip the rows already returned.',
     ],
 
-    'uses_limit_param' => [
-        'type'   => 'file_contains',
-        'file'   => 'Http/controllers/db/users/index.php',
+    'limit_is_bound' => [
+        'type' => 'file_contains',
+        'file' => 'Http/controllers/db/users/index.php',
         'search' => ':limit',
-        'hint'   => 'Use :limit as a named parameter instead of putting the number directly in the SQL string',
+        'hint' => 'Bind the limit as a named parameter rather than concatenating it into the SQL.',
     ],
 
-    'uses_offset_param' => [
-        'type'   => 'file_contains',
-        'file'   => 'Http/controllers/db/users/index.php',
+    'offset_is_bound' => [
+        'type' => 'file_contains',
+        'file' => 'Http/controllers/db/users/index.php',
         'search' => ':offset',
-        'hint'   => 'Use :offset as a named parameter instead of putting the number directly in the SQL string',
+        'hint' => 'Bind the offset as a named parameter rather than concatenating it into the SQL.',
     ],
 
-    'uses_json_encode' => [
-        'type'   => 'file_contains',
-        'file'   => 'Http/controllers/db/users/index.php',
-        'search' => 'json_encode',
-        'hint'   => 'Return the response as JSON using json_encode — wrap data, page, and limit in an array',
+    'response_is_enveloped' => [
+        'type' => 'file_contains',
+        'file' => 'Http/controllers/db/users/index.php',
+        'search' => "'data'",
+        'hint' => "Return {'data': [...], 'page': ..., 'limit': ...} so the client can tell which page it received.",
     ],
 ];

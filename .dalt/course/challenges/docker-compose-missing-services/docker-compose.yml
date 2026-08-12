@@ -5,15 +5,17 @@ services:
       - .:/var/www/html
     env_file:
       - .env
-    # Once you add the database service below, configure the app to start after it.
+    # TODO: once the database service exists, make the app start after it.
 
-  # Add the database service here.
+  # TODO: add the database service.
   # Use the official Postgres 16 image on Alpine Linux.
   # Load credentials via env_file and persist data with the named volume declared below.
 
-  # Add the web server service here.
+  # TODO: add the web server service.
   # Use the official Nginx image on Alpine Linux.
   # Mount the nginx config from ./nginx/default.conf into the container.
+  # Mount the application code too — nginx serves static files from its own
+  # filesystem, so without it your CSS and JS will 404 even though pages render.
   # Expose the container's HTTP port to your host machine (see the lesson for the port number).
 
 volumes:

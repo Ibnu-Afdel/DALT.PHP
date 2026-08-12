@@ -7,9 +7,6 @@ $fromId = $_POST['from_id'] ?? null;
 $toId   = $_POST['to_id']   ?? null;
 $amount = (int)($_POST['amount'] ?? 0);
 
-// BUG: No try/catch and no rollBack.
-// If the second UPDATE fails, the first is already committed
-// and credits vanish permanently.
 $pdo->beginTransaction();
 
 $db->query(
@@ -24,5 +21,4 @@ $db->query(
 
 $pdo->commit();
 
-header('Content-Type: application/json');
-echo json_encode(['success' => true]);
+return ['success' => true];

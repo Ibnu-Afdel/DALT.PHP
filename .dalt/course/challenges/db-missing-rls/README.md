@@ -1,55 +1,104 @@
-# Challenge: db-missing-rls
+# Challenge: Missing Row-Level Security
 
-## The Problem
+**Difficulty:** Hard · **Bugs:** 2 · **Lesson:** [16 — Advanced PostgreSQL Patterns](../../lessons/16-postgres-advanced-patterns/README.md)
 
-Right now, your application isolates tenant data by manually adding `WHERE tenant_id = :id` to every query in PHP. If a developer creates a new endpoint and forgets to add that `WHERE` clause, the API will leak data from other tenants.
+## Prerequisites
 
-Row-Level Security (RLS) moves this responsibility to the database. When RLS is active, Postgres will automatically append the tenant filter to every query against the table.
+This challenge needs **PostgreSQL**, a `tenant_id` column on `posts`, and — critically — a connection that is **not** a superuser.
 
-## What You Need to Fix
+```sql
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS tenant_id INT NOT NULL DEFAULT 1;
 
-Load this challenge:
+CREATE ROLE app_user LOGIN PASSWORD 'change-me';
+GRANT SELECT, INSERT, UPDATE, DELETE ON posts TO app_user;
+```
+
+```env
+DB_USERNAME=app_user
+DB_PASSWORD=change-me
+```
+
+Seed at least two tenants so you have something to isolate:
+
+```sql
+INSERT INTO posts (tenant_id, title, body, user_id)
+VALUES (1, 'Tenant one', 'x', 1), (1, 'Also tenant one', 'x', 1), (2, 'Tenant two', 'x', 1);
+```
+
+**Do not skip the role.** Superusers and table owners bypass row-level security silently, so with the default `postgres` user every policy you write will appear to do nothing.
+
+## Start
 
 ```bash
 php artisan challenge:start db-missing-rls
+php artisan serve
 ```
 
-Three files are provided:
-- `database/migrations/003_enable_rls.sql` — Currently empty.
-- `Http/controllers/tenant/posts.php` — A controller that manually filters by `tenant_id`.
-- `routes/routes.php` — Registers the route.
+`php artisan challenge:stop` restores everything when you are done.
 
-## What You Must Do
+## Observe the current design
 
-### 1. Write the Migration
+`GET /tenant/{tenant_id}/posts` returns the right rows today. Try it for tenant 1 and tenant 2 — the data really is separated.
 
-Open `database/migrations/003_enable_rls.sql`.
+So nothing is visibly broken. The problem is *where* the separation lives: read the controller and note what is doing the filtering. Then ask what happens the day someone adds a second endpoint over the same table and forgets that line.
 
-1. Enable RLS on the `posts` table:
-   `ALTER TABLE posts ENABLE ROW LEVEL SECURITY;`
-2. Create a policy named `tenant_isolation` on the `posts` table. The policy should allow access if `tenant_id = current_setting('app.tenant_id')::INT`.
-
-### 2. Update the Controller
-
-Open `Http/controllers/tenant/posts.php`.
-
-1. Before running the `SELECT` query, execute a `$db->query()` that sets the Postgres session variable:
-   `SET app.tenant_id = :id` (pass the `$tenantId` as the parameter).
-2. Remove the `WHERE tenant_id = :id` clause from the `$posts` query entirely. The query should just be `SELECT * FROM posts ORDER BY created_at DESC`.
-
-Postgres will now automatically intercept the `SELECT * FROM posts` and filter it based on the `app.tenant_id` session variable you set in the previous query.
+That is the failure this challenge prevents: not a bug you can see, but one you cannot see yet.
 
 ## Hints
 
-- The syntax to create a policy looks like:
-  ```sql
-  CREATE POLICY tenant_isolation ON posts
-  USING (tenant_id = current_setting('app.tenant_id')::INT);
-  ```
-- Make sure to actually call `$db->query('SET app.tenant_id = :id', ['id' => $tenantId]);` in PHP before querying the posts.
+<details>
+<summary>Hint 1 — move the rule</summary>
+
+The database can enforce which rows a session may see, so that *every* query against the table is filtered whether or not the developer remembered. Two pieces are needed: switching the feature on for the table, and a rule describing what is visible.
+</details>
+
+<details>
+<summary>Hint 2 — the rule needs to know the tenant</summary>
+
+A policy cannot read PHP variables. It reads a per-session setting, which your application sets once per request before querying. Look up `current_setting(name, missing_ok)`.
+</details>
+
+<details>
+<summary>Hint 3 — setting it from PHP</summary>
+
+The obvious statement does not work:
+
+```php
+$db->query('SET app.tenant_id = :id', ['id' => $tenantId]);
+// SQLSTATE[42601]: syntax error at or near "$1"
+```
+
+`SET` is a utility statement and takes no bind parameters. Interpolating the value instead would put request data straight into SQL — in the feature meant to stop tenant data leaking. There is an ordinary *function* that does the same job and accepts parameters normally.
+</details>
+
+<details>
+<summary>Hint 4 — finishing the job</summary>
+
+Once the database enforces the rule, the hand-written `WHERE tenant_id = :id` is exactly what you delete. Removing it is the point: the endpoint should stay correct without it.
+</details>
+
+## Success criteria
+
+- `003_enable_rls.sql` enables row-level security and creates a policy driven by the session setting.
+- The controller sets the tenant with a **bound** parameter, not string interpolation.
+- The controller no longer filters by `tenant_id` in SQL.
+- Requesting tenant 1 returns only tenant 1's rows, and tenant 2 only tenant 2's.
 
 ## Verify
 
 ```bash
 php artisan challenge:verify
 ```
+
+The checks confirm the shape, not the isolation. Prove the isolation yourself — request both tenants and compare. If both return everything, check which role you are connected as before suspecting your policy.
+
+## Finish
+
+```bash
+php artisan challenge:stop
+```
+
+## Related
+
+- **Lesson 16: Advanced PostgreSQL Patterns** — read this first
+- **Next:** Lesson 17 — Observability

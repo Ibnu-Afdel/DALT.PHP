@@ -246,5 +246,83 @@ test('every shipped specification is valid and rejects its broken source fixture
     }
 
     expect($directories)->toHaveCount(20)
-        ->and($total)->toBe(85);
+        ->and($total)->toBe(91);
+});
+
+test('class contract checks load the learner class and report what it really declares', function (
+    string $body,
+    bool $expectedPass,
+    string $expectedFragment,
+) {
+    $root = verifierFixture();
+    writeVerifierFixture($root, 'vendor/autoload.php', '<?php');
+    writeVerifierFixture($root, '.dalt/course/challenges/example/framework/Core/Widget.php', $body);
+    writeVerifierTests($root, [
+        'widget_contract' => [
+            'type' => 'class_contract',
+            'file' => 'framework/Core/Widget.php',
+            'class' => 'Probe\Widget',
+            'implements' => ['Probe\WidgetContract'],
+            'methods' => ['handle'],
+            'hint' => 'Implement the contract.',
+        ],
+    ]);
+
+    try {
+        $result = (new ChallengeVerifier('.dalt/course/challenges/example', false, $root))->verify();
+
+        expect($result['status'])->toBe($expectedPass ? 'pass' : 'fail')
+            ->and($result['total'])->toBe(1)
+            ->and($result['results'][0]['message'])->toContain($expectedFragment);
+    } finally {
+        removeVerifierFixture($root);
+    }
+})->with([
+    'satisfies the contract' => [
+        "<?php\nnamespace Probe;\ninterface WidgetContract { public function handle(); }\nclass Widget implements WidgetContract { public function handle() {} }\n",
+        true,
+        'satisfies the expected contract',
+    ],
+    'implements nothing' => [
+        "<?php\nnamespace Probe;\ninterface WidgetContract { public function handle(); }\nclass Widget { public function handle() {} }\n",
+        false,
+        'does not implement',
+    ],
+    'drops a required method' => [
+        "<?php\nnamespace Probe;\ninterface WidgetContract {}\nclass Widget implements WidgetContract { public function other() {} }\n",
+        false,
+        'missing the method(s): handle',
+    ],
+    'does not parse' => [
+        "<?php\nnamespace Probe;\nclass Widget { public function handle( {}\n",
+        false,
+        'failed outright',
+    ],
+    'declares the wrong name' => [
+        "<?php\nnamespace Probe;\ninterface WidgetContract {}\nclass Gadget implements WidgetContract { public function handle() {} }\n",
+        false,
+        'does not declare',
+    ],
+]);
+
+test('class contract checks refuse targets that execute on require', function () {
+    $root = verifierFixture();
+    writeVerifierFixture($root, '.dalt/course/challenges/example/Http/controllers/posts/index.php', '<?php');
+    writeVerifierTests($root, [
+        'controller_contract' => [
+            'type' => 'class_contract',
+            'file' => 'Http/controllers/posts/index.php',
+            'class' => 'Probe\Widget',
+            'methods' => ['handle'],
+        ],
+    ]);
+
+    try {
+        $result = (new ChallengeVerifier('.dalt/course/challenges/example', false, $root))->verify();
+
+        expect($result['status'])->toBe('error')
+            ->and($result['message'])->toContain('may only inspect a framework/Core class file');
+    } finally {
+        removeVerifierFixture($root);
+    }
 });

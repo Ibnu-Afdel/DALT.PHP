@@ -12,9 +12,8 @@ services:
       - pgdata:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: postgres
-      # BUG: Plaintext password in compose file
       POSTGRES_PASSWORD: supersecret
-      POSTGRES_DB: dalt
+      POSTGRES_DB: dalt_php_app
 
 volumes:
   pgdata:

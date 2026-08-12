@@ -1,73 +1,108 @@
-# Challenge: db-broken-fts
+# Challenge: Broken Full-Text Search
 
-## The Problem
+**Difficulty:** Medium · **Bugs:** 1 · **Lesson:** [13 — PostgreSQL Advanced](../../lessons/13-postgres-advanced/README.md)
 
-The `GET /posts/search?q=term` endpoint searches posts using `ILIKE`. This works on a 10-row table in development. On a real dataset it's a disaster:
+## Prerequisites
 
-- `ILIKE '%keyword%'` does a **sequential scan** — it reads every row, every character
-- It **can't use a B-tree index** because the leading `%` prevents index lookups
-- Relevance ranking is impossible — all matches are equal
+This challenge runs against **PostgreSQL**, and it expects the schema you build during the Lesson 13 hands-on. Nothing here creates it for you, because a generated `TSVECTOR` column has no SQLite equivalent and would break `php artisan migrate` for anyone still on the default driver.
 
-The `posts` table has a `search_vector` column that Postgres maintains automatically. It's a `GENERATED ALWAYS AS` column storing a pre-computed `tsvector` of `title` and `body`. There's already a GIN index on it. Your job is to use it.
+Before starting, confirm the column and index exist:
 
-## What You Need to Fix
+```bash
+docker compose exec db psql -U postgres -d dalt_php_app -c "\d posts"
+```
 
-Load this challenge:
+You should see a `search_vector` column of type `tsvector` and an index using GIN. If they are missing, run the Lesson 13 statements that create them:
+
+```sql
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS search_vector TSVECTOR
+  GENERATED ALWAYS AS (to_tsvector('english', title || ' ' || COALESCE(body, ''))) STORED;
+
+CREATE INDEX IF NOT EXISTS idx_posts_search ON posts USING GIN(search_vector);
+```
+
+## Start
 
 ```bash
 php artisan challenge:start db-broken-fts
+php artisan serve
 ```
 
-Two files are copied into your project:
+`php artisan challenge:stop` restores everything when you are done.
 
-- `Http/controllers/posts/search.php` — uses `ILIKE` and `%` string concatenation
-- `routes/routes.php` — registers `GET /posts/search`
+## Observe the symptoms first
 
-Open `Http/controllers/posts/search.php`. The query looks like this:
+`GET /posts/search?q=...` works, in the sense that it returns rows. Three things are wrong with *how*.
 
-```php
-$posts = $db->query(
-    'SELECT id, title, created_at FROM posts WHERE title ILIKE :q ORDER BY created_at DESC',
-    ['q' => '%' . $q . '%']
-)->get();
-```
+1. Search for a word that appears in the middle of a title. Fine.
+2. Now search for a word with a different ending — `container` when the title says `containers`, or `simplify` when it says `simplifies`. Nothing comes back.
+3. Search for a common word that appears in many posts. Note the order of the results, then ask what decides it.
+4. Run the query plan:
 
-There are three problems:
-1. **`ILIKE`** — case-insensitive substring match, no index support
-2. **`%` concatenation** — necessary for ILIKE but means no index can help
-3. **No relevance ordering** — `ORDER BY created_at` ignores match quality
+   ```bash
+   docker compose exec db psql -U postgres -d dalt_php_app \
+     -c "EXPLAIN ANALYZE SELECT id FROM posts WHERE title ILIKE '%docker%';"
+   ```
 
-## What You Must Do
+   Read the first line.
 
-Replace the broken query with a full-text search using the existing `search_vector` column:
-
-```php
-$posts = $db->query(
-    "SELECT id, title, created_at,
-            ts_rank(search_vector, plainto_tsquery('english', :q)) AS relevance
-     FROM posts
-     WHERE search_vector @@ plainto_tsquery('english', :q)
-     ORDER BY relevance DESC
-     LIMIT 20",
-    ['q' => $q]
-)->get();
-```
-
-Changes to make:
-- Replace `WHERE title ILIKE :q` with `WHERE search_vector @@ plainto_tsquery('english', :q)`
-- Change `['q' => '%' . $q . '%']` to `['q' => $q]` — no `%` needed with full-text search
-- Replace `ORDER BY created_at DESC` with `ORDER BY relevance DESC`
-- Remove `ILIKE` entirely — it must not appear anywhere in the controller
+Write down what those four observations tell you before opening the controller.
 
 ## Hints
 
-- `@@` is the full-text search match operator in Postgres
-- `plainto_tsquery('english', :q)` converts plain search text into a normalized query — it handles multiple words and stemming automatically
-- `search_vector` is a generated column — Postgres already maintains it from `title || ' ' || body`; you don't need to call `to_tsvector()` in your query
-- `ts_rank(search_vector, query)` scores matches; higher is more relevant
+<details>
+<summary>Hint 1 — where to look</summary>
+
+`app/Http/controllers/posts/search.php`. The controller runs one query; everything wrong is in it. The column you need already exists on the table.
+</details>
+
+<details>
+<summary>Hint 2 — why word endings fail</summary>
+
+`ILIKE '%container%'` is substring matching on raw characters. It has no idea that `containers`, `contained`, and `container` share a root, and it will happily match the middle of an unrelated word. Postgres has a text-search type that normalizes words to their stems before comparing.
+</details>
+
+<details>
+<summary>Hint 3 — why the plan says Seq Scan</summary>
+
+A leading `%` wildcard makes a B-tree index useless, so the database reads every row. The GIN index on the table is built for a different operator than `ILIKE`.
+</details>
+
+<details>
+<summary>Hint 4 — why the ordering is arbitrary</summary>
+
+`ORDER BY created_at DESC` sorts by recency, which has nothing to do with how well a row matched. Postgres can score a match; use that score to sort.
+</details>
+
+<details>
+<summary>Hint 5 — the pieces</summary>
+
+The generated column holds a `tsvector`. Turn the user's input into a `tsquery` with `plainto_tsquery('english', :q)`, match the two with the `@@` operator, and sort by `ts_rank` of the same pair. Keep `:q` bound — a search term is still user input.
+</details>
+
+## Success criteria
+
+- Searching `container` finds a post titled with `containers`.
+- Results are ordered by relevance, not by date.
+- The query plan uses the GIN index instead of a sequential scan.
+- The search term is still passed as a bound parameter.
+- An empty `q` still returns 400.
 
 ## Verify
 
 ```bash
 php artisan challenge:verify
 ```
+
+Then confirm the behavior yourself — re-run the `EXPLAIN ANALYZE` and check the scan type changed.
+
+## Finish
+
+```bash
+php artisan challenge:stop
+```
+
+## Related
+
+- **Lesson 13: PostgreSQL Advanced** — read this first
+- **Next challenge:** db-missing-jsonb
