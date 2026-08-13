@@ -106,7 +106,7 @@ test('challenge icons come from their related lesson taxonomy', function () {
         $lesson = CourseLoader::getLesson('containers', $root);
         $challenge = CourseLoader::getChallenge('container-fix', $root, []);
 
-        expect($lesson['icon'])->toContain('<svg')
+        expect($lesson['icon'])->toBe('docker')
             ->and($challenge['icon'])->toBe($lesson['icon']);
     } finally {
         removeCourseFixture($root);

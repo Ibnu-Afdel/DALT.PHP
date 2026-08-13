@@ -44,6 +44,7 @@
 
   body {
     font-family: var(--font-body);
+    overflow-x: clip;
   }
 
   code,
@@ -70,6 +71,32 @@
 .skip-link:focus {
   transform: translateY(0);
 }
+
+/* Static learning primitives: action hierarchy and long-form reading rhythm. */
+.ui-button { display:inline-flex; min-height:2.75rem; align-items:center; justify-content:center; gap:.5rem; border-radius:.625rem; padding:.625rem 1rem; font-size:.875rem; font-weight:700; transition:background-color .15s ease,border-color .15s ease,color .15s ease; }
+.ui-button-primary { background:var(--accent); color:#0a0d12; }
+.ui-button-primary:hover { background:#b5edb8; }
+.ui-button-secondary { border:1px solid color-mix(in srgb,var(--accent) 48%,transparent); color:var(--accent); }
+.ui-button-secondary:hover { background:color-mix(in srgb,var(--accent) 10%,transparent); }
+.ui-status { display:inline-flex; align-items:center; gap:.375rem; font-size:.75rem; font-weight:650; }
+.ui-status-complete { color:var(--accent); }
+.ui-status-progress { color:var(--warning); }
+.ui-status-pending { color:#9ca3af; }
+.learn-prose { max-width:72ch; color:#c1cad5; font-size:1rem; line-height:1.8; }
+.learn-prose > :is(h2,h3) { color:#f3f4f6; letter-spacing:-.025em; }
+.learn-prose > h2 { margin-top:3.25rem; margin-bottom:1rem; font-size:1.7rem; line-height:1.25; }
+.learn-prose > h3 { margin-top:2.3rem; margin-bottom:.75rem; font-size:1.25rem; line-height:1.35; }
+.learn-prose > p { margin-block:1.15rem; }
+.learn-prose > :is(ul,ol) { margin-block:1.25rem; padding-left:1.4rem; }
+.learn-prose li { margin-block:.45rem; padding-left:.2rem; }
+.learn-prose :not(pre) > code { border:1px solid #273443; border-radius:.35rem; background:#101720; padding:.12rem .32rem; color:#d9e3ed; font-size:.88em; }
+.learn-prose pre { position:relative; min-width:0; margin-block:1.75rem; border:1px solid #263443; border-radius:.75rem; background:#080b0f; padding:1.15rem 1.25rem; }
+.learn-prose pre[data-language]::before { content:attr(data-language); display:block; margin:-.1rem 0 .8rem; color:#8492a3; font-family:var(--font-mono); font-size:.68rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+.learn-prose .code-copy { position:absolute; top:.6rem; right:.6rem; border:1px solid #334155; border-radius:.4rem; background:#11161d; padding:.25rem .45rem; color:#cbd5e1; font:600 .7rem var(--font-body); }
+.learn-prose .code-copy:hover { border-color:var(--accent); color:var(--accent); }
+.learn-prose table { display:block; max-width:100%; overflow-x:auto; border-collapse:collapse; font-size:.92rem; }
+.learn-prose :is(th,td) { border:1px solid #334155; padding:.65rem .8rem; text-align:left; }
+.learn-prose th { background:#11161d; color:#f3f4f6; }
 
 .prose pre {
   max-width: 100%;
@@ -109,6 +136,13 @@
   padding: 1rem 1.125rem;
   color: #d9e3ed;
 }
+
+.prose .markdown-alert::before { display:block; margin-bottom:.45rem; color:#cbd5e1; font-size:.75rem; font-weight:750; letter-spacing:.08em; }
+.prose .markdown-alert-note::before { content:'Note'; }
+.prose .markdown-alert-tip::before { content:'Tip'; }
+.prose .markdown-alert-important::before { content:'Important'; }
+.prose .markdown-alert-warning::before { content:'Warning'; }
+.prose .markdown-alert-caution::before { content:'Caution'; }
 
 .prose .markdown-alert > :first-child {
   margin-top: 0;

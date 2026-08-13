@@ -1,38 +1,14 @@
 import '../css/input.css'
-import { createApp } from 'vue'
+import './code-copy.js'
 
-// Auto-register all Vue components from the components directory
-const components = import.meta.glob('./components/**/*.vue', { eager: true })
+document.addEventListener('DOMContentLoaded', async () => {
+  const island = document.querySelector('[data-vue]')
+  if (!island) return
 
-// Create Vue app instance
-const app = createApp({})
-
-// Register all components globally with kebab-case names
-Object.entries(components).forEach(([path, component]) => {
-  const componentName = path
-    .split('/')
-    .pop()
-    .replace(/\.\w+$/, '')
-  
-  // Convert PascalCase to kebab-case for HTML usage
-  const kebabName = componentName
-    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-    .toLowerCase()
-  
-  app.component(kebabName, component.default || component)
+  const { createApp } = await import('vue')
+  const app = createApp({})
+  if (island.querySelector('roadmap-graph')) app.component('roadmap-graph', (await import('./components/RoadmapGraph.vue')).default)
+  if (island.querySelector('challenge-verifier')) app.component('challenge-verifier', (await import('./components/ChallengeVerifier.vue')).default)
+  if (island.querySelector('unlock-button')) app.component('unlock-button', (await import('./components/UnlockButton.vue')).default)
+  app.mount(island)
 })
-
-// Mount Vue to #app or elements with [data-vue] attribute
-document.addEventListener('DOMContentLoaded', () => {
-  // Mount to #app if it exists
-  const appElement = document.getElementById('app')
-  if (appElement) {
-    app.mount('#app')
-  } else {
-    // Fallback to data-vue elements
-    const vueElements = document.querySelectorAll('[data-vue]')
-    vueElements.forEach(element => {
-      createApp({}).mount(element)
-    })
-  }
-}) 

@@ -1,11 +1,17 @@
 {
   ".dalt/resources/js/app.js": {
-    "file": "assets/app-Bwo14LRs.js",
+    "file": "assets/app-Cpsj_qlC.js",
     "name": "app",
     "src": ".dalt/resources/js/app.js",
     "isEntry": true,
+    "dynamicImports": [
+      "node_modules/vue/dist/vue.esm-bundler.js",
+      ".dalt/resources/js/components/RoadmapGraph.vue",
+      ".dalt/resources/js/components/ChallengeVerifier.vue",
+      ".dalt/resources/js/components/UnlockButton.vue"
+    ],
     "css": [
-      "assets/app-byULxYFy.css"
+      "assets/app-DnaYpit6.css"
     ],
     "assets": [
       "assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2",
@@ -20,6 +26,33 @@
       "assets/jetbrains-mono-vietnamese-wght-normal-Bt-aOZkq.woff2",
       "assets/jetbrains-mono-latin-ext-wght-normal-DBQx-q_a.woff2",
       "assets/jetbrains-mono-latin-wght-normal-B9CIFXIH.woff2"
+    ]
+  },
+  ".dalt/resources/js/components/ChallengeVerifier.vue": {
+    "file": "assets/ChallengeVerifier-Qjvnl4qB.js",
+    "name": "ChallengeVerifier",
+    "src": ".dalt/resources/js/components/ChallengeVerifier.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "node_modules/vue/dist/vue.esm-bundler.js"
+    ]
+  },
+  ".dalt/resources/js/components/RoadmapGraph.vue": {
+    "file": "assets/RoadmapGraph-CI01HBTv.js",
+    "name": "RoadmapGraph",
+    "src": ".dalt/resources/js/components/RoadmapGraph.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "node_modules/vue/dist/vue.esm-bundler.js"
+    ]
+  },
+  ".dalt/resources/js/components/UnlockButton.vue": {
+    "file": "assets/UnlockButton-QnFuEsUm.js",
+    "name": "UnlockButton",
+    "src": ".dalt/resources/js/components/UnlockButton.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "node_modules/vue/dist/vue.esm-bundler.js"
     ]
   },
   "node_modules/@fontsource-variable/inter/files/inter-cyrillic-ext-wght-normal.woff2": {
@@ -69,5 +102,11 @@
   "node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-vietnamese-wght-normal.woff2": {
     "file": "assets/jetbrains-mono-vietnamese-wght-normal-Bt-aOZkq.woff2",
     "src": "node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-vietnamese-wght-normal.woff2"
+  },
+  "node_modules/vue/dist/vue.esm-bundler.js": {
+    "file": "assets/vue.esm-bundler-DVVsp_Xq.js",
+    "name": "vue.esm-bundler",
+    "src": "node_modules/vue/dist/vue.esm-bundler.js",
+    "isDynamicEntry": true
   }
 }

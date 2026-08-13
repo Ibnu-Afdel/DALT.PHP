@@ -66,32 +66,26 @@
       </p>
     </div>
 
-    <!-- Detail drawer -->
-    <div v-if="selected" class="fixed inset-0 z-50 flex justify-end bg-black/60" @click.self="closeNode">
-      <div
-        ref="drawer"
+    <!-- Reka Dialog supplies focus trap, Escape, overlay and scroll locking. -->
+    <DialogRoot :open="Boolean(selected)" @update:open="(open) => !open && closeNode()">
+      <DialogPortal>
+        <DialogOverlay class="fixed inset-0 z-50 bg-black/60" />
+        <DialogContent
+        v-if="selected"
         class="flex h-full w-full max-w-lg flex-col overflow-y-auto border-l border-gray-800 bg-[#161b22] p-6 shadow-2xl"
-        role="dialog"
-        aria-modal="true"
         :aria-label="`${selected.id}: ${selected.title}`"
-        tabindex="-1"
       >
         <div class="flex items-start justify-between gap-4">
           <div>
             <span class="font-mono text-xs uppercase tracking-wider text-gray-500">Lesson {{ selected.order }}</span>
             <h3 class="mt-1 text-xl font-bold text-gray-50">{{ selected.title }}</h3>
           </div>
-          <button
-            ref="closeButton"
-            type="button"
+          <DialogClose
             class="rounded-lg border border-gray-700 p-2 text-gray-400 hover:border-gray-500 hover:text-gray-200"
             aria-label="Close node details"
-            @click="closeNode"
           >
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+            <X class="h-4 w-4" aria-hidden="true" />
+          </DialogClose>
         </div>
 
         <div class="mt-2" :class="statusTextClass(selected)">
@@ -147,24 +141,21 @@
                 : 'border-gray-700 text-gray-300 hover:border-gray-500'"
               @click="toggleSelfMarked(selected.id)"
             >
-              <svg v-if="isSelfMarked(selected.id)" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-              </svg>
+              <Check v-if="isSelfMarked(selected.id)" class="h-4 w-4" aria-hidden="true" />
               {{ isSelfMarked(selected.id) ? 'Marked understood' : 'Mark as understood' }}
             </button>
             <p class="mt-2 text-[11px] text-gray-600">Self-reported — stored only in this browser, not proof like a passed challenge.</p>
           </section>
           <section v-else class="border-t border-gray-800 pt-4">
             <p class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <CircleCheck class="h-4 w-4" aria-hidden="true" />
               Verified by a passed challenge
             </p>
           </section>
         </div>
-      </div>
-    </div>
+        </DialogContent>
+      </DialogPortal>
+    </DialogRoot>
 
     <div class="sr-only" role="status" aria-live="polite">{{ announcement }}</div>
   </div>
@@ -172,6 +163,8 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { DialogClose, DialogContent, DialogOverlay, DialogPortal, DialogRoot } from 'reka-ui'
+import { Check, CircleCheck, X } from 'lucide-vue-next'
 
 const STORAGE_KEY = 'dalt.roadmap.selfMarked'
 
@@ -188,8 +181,6 @@ const error = ref('')
 const selected = ref(null)
 const selfMarked = ref(new Set())
 const announcement = ref('')
-const drawer = ref(null)
-const closeButton = ref(null)
 let lastFocused = null
 
 // Cards flow in normal document layout (flex-wrap) so the graph is bounded by the
@@ -234,11 +225,9 @@ onMounted(() => {
     }
   })
 
-  window.addEventListener('keydown', onKeydown)
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('keydown', onKeydown)
   if (resizeObserver) {
     resizeObserver.disconnect()
   } else {
@@ -329,7 +318,7 @@ const cardClass = (node) => {
   const status = nodeStatus(node)
   if (status === 'done') {
     return node.verified
-      ? 'border-emerald-500/50 bg-emerald-500/10 text-gray-100 hover:bg-emerald-500/20'
+      ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/20'
       : 'border-[#93DA97]/50 bg-[#93DA97]/10 text-gray-100 hover:bg-[#93DA97]/20'
   }
   if (status === 'available') {
@@ -407,7 +396,6 @@ const openNode = (node) => {
   if (!node) return
   lastFocused = document.activeElement
   selected.value = node
-  nextTick(() => closeButton.value?.focus())
 }
 
 const closeNode = () => {
@@ -417,9 +405,4 @@ const closeNode = () => {
   }
 }
 
-const onKeydown = (event) => {
-  if (event.key === 'Escape' && selected.value) {
-    closeNode()
-  }
-}
 </script>

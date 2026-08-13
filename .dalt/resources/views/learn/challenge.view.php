@@ -10,7 +10,7 @@
     <header class="mt-10 border-b border-[#1e293b] pb-10">
       <div class="flex items-start gap-5">
         <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border <?= $isActive ? 'border-amber-400/30 bg-amber-400/10 text-amber-300' : ($challenge['passed'] ? 'border-[#93DA97]/20 bg-[#93DA97]/10 text-[#93DA97]' : 'border-gray-700 bg-[#11161d] text-[#d9e3ed]') ?>" aria-hidden="true">
-          <span class="[&>svg]:h-6 [&>svg]:w-6"><?= $challenge['icon'] ?></span>
+          <?= \Core\Icon::render($challenge['icon']) ?>
         </div>
         <div class="min-w-0">
           <p class="font-mono text-xs text-gray-500">Challenge · <?= $challenge['bugs'] ?> bug<?= $challenge['bugs'] === 1 ? '' : 's' ?> to trace</p>
@@ -36,7 +36,7 @@
     </header>
 
     <div class="py-12">
-      <div class="prose prose-invert max-w-none prose-headings:scroll-mt-24 prose-headings:text-gray-100 prose-headings:tracking-tight prose-p:text-gray-400 prose-p:leading-8 prose-a:font-medium prose-a:text-[#93DA97] prose-a:no-underline hover:prose-a:text-[#b5edb8] prose-pre:rounded-xl prose-pre:border prose-pre:border-[#1e293b] prose-pre:bg-[#080b0f] prose-code:text-[#d9e3ed]">
+      <div class="learn-prose prose prose-invert prose-headings:scroll-mt-24 prose-a:font-medium prose-a:text-[#93DA97] prose-a:no-underline hover:prose-a:text-[#b5edb8]">
         <?= $renderedContent ?>
       </div>
     </div>
@@ -56,7 +56,7 @@
       </dl>
     </aside>
 
-    <section class="border-b border-[#1e293b] py-8">
+    <section class="border-b border-[#1e293b] py-8" data-vue>
       <challenge-verifier challenge-id="<?= htmlspecialchars($challengeId, ENT_QUOTES, 'UTF-8') ?>" lesson-title="<?= htmlspecialchars($relatedLesson['title'] ?? '', ENT_QUOTES, 'UTF-8') ?>" next-lesson-id="<?= htmlspecialchars($nextLesson['id'] ?? '', ENT_QUOTES, 'UTF-8') ?>" next-lesson-title="<?= htmlspecialchars($nextLesson['title'] ?? '', ENT_QUOTES, 'UTF-8') ?>" track-id="<?= htmlspecialchars($relatedLesson['section'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
         <noscript>
           <div class="rounded-xl border border-amber-400/40 bg-amber-400/10 p-5 text-amber-100">

@@ -20,7 +20,7 @@
           Every lesson, with its real prerequisites and practice challenge. Click a node to open the lesson itself; a
           node unlocks once every prerequisite is verified or self-marked.
         </p>
-        <div class="mt-6">
+        <div class="mt-6" data-vue>
           <roadmap-graph>
             <p class="text-sm text-gray-500">Enable JavaScript to browse the roadmap as an interactive graph. The full text version is below.</p>
           </roadmap-graph>
