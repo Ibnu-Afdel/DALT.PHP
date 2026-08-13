@@ -12,12 +12,12 @@ if ($root === '' || !is_dir($root)) {
 }
 
 define('BASE_PATH', rtrim($root, '/\\') . DIRECTORY_SEPARATOR);
-require dirname(__DIR__, 2) . '/framework/Core/functions.php';
-require dirname(__DIR__, 2) . '/.dalt/Core/ChallengeStateException.php';
-require dirname(__DIR__, 2) . '/.dalt/Core/CourseMetadataException.php';
-require dirname(__DIR__, 2) . '/.dalt/Core/CourseLoader.php';
-require dirname(__DIR__, 2) . '/.dalt/Core/ProgressManager.php';
-require dirname(__DIR__, 2) . '/.dalt/Core/ChallengeManager.php';
+require dirname(__DIR__, 3) . '/framework/Core/functions.php';
+require dirname(__DIR__, 3) . '/.dalt/Core/ChallengeStateException.php';
+require dirname(__DIR__, 3) . '/.dalt/Core/CourseMetadataException.php';
+require dirname(__DIR__, 3) . '/.dalt/Core/CourseLoader.php';
+require dirname(__DIR__, 3) . '/.dalt/Core/ProgressManager.php';
+require dirname(__DIR__, 3) . '/.dalt/Core/ChallengeManager.php';
 
 try {
     $result = match ($action) {

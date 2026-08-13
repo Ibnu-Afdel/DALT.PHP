@@ -60,15 +60,15 @@ test('release metadata is derived from vcs and both dependency locks are distrib
         ->and($validation['stdout'])->toContain('./composer.json is valid');
 });
 
-test('the committed production manifest references only present built assets', function () {
-    $buildDirectory = base_path('public/build');
+test('the committed DALT manifest references only present isolated built assets', function () {
+    $buildDirectory = base_path('.dalt/build');
     $manifest = json_decode(
         (string) file_get_contents($buildDirectory . '/.vite/manifest.json'),
         true,
         flags: JSON_THROW_ON_ERROR,
     );
 
-    expect($manifest)->toHaveKey('.dalt/resources/js/app.js');
+    expect($manifest)->toHaveKey('resources/js/app.js');
 
     foreach ($manifest as $entry) {
         expect($entry)->toHaveKey('file')

@@ -65,7 +65,7 @@ function p05ProjectFixture(): string
 function p05Manager(string $root, string $action, string $argument = ''): array
 {
     $process = proc_open(
-        [PHP_BINARY, base_path('tests/Support/run-challenge-manager.php'), $root, $action, $argument],
+        [PHP_BINARY, base_path('.dalt/tests/Support/run-challenge-manager.php'), $root, $action, $argument],
         [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
         $pipes,
         $root,

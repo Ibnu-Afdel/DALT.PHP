@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Core\HttpException;
 use Core\Container;
 use Core\Middleware\MiddlewareInterface;
+use Core\Platform;
 use Core\Request;
 use Core\Response;
 use Core\Router;
@@ -116,6 +117,13 @@ test('it dispatches controller files through the response boundary', function ()
 });
 
 test('it falls back to optional dalt controllers after checking the application root', function () {
+    if (!is_dir(base_path('.dalt'))) {
+        expect(Platform::discover(base_path())->controllerRoots())->toBe([]);
+
+        return;
+    }
+
+    Platform::discover(base_path())->boot();
     $router = new Router();
     $router->get('/learn', 'learn/index.php');
 

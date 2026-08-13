@@ -14,7 +14,7 @@ test('framework bootstrap installs configuration and keeps database lazy', funct
 
     expect($container->resolve(Config::class))->toBeInstanceOf(Config::class)
         ->and(config('app.name'))->toBe('DALT.PHP Framework')
-        ->and($container->resolve(Platform::class)->isInstalled())->toBeTrue()
+        ->and($container->resolve(Platform::class)->isInstalled())->toBe(is_dir(base_path('.dalt')))
         ->and($container->has(Database::class))->toBeTrue()
         ->and($container->resolved(Database::class))->toBeFalse();
 

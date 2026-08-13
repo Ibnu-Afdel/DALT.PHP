@@ -97,17 +97,13 @@ test('a partially removed platform fails at boot discovery with missing paths', 
     'Guided learning is incomplete; missing or invalid required path(s): .dalt/routes/routes.php, .dalt/Core, .dalt/Http/controllers, .dalt/resources/views',
 );
 
-test('composer autoload checks framework classes before optional platform fallbacks', function () {
+test('root composer autoload owns framework classes only', function () {
     $composer = json_decode(
         (string) file_get_contents(base_path('composer.json')),
         true,
         flags: JSON_THROW_ON_ERROR,
     );
 
-    expect($composer['autoload']['psr-4']['Core\\'])->toBe([
-        'framework/Core/',
-        '.dalt/Core/',
-    ])
-        ->and(class_exists(Core\Container::class))->toBeTrue()
-        ->and(class_exists(Core\CourseLoader::class))->toBeTrue();
+    expect($composer['autoload']['psr-4']['Core\\'])->toBe('framework/Core/')
+        ->and(class_exists(Core\Container::class))->toBeTrue();
 });

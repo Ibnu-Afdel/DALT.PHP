@@ -41,7 +41,7 @@ function writeChallengeFixture(string $root, string $relative, string $contents)
 function runChallengeManager(string $root, string $action, string $argument = ''): array
 {
     $process = proc_open(
-        [PHP_BINARY, base_path('tests/Support/run-challenge-manager.php'), $root, $action, $argument],
+        [PHP_BINARY, base_path('.dalt/tests/Support/run-challenge-manager.php'), $root, $action, $argument],
         [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
         $pipes,
         $root,
@@ -293,7 +293,7 @@ test('challenge mutations wait for the project operation lock', function () {
     }
 
     $process = proc_open(
-        [PHP_BINARY, base_path('tests/Support/run-challenge-manager.php'), $root, 'start', 'locked'],
+        [PHP_BINARY, base_path('.dalt/tests/Support/run-challenge-manager.php'), $root, 'start', 'locked'],
         [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
         $pipes,
         $root,
