@@ -1,0 +1,9 @@
+{
+  "title": "Broken Error Handling",
+  "order": 21,
+  "description": "The exception boundary ignores the real HTTP status and leaks a stack trace in production.",
+  "difficulty": "Medium",
+  "bugs": 2,
+  "lesson": "18-debugging-and-logging",
+  "color": "red"
+}

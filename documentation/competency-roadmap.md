@@ -28,51 +28,36 @@ Laravel bridge links below target Laravel 13.x documentation and the `13.x` fram
 
 ## The graph at a glance
 
+Three nodes the original blueprint proposed are explicitly out of scope, not silently missing — R00, R12, and R13. Two more were written but never became independent nodes — R05 and R08 are folded into R01 and R04. Each is called out at its former position below so the absence reads as a decision, not a hole.
+
 ```text
-R00 Repository boundaries
-  └─> R01 Request lifecycle ─> R02 Request/response messages ─> R03 Routing
-                                      └──────────────────────────────┘
-                                      R03 ─> R04 Middleware ─> R05 Container/bootstrap
-                                                               ├─> R06 Errors/debugging
-                                                               ├─> R07 Sessions/state ─> R08 Validation
-                                                               │                         └─> R09 Auth
-                                                               └─> R10 Database ─> R11 Migrations
-                                                                                         └─> R12 Views/assets
-R12 + R06 + R10 ─> R13 CLI/tooling ─> R14 Contract testing
+R01 Request lifecycle (includes bootstrapping/containers, folded from R05)
+  └─> R02 Request/response messages ─> R03 Routing
+                                              └─> R04 Middleware (includes validation, folded from R08)
+                                                    ├─> R06 Errors/debugging
+                                                    ├─> R07 Sessions/state ─> R09 Auth
+                                                    └─> R10 Database ─> R11 Migrations
+
+R06 + R10 ─> R14 Contract testing
 
 Docker branch:  DKR01 ─> DKR02 ─> DKR03 ─> DKR04 ─> DKR05
 PostgreSQL:     PG01 ─> PG02 ─> PG03 ─> PG04 ─> PG05 ─> PG06 ─> PG07
                          └───────────────────────────────┘       └─> PG07
 
-Platform branch: R05 + R07 + R12 + R14 ─> P-R01 ─> P-R02 ─> P-R03 ─> P-R04
-                                                └─> P-R05 ─> P-R06
+Platform branch: R01 + R07 + R14 ─> P-R01 ─> P-R02 ─> P-R03 ─> P-R04
+                                          └─> P-R05 ─> P-R06
+
+Out of scope (owner's call, 2026-08-13): R00 (repository boundaries and PHP execution),
+R12 (controllers, views, escaping), R13 (console entry points and project tooling).
 ```
 
 The current course metadata makes Docker Compose a prerequisite for the PostgreSQL lessons because it supplies the declared PostgreSQL environment. Conceptually, PostgreSQL begins at the database boundary after R10; a learner may use a local PostgreSQL installation instead, provided the lesson's database assumptions are satisfied.
 
 ## Recommended foundation path
 
-### R00 — Repository boundaries and PHP execution
+### R00 — Repository boundaries and PHP execution — out of scope
 
-**Competency:** Explain which files belong to the application, framework, public boundary, configuration, database, and optional `.dalt` platform, and predict what PHP loads in a new process.
-
-**Why it matters:** Framework behavior is composition. If the ownership boundary is unclear, a learner will patch the wrong layer or expose a non-public file through the web server.
-
-**Prerequisites:** None.
-
-**Read:** `composer.json`, `public/index.php`, `public/router.php`, `framework/Core/functions.php`, `documentation/installation-and-quick-start.md`, and `documentation/architecture.md`.
-
-**Trace:** Run `php artisan help`, inspect the Composer PSR-4 mappings, and follow `BASE_PATH` from `public/index.php` into `base_path()`. Predict what changes when `.dalt/` is absent; verify that `Platform::discover()` treats that as an explicit no-op.
-
-**Practice:** Request inspector project: safely display selected method, path, query, and body values without exposing the whole server environment.
-
-**Build:** Add a small route and one controller in `app/`, then identify every file that participates before the controller runs.
-
-**Test and checkpoint:** Write a test or explanation that distinguishes a static file handled by `public/router.php` from a dynamic request handled by `public/index.php`. Draw the root boundaries from memory and name the document root.
-
-**Laravel bridge:** [Installation](https://laravel.com/docs/13.x/installation), [Directory Structure](https://laravel.com/docs/13.x/structure), and Laravel's [foundation source](https://github.com/laravel/framework/tree/13.x/src/Illuminate/Foundation).
-
-**DALT boundary:** There is no production kernel, package discovery system, or web-server abstraction. The front controller and Composer mapping are intentionally visible.
+**Cut (owner's call, 2026-08-13).** PHP-language fundamentals — Composer autoloading, namespaces, `require`, superglobals, process boundaries — are not what this course teaches. The owner is relearning backend *concepts* after a period of heavy AI use, not PHP syntax, and will pick the language mechanics up in passing while working through R01 onward. The `composer.json`, `public/index.php`, and `public/router.php` files this node would have covered are already read as part of R01's trace, so nothing about the request lifecycle is actually uncovered — only a standalone "PHP execution model" competency is deliberately not built as its own checkpoint.
 
 **Next:** R01. Optional branch: DKR01.
 
@@ -82,9 +67,9 @@ The current course metadata makes Docker Compose a prerequisite for the PostgreS
 
 **Why it matters:** A route, middleware, controller, and response are stages in one request, not independent magic.
 
-**Prerequisites:** R00.
+**Prerequisites:** None.
 
-**Read:** `public/router.php`, `public/index.php`, `framework/Core/bootstrap.php`, `framework/Core/Request.php`, `framework/Core/Router.php`, `framework/Core/Response.php`; then [Lesson 01: Request Lifecycle](../.dalt/course/lessons/01-request-lifecycle/README.md).
+**Read:** `public/router.php`, `public/index.php`, `framework/Core/bootstrap.php`, `framework/Core/Request.php`, `framework/Core/Router.php`, `framework/Core/Response.php`, `framework/Core/Container.php`; then [Lesson 01: Request Lifecycle](../.dalt/course/lessons/01-request-lifecycle/README.md), which now also covers R05's bootstrapping and container competency in its §3.
 
 **Trace:** Request `/` with `GET`, then request a missing path. Predict which stage produces the 404 and whether middleware runs. Repeat with a controller that throws while `APP_DEBUG` is true and false.
 
@@ -170,29 +155,11 @@ The current course metadata makes Docker Compose a prerequisite for the PostgreS
 
 **DALT boundary:** DALT has route-local aliases only; it does not have global middleware groups, terminable middleware, middleware parameters, or the full Laravel HTTP stack.
 
-**Next:** R05, R06, and R07.
+**Next:** R06 and R07. (R05's container competency is already covered — see the note below.)
 
-### R05 — Bootstrapping and dependency containers
+### R05 — Bootstrapping and dependency containers — folded into R01
 
-**Competency:** Bind, resolve, and explain transient versus singleton dependencies, including why a service is not created until it is resolved.
-
-**Why it matters:** The container is the seam that lets routing, middleware, configuration, and database code collaborate without constructing everything manually.
-
-**Prerequisites:** R04.
-
-**Read:** `framework/Core/Container.php`, `framework/Core/App.php`, `framework/Core/Config.php`, `framework/Core/bootstrap.php`, and the bootstrap section of [Architecture](architecture.md).
-
-**Trace:** Resolve a transient twice and a singleton twice. Resolve `Database` without using it and predict whether a PDO connection exists. Type-hint `Request` and a named route parameter in a closure.
-
-**Practice:** Focused exercise: bind an interface to a class, then make an invalid binding and read the resolution error.
-
-**Build:** Mini framework extension: add one explicitly scoped service and document its lifetime with tests.
-
-**Test and checkpoint:** Interpret the container tests for binding, singleton identity, missing dependencies, and circular resolution. Explain the difference between `bind`, `singleton`, and `instance` without looking at the source.
-
-**Laravel bridge:** [Service Container](https://laravel.com/docs/13.x/container), [Service Providers](https://laravel.com/docs/13.x/providers), and the [container source](https://github.com/laravel/framework/tree/13.x/src/Illuminate/Container).
-
-**DALT boundary:** DALT has no provider lifecycle, contextual bindings, tags, scoped worker lifecycle, or facade system. Its container is intentionally small and inspectable.
+**Folded, not cut.** Unlike R00/R12/R13, this competency is genuinely taught — it now lives inside [Lesson 01: Request Lifecycle](../.dalt/course/lessons/01-request-lifecycle/README.md) §3, which covers `bind()`/`singleton()`/`instance()`, why registration is not construction, and why `Database` is registered lazily. A separate R05 checkpoint would have asked the learner to re-read files (`Container.php`, `bootstrap.php`) already read for R01, for a competency (bind/resolve/singleton) that is inseparable from R01's own "the database stays lazy" trace. Wherever another node below lists a prerequisite of "R05," read it as "R01" — R01 now includes this competency.
 
 **Next:** R06, R07, R10, and the platform branch.
 
@@ -202,13 +169,13 @@ The current course metadata makes Docker Compose a prerequisite for the PostgreS
 
 **Why it matters:** A framework is partly an error translation system. Debug output, production output, HTTP status, and logs have different audiences.
 
-**Prerequisites:** R05.
+**Prerequisites:** R01.
 
-**Read:** `framework/Core/ExceptionHandler.php`, `framework/Core/HttpException.php`, `framework/Core/ValidationException.php`, `framework/Core/functions.php`, and [Errors and Debugging](errors-and-debugging.md).
+**Read:** `framework/Core/ExceptionHandler.php`, `framework/Core/HttpException.php`, `framework/Core/ValidationException.php`, `framework/Core/functions.php`, [Errors and Debugging](errors-and-debugging.md), and [Lesson 18: Errors, Exceptions, and Debugging](../.dalt/course/lessons/18-debugging-and-logging/README.md).
 
 **Trace:** Compare `abort(404)`, a missing controller, an unsupported handler return, and an unexpected 500 with `APP_DEBUG=true` and false. Inspect which cases reach `storage/logs/app.log`.
 
-**Practice:** Focused debugging exercise using `dd()`, `app_log()`, and a minimal CLI reproduction, then remove diagnostic output.
+**Practice:** `broken-error-handling`, plus a focused debugging exercise using `dd()`, `app_log()`, and a minimal CLI reproduction, then remove diagnostic output.
 
 **Build:** Add a safe error page and a test that proves production output does not disclose a trace.
 
@@ -218,7 +185,7 @@ The current course metadata makes Docker Compose a prerequisite for the PostgreS
 
 **DALT boundary:** DALT logs to a local file and renders a small HTML response. It does not ship external reporters, structured logging channels, renderable exception mappings, or custom error-page discovery.
 
-**Next:** R07, R08, R13, and R14.
+**Next:** R07 and, with R10, R14.
 
 ### R07 — State across requests
 
@@ -226,7 +193,7 @@ The current course metadata makes Docker Compose a prerequisite for the PostgreS
 
 **Why it matters:** Login state, validation errors, and multi-step forms cross request boundaries; confusing their lifetimes creates security and UX defects.
 
-**Prerequisites:** R05 and R06.
+**Prerequisites:** R01 and R06.
 
 **Read:** `framework/Core/Session.php`, session startup in `public/index.php`, `framework/Core/Authenticator.php`, `framework/Core/functions.php`, and [Lesson 01: Request Lifecycle](../.dalt/course/lessons/01-request-lifecycle/README.md).
 
@@ -242,29 +209,11 @@ The current course metadata makes Docker Compose a prerequisite for the PostgreS
 
 **DALT boundary:** DALT uses native PHP sessions and file storage. It does not provide Laravel's configurable cache-backed session drivers, cookie encryption middleware, or session middleware groups.
 
-**Next:** R08 and R09.
+**Next:** R09. (R08's validation competency is already covered — see the note below.)
 
-### R08 — Validation and trusted input
+### R08 — Validation and trusted input — folded into R04
 
-**Competency:** Validate input at a clear boundary, distinguish validation from authorization, preserve safe old input, and return an actionable failure.
-
-**Why it matters:** Request data is untrusted. Validation determines whether data has the right shape; authorization determines whether the actor may perform the action.
-
-**Prerequisites:** R02, R06, and R07.
-
-**Read:** `framework/Core/Validator.php`, `framework/Core/ValidationException.php`, `framework/Core/functions.php`, `public/index.php`, and the validation sections of [Framework Reference](framework-reference.md) and [Errors and Debugging](errors-and-debugging.md).
-
-**Trace:** Submit a missing, wrong-type, too-short, and valid value. Predict whether the request returns a redirect, error bag, or success response. Compare `authorize(false)` with a validation failure.
-
-**Practice:** Focused exercise: add a validated form field and preserve only the fields needed to redraw the form.
-
-**Build:** Form workflow from R07 with a second validation rule and a forbidden-resource branch.
-
-**Test and checkpoint:** Write tests for the boundary cases and explain the redirect/flash flow unaided.
-
-**Laravel bridge:** [Validation](https://laravel.com/docs/13.x/validation) and the [validation source](https://github.com/laravel/framework/tree/13.x/src/Illuminate/Validation).
-
-**DALT boundary:** DALT has a deliberately small rule set and no form-request classes, translation system, automatic JSON negotiation, or complete input-normalization middleware.
+**Folded, not cut.** This competency is taught inside [Lesson 03: Middleware](../.dalt/course/lessons/03-middleware/README.md) §8, alongside — and deliberately contrasted with — authorization, since middleware is where DALT's other authorization mechanism (the `auth` alias) already lives. Splitting validation into its own node would have separated "is this data shaped right" from "is this actor allowed," the exact distinction §8 exists to teach side by side. Read a prerequisite of "R08" elsewhere in this roadmap as "R04."
 
 **Next:** R09.
 
@@ -274,7 +223,7 @@ The current course metadata makes Docker Compose a prerequisite for the PostgreS
 
 **Why it matters:** Authentication answers who the requester is; authorization answers what that identity may do. Both are stateful security boundaries.
 
-**Prerequisites:** R04, R07, and R08.
+**Prerequisites:** R04 and R07.
 
 **Read:** `framework/Core/Authenticator.php`, `framework/Core/Middleware/Auth.php`, `Guest.php`, `framework/Core/functions.php`, and [Lesson 04: Authentication](../.dalt/course/lessons/04-authentication/README.md).
 
@@ -298,7 +247,7 @@ The current course metadata makes Docker Compose a prerequisite for the PostgreS
 
 **Why it matters:** The database is a trust and failure boundary. Prepared statements protect values, while result shape and transaction handling determine application behavior.
 
-**Prerequisites:** R02, R05, and R09 for authenticated queries.
+**Prerequisites:** R02, R01, and R09 for authenticated queries.
 
 **Read:** `framework/Core/Database.php`, `framework/Core/DatabaseManager.php`, `config/database.php`, `database/migrations/001_create_users_table.sql`, and [Lesson 05: Database](../.dalt/course/lessons/05-database/README.md).
 
@@ -338,55 +287,15 @@ The current course metadata makes Docker Compose a prerequisite for the PostgreS
 
 **DALT boundary:** Migrations are SQL files with a small runner. There are no schema-builder objects, generated down methods, migration events, or broad cross-driver translation.
 
-**Next:** R12, PG05, and the migration project.
+**Next:** PG05 and the migration project. (R12 is out of scope — see the note below.)
 
-### R12 — Controllers, views, escaping, and assets
+### R12 — Controllers, views, escaping, and assets — out of scope
 
-**Competency:** Keep handlers thin, pass data to a view, preserve application/platform precedence, escape output, and understand built versus development assets.
+**Cut (owner's call, 2026-08-13).** Presentation — view rendering, escaping, asset pipelines — is real DALT surface (`framework/Core/View.php`, `resources/views/`) but is not where the backend-fundamentals gap this course exists to close actually is. The owner's stated goal is relearning request/data/state boundaries, not templating or frontend asset tooling. Nothing about this cut blocks R13 or R14; neither ever depended on view rendering specifically.
 
-**Why it matters:** Presentation is another boundary: view data must not become executable markup, and a development asset path must not be mistaken for a production build.
+### R13 — Console entry points and project tooling — out of scope
 
-**Prerequisites:** R02, R05, R06, and R10.
-
-**Read:** `framework/Core/View.php`, `framework/Core/functions.php`, `resources/views/`, `public/build/`, `vite.config.mjs`, and [Framework Reference](framework-reference.md).
-
-**Trace:** Render a view with colliding attributes, attempt a traversal path, compare the application view root with the platform fallback, and inspect how `vite()` chooses a manifest or dev server.
-
-**Practice:** Focused exercise: convert a fat controller into a query/transform/render path and add escaping tests.
-
-**Build:** A CRUD page with a reusable view component, escaped user content, and a documented asset build path.
-
-**Test and checkpoint:** Explain why `view()` echoes while returning content, why application views win, and what happens when the manifest is missing.
-
-**Laravel bridge:** [Controllers](https://laravel.com/docs/13.x/controllers), [Views](https://laravel.com/docs/13.x/views), [Blade](https://laravel.com/docs/13.x/blade), [Vite](https://laravel.com/docs/13.x/vite), and the [view source](https://github.com/laravel/framework/tree/13.x/src/Illuminate/View).
-
-**DALT boundary:** DALT uses PHP view files and a small Vite helper. It does not provide Blade compilation, component discovery, asset versioning beyond the manifest, or a production asset pipeline service.
-
-**Next:** R13, R14, and the platform branch.
-
-### R13 — Console entry points and project tooling
-
-**Competency:** Distinguish HTTP and CLI boot paths, run safe project commands, and understand which commands load database or platform state.
-
-**Why it matters:** Frameworks have more than one entry point. A CLI command that boots the wrong services can be slow, unsafe, or impossible to use in a clean installation.
-
-**Prerequisites:** R05, R06, R10, and R12.
-
-**Read:** `artisan`, `composer.json`, `.dalt/scripts/`, and [Installation and Quick Start](installation-and-quick-start.md).
-
-**Trace:** Run `php artisan help`, `php artisan migrate` against an isolated SQLite file, and `php artisan make:migration sample`. Predict which commands require the platform and which validate destructive input.
-
-**Practice:** Focused exercise: add a narrowly scoped command or improve an error message without loading the database for unrelated commands.
-
-**Build:** A small CLI report command that reads the same contract as an HTTP endpoint and returns a useful exit code.
-
-**Test and checkpoint:** Interpret `ArtisanCommandTest` and explain the difference between `serve`, `migrate`, `test`, and challenge commands.
-
-**Laravel bridge:** [Artisan Console](https://laravel.com/docs/13.x/artisan), [Console Tests](https://laravel.com/docs/13.x/console-tests), and the [console source](https://github.com/laravel/framework/tree/13.x/src/Illuminate/Console).
-
-**DALT boundary:** DALT uses one executable with a switch statement and a few project commands. It does not provide a command bus, scheduling, queues, prompts abstraction, or command auto-discovery.
-
-**Next:** R14 and platform branch.
+**Cut (owner's call, 2026-08-13).** The HTTP-versus-CLI boot-path distinction is genuinely a different entry point worth knowing, but it is a narrower, lower-leverage competency than R06 and R14, which this course builds instead. `artisan`'s commands are still read in passing wherever a lesson already asks the learner to run one (`php artisan migrate`, `php artisan challenge:verify`); there is simply no dedicated checkpoint for the CLI boot path itself.
 
 ### R14 — Testing a framework contract
 
@@ -394,13 +303,13 @@ The current course metadata makes Docker Compose a prerequisite for the PostgreS
 
 **Why it matters:** Documentation and challenge verification are only trustworthy when they execute or inspect the behavior they claim to protect.
 
-**Prerequisites:** R06, R10, R13, and one completed application project.
+**Prerequisites:** R06, R10, and one completed application project.
 
-**Read:** `tests/`, `phpunit.xml`, `.dalt/Core/ChallengeVerifier.php`, `.dalt/course/challenges/*/tests.php`, [Contributor Content Guide](contributor-content.md), and the verifier implementation under `.dalt/Core/`.
+**Read:** `tests/`, `phpunit.xml`, `.dalt/Core/ChallengeVerifier.php`, `.dalt/course/challenges/*/tests.php`, [Contributor Content Guide](contributor-content.md), the verifier implementation under `.dalt/Core/`, and [Lesson 19: Testing a Framework Contract](../.dalt/course/lessons/19-testing-framework-contracts/README.md).
 
 **Trace:** Compare a source check with `class_contract` and `handler_result`. Reproduce the dead-code shape that a source match accepts, then run the controller check against seeded data.
 
-**Practice:** Extend one source-matched challenge with an executable check and prove that the broken fixture fails before the corrected fixture passes.
+**Practice:** `untested-contract`, plus extending one source-matched challenge with an executable check and proving that the broken fixture fails before the corrected fixture passes.
 
 **Build:** Mini framework extension: add one behavior, its focused tests, its documentation example, and a failure test for a plausible misuse.
 
@@ -422,7 +331,7 @@ These branches deepen backend deployment and database reasoning. They are visual
 
 **Competency:** Explain an image, container, port, volume, and process boundary and run the basic Docker lifecycle commands.
 
-**Prerequisites:** R00. **Read:** [Lesson 06: Docker Basics](../.dalt/course/lessons/06-docker-basics/README.md). **Trace/predict:** inspect the image, container, exposed port, and mounted code in a minimal run. **Practice/build:** run the DALT app in a disposable container and document what survives removal. **Test/checkpoint:** predict which state is lost with the container and explain why a container is not a VM. **Laravel bridge:** [Laravel Sail](https://laravel.com/docs/13.x/sail). **DALT boundary:** DALT teaches Docker concepts; it does not provide a container orchestrator or deployment platform. **Next:** DKR02.
+**Prerequisites:** None. **Read:** [Lesson 06: Docker Basics](../.dalt/course/lessons/06-docker-basics/README.md). **Trace/predict:** inspect the image, container, exposed port, and mounted code in a minimal run. **Practice/build:** run the DALT app in a disposable container and document what survives removal. **Test/checkpoint:** predict which state is lost with the container and explain why a container is not a VM. **Laravel bridge:** [Laravel Sail](https://laravel.com/docs/13.x/sail). **DALT boundary:** DALT teaches Docker concepts; it does not provide a container orchestrator or deployment platform. **Next:** DKR02.
 
 #### DKR02 — Dockerfiles and PHP runtime images
 
@@ -494,7 +403,7 @@ These branches deepen backend deployment and database reasoning. They are visual
 
 ## Learning-platform branch
 
-This branch is for learners who want to understand how a course system discovers content, changes files safely, verifies repairs, and teaches through HTTP. Unlock it after R05, R07, R12, and R14.
+This branch is for learners who want to understand how a course system discovers content, changes files safely, verifies repairs, and teaches through HTTP. Unlock it after R01, R07, and R14. (The original blueprint also listed R05 and R12 — R05 is now part of R01, and R12's view-rendering competency is out of scope; neither blocks this branch in practice, since P-R05 reads the learning platform's own views directly rather than assuming general view-layer competency.)
 
 ### P-R01 — Optional platform bootstrapping
 
@@ -539,11 +448,11 @@ Projects unlock when their prerequisite nodes are complete. A project can use an
 1. **Request inspector** — R01–R02. Display selected request data safely; test query/body precedence and route strings.
 2. **Tiny route debugger** — R03. Add dynamic and closure routes, deliberate 404s, and route-contract tests.
 3. **Middleware trace viewer** — R04. Record before/after order and demonstrate short-circuiting.
-4. **Form workflow** — R06–R08. Validate, redirect, flash errors, preserve old input, enforce CSRF, and show success.
+4. **Form workflow** — R04 (validation and CSRF), R06, R07. Validate, redirect, flash errors, preserve old input, enforce CSRF, and show success.
 5. **Session authentication** — R07–R09. Register, login, logout, protect a page, rotate identity, and test unsafe redirect targets.
-6. **CRUD application** — R10–R12. Use prepared SQL, validation, authorization, pagination, escaping, and explicit failures.
+6. **CRUD application** — R10–R11, with R04 for validation. Use prepared SQL, validation, authorization, pagination, and explicit failures.
 7. **Migration failure lab** — R11 and PG05. Create, fail, inspect, recover, and explain schema state.
-8. **Mini framework extension** — R05, R06, R13, R14. Add one scoped mechanism, test it, document it, and test misuse.
+8. **Mini framework extension** — R01, R06, R14. Add one scoped mechanism, test it, document it, and test misuse.
 9. **Learning-content contribution** — R14 and P-R01–P-R06. Ship a lesson, challenge, verifier check, and catalog/UI integration that passes review.
 
 ## Completion rubric

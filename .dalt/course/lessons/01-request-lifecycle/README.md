@@ -8,7 +8,8 @@ By the end of this lesson, you can:
 - distinguish the server router, front controller, bootstrap, router, handler, and response boundary;
 - predict where request input, session state, and exceptions are available;
 - explain why DALT sends one `Core\Response` instead of letting every layer write headers;
-- diagnose a lifecycle bug by locating the first layer whose contract is violated.
+- diagnose a lifecycle bug by locating the first layer whose contract is violated;
+- explain the difference between `bind()`, `singleton()`, and `instance()`, and why registering a service is not the same as constructing it.
 
 ## Prerequisite checkpoint
 
@@ -20,6 +21,7 @@ Before starting, locate these files and say what each one owns:
 4. `framework/Core/Request.php`
 5. `framework/Core/Router.php`
 6. `framework/Core/Response.php`
+7. `framework/Core/Container.php`
 
 You do not need to understand every method yet. The goal is to know where to look.
 
@@ -94,11 +96,40 @@ Every dynamic request enters the same PHP file. Its current order is:
 
 The order matters. Configuration must exist before validated session configuration is used. The request must exist before route handlers and middleware receive it. The response must be selected before PHP headers and body output are sent.
 
-## 3. Bootstrap prepares services, but the database stays lazy
+## 3. Bootstrap builds the container, and registration is not construction
 
-`framework/Core/bootstrap.php` loads `.env`, validates the configuration directory, discovers the optional platform, creates a `Container`, and registers `Config`, `Platform`, `View`, and `Database`.
+`framework/Core/bootstrap.php` loads `.env`, validates the configuration directory, discovers the optional platform, creates a `Container`, and registers `Config`, `Platform`, `View`, and `Database`. Before any of that can matter, it is worth being precise about what "registers" means, because it is not "creates."
 
-The database is registered as a singleton factory. Registration does not open a database connection. The connection is created only when a handler resolves `Core\Database`. This distinction matters when debugging a request that renders without touching the database.
+`Core\Container` has three ways to make an abstract name resolvable:
+
+```php
+$container->bind(Mailer::class, SmtpMailer::class);        // a fresh instance every resolve()
+$container->singleton(Database::class, fn ($c) => /* ... */); // built once, cached, reused
+$container->instance(Request::class, $capturedRequest);       // this exact object, already built
+```
+
+None of these three lines construct anything except `instance()`, which is handed an object that already exists. `bind()` and `singleton()` only record *how* to build the thing later — a closure or a class name — and the difference between them is entirely about what happens the *second* time something asks for it:
+
+```text
+bind():      resolve() → build a new one → return it → (nothing cached)
+singleton(): resolve() → build a new one → cache it → return it
+             resolve() again → return the cached one, do not rebuild
+```
+
+`resolve()` is the single entry point that turns a name into a value, and it is also where a class with no explicit binding gets auto-wired: if nothing was registered for a class name but the class itself exists, `Container` reads its constructor with reflection and resolves each typed parameter recursively, the same way it already resolves a closure route handler's typed parameters (Lesson 02). Ask for something that both has no binding and does not exist as a class, and `resolve()` throws immediately rather than returning something half-built; ask for something that is already being built further up the same call stack, and it throws a `Circular dependency detected` exception instead of recursing forever.
+
+### The database is the concrete example: registered, not connected
+
+```php
+$container->singleton(
+    Database::class,
+    fn (Container $container): Database => DatabaseManager::create(
+        $container->resolve(Config::class)->array('database.database'),
+    ),
+);
+```
+
+This line runs during bootstrap, on every request. It does not open a database connection — it stores a closure. The closure only runs the first time something calls `App::resolve(Database::class)`, and because this registration used `singleton()`, that first result is cached: a second resolution anywhere else in the same request reuses the same `PDO` connection instead of opening another one. A request whose handler never touches the database never opens a connection at all — worth remembering when a request renders fine but "the database is down" turns out to be unrelated.
 
 The application route file is currently small:
 
@@ -230,6 +261,7 @@ Use the welcome route and a missing route to trace these files in order:
 6. `framework/Core/Middleware/Middleware.php`
 7. `framework/Core/Response.php`
 8. `framework/Core/ExceptionHandler.php`
+9. `framework/Core/Container.php` — `bind()`, `singleton()`, `instance()`, and what `resolve()` does differently for each
 
 For each file, write down:
 
@@ -251,12 +283,26 @@ composer test -- --filter='Request|Response|welcome|404'
 - A response that bypasses middleware often comes from direct output or a terminating helper.
 - A flash value that disappears after a redirect points to request-start aging, session startup, or the redirect caller—not to an end-of-request cleanup step.
 - A detailed 500 in production points to the exception boundary or debug configuration.
+- Resolving a service twice and getting two different instances when you expected one: it was registered with `bind()`, not `singleton()`.
+- `Cannot resolve '...': no binding or concrete class exists.`: the abstract name is neither bound nor an autoloadable class — check the namespace and the spelling.
+- `Circular dependency detected: A -> B -> A`: two classes depend on each other through the container; break the cycle by injecting a narrower dependency or resolving lazily inside a method instead of the constructor.
 
 ## Laravel bridge
 
-Laravel follows the same essential shape: the request enters a front controller, the application bootstraps a container, middleware surrounds route dispatch, the action is normalized to a response, and the response travels outward before being sent.
+Compared against Laravel 13.x [Service Container](https://laravel.com/docs/13.x/container) (consulted 2026-08-13), in addition to the lifecycle documentation cited in the sections above.
 
-DALT deliberately omits Laravel's service providers, PSR-7 bridges, advanced response types, content negotiation, streamed/download responses, named middleware groups, and production proxy configuration. The smaller contract makes the request-to-response mechanism visible.
+Laravel follows the same essential shape: the request enters a front controller, the application bootstraps a container, middleware surrounds route dispatch, the action is normalized to a response, and the response travels outward before being sent. The container mechanics map directly:
+
+| Laravel 13.x | DALT |
+|---|---|
+| `$this->app->bind(Abstract::class, Concrete::class)` | `Container::bind()` — identical shape and identical "new instance every resolve" behavior |
+| `$this->app->singleton(...)` | `Container::singleton()` — identical shape |
+| `$this->app->instance(...)` | `Container::instance()` — identical shape |
+| registration happens across many `ServiceProvider::register()` methods, auto-discovered from `composer.json` | registration happens in one file, `framework/Core/bootstrap.php`, read top to bottom |
+| automatic constructor injection, contextual binding, tagged bindings | automatic constructor injection only — no contextual or tagged bindings |
+| facades resolve through the container behind a static-looking call | no facades; every dependency is resolved or injected explicitly |
+
+DALT deliberately omits Laravel's service providers, facades, contextual/tagged bindings, PSR-7 bridges, advanced response types, content negotiation, streamed/download responses, named middleware groups, and production proxy configuration. The smaller contract makes the request-to-response mechanism — and the container underneath it — visible in one file instead of a discovery system.
 
 Compare the DALT source with the current Laravel lifecycle, responses, middleware, and session documentation after you can narrate this trace. Treat Laravel as a larger comparison target, not as a requirement that DALT reproduce every feature.
 
@@ -277,5 +323,7 @@ Without opening the source, answer these questions:
 5. Why does flash aging happen at request start?
 6. What is the difference between a 404 `HttpException`, a validation redirect, and an unexpected 500?
 7. Name one feature Laravel provides that DALT intentionally leaves out.
+8. `Database` is registered with `singleton()`, not `bind()`. What would change, concretely, about a request that resolves it twice if it had been registered with `bind()` instead?
+9. A class you did not explicitly register still resolves successfully. Explain how, without using the word "magic."
 
 If you can answer these and identify the responsible file from a failing request, this lesson's lifecycle checkpoint is complete.

@@ -1,0 +1,10 @@
+{
+  "title": "Testing a Framework Contract",
+  "description": "Write a Pest test that proves a behavior instead of assuming it — and would catch the fix that only looks right",
+  "order": 19,
+  "section": "foundation",
+  "section_order": 8,
+  "icon": "clipboard-check",
+  "color": "gray",
+  "prerequisites": ["05-database", "18-debugging-and-logging"]
+}

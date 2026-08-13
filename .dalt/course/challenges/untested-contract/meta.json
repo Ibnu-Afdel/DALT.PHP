@@ -1,0 +1,9 @@
+{
+  "title": "Untested Contract",
+  "order": 22,
+  "description": "A coupon can be redeemed more than once — the kind of bug a single manual try never finds.",
+  "difficulty": "Medium",
+  "bugs": 1,
+  "lesson": "19-testing-framework-contracts",
+  "color": "gray"
+}

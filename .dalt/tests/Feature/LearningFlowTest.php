@@ -144,8 +144,10 @@ test('roadmap is a server-rendered curriculum view of effective learning progres
         $client = new ApplicationTestClient($root);
         $roadmap = $client->request('GET', '/learn/roadmap');
 
+        $totalLessons = count(\Core\CourseLoader::getLessons());
+
         expect($roadmap->statusCode)->toBe(200)
-            ->and($roadmap->body)->toContain('2 of 17 lessons completed')
+            ->and($roadmap->body)->toContain("2 of {$totalLessons} lessons completed")
             ->and($roadmap->body)->toContain('1 verified through practice')
             ->and($roadmap->body)->toContain('Routing')
             ->and($roadmap->body)->toContain('>Verified</span>')
@@ -193,8 +195,9 @@ test('roadmap reports a complete curriculum without a fake next lesson', functio
             'last_visited_lesson' => '17-observability',
         ], JSON_THROW_ON_ERROR));
         $roadmap = (new ApplicationTestClient($root))->request('GET', '/learn/roadmap');
+        $totalLessons = count(\Core\CourseLoader::getLessons());
 
-        expect($roadmap->body)->toContain('17 of 17 lessons completed')
+        expect($roadmap->body)->toContain("{$totalLessons} of {$totalLessons} lessons completed")
             ->and($roadmap->body)->not->toContain('Continue from');
     } finally {
         p05RemoveTree($root);

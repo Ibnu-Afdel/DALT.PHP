@@ -285,7 +285,7 @@ test('every shipped specification is valid and rejects its broken source fixture
     // A floor, not an exact count. Adding checks to a challenge is the change we
     // want people making freely; an exact total turns every such edit into an
     // unrelated test failure. The floor still catches silent deletion.
-    expect($directories)->toHaveCount(20)
+    expect(count($directories))->toBeGreaterThanOrEqual(20)
         ->and($total)->toBeGreaterThanOrEqual(95);
 });
 

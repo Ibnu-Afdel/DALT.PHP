@@ -1,0 +1,10 @@
+{
+  "title": "Errors, Exceptions, and Debugging",
+  "description": "Read a stack trace to the responsible layer and control what a failure shows the client versus the log",
+  "order": 18,
+  "section": "foundation",
+  "section_order": 7,
+  "icon": "bug",
+  "color": "red",
+  "prerequisites": ["01-request-lifecycle"]
+}
