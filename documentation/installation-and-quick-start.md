@@ -11,12 +11,14 @@ composer create-project ibnuafdel/daltphp my-project --stability=beta --remove-v
 cd my-project
 ```
 
-The project requires PHP `^8.2`. The create-project scripts copy `.env.example` to `.env` when needed and remove the framework repository metadata from the generated project. If you are working from a source checkout instead, run:
+The project requires PHP `^8.2`. A single `composer create-project` is enough: it copies `.env.example` to `.env` when needed, installs the optional `.dalt` learning platform's own dependencies (it has its own `composer.json`), and removes the framework repository metadata from the generated project. If you are working from a source checkout instead, run:
 
 ```bash
 composer install
 cp .env.example .env
 ```
+
+`composer install` also installs `.dalt`'s dependencies automatically (via a `post-install-cmd`/`post-update-cmd` hook); no separate `composer install --working-dir=.dalt` step is needed.
 
 Do not commit `.env`; it is environment-specific and may contain credentials.
 
@@ -34,7 +36,7 @@ php artisan serve 0.0.0.0 8080
 
 `serve` uses PHP's built-in development server and exposes `public/` as the document root. It is for local development, not production hosting. If the requested port is busy, DALT tries the next available port, up to 50 ports ahead.
 
-The default project includes built frontend assets, so Node.js is not required for the first request. Run `npm ci` and `npm run dev` only when changing the learning-platform frontend; run `npm run build` before distributing those changes.
+The default project includes built frontend assets for both the root app (`public/build/`) and the optional learning platform (`.dalt/build/`), so Node.js is not required for the first request, including `/learn`. Run `npm ci` and `npm run dev` (at the root, or with `--prefix .dalt` for the learning-platform UI) only when changing frontend source; run the matching `npm run build` before distributing those changes.
 
 ## Add a route
 

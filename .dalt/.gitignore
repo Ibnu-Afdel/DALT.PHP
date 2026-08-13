@@ -1,6 +1,5 @@
 /vendor/
 /node_modules/
-/build/
 /active_challenge.txt
 /challenge-backup/
 /challenge-state.json
