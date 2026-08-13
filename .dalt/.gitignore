@@ -1,0 +1,10 @@
+/vendor/
+/node_modules/
+/build/
+/active_challenge.txt
+/challenge-backup/
+/challenge-state.json
+/challenge.lock
+/progress.lock
+/progress.json
+/baseline/

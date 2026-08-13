@@ -1,6 +1,5 @@
 # Dependencies
 /node_modules
-/.dalt/node_modules
 /vendor
 
 # Environment variables
@@ -29,14 +28,7 @@ Thumbs.db
 *.tmp
 *.temp
 
-# Challenge runtime state (from php artisan challenge:start)
-.dalt/active_challenge.txt
-.dalt/challenge-backup/
-.dalt/challenge-state.json
-.dalt/challenge.lock
-.dalt/progress.lock
-.dalt/progress.json
-.dalt/baseline/
+# Temporary removal workspaces
 .dalt-removing-*/
 .git-removing-*/
 /storage/framework/platform-removal.lock

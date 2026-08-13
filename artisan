@@ -75,6 +75,8 @@ function platform_installed(): bool
 function require_platform(string $commandName): void
 {
     if (platform_installed()) {
+        require_once base_path('.dalt/bootstrap.php');
+
         return;
     }
 

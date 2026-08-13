@@ -28,7 +28,7 @@
     @keyframes fade-out { to { opacity: 0; } }
     @keyframes fade-in { from { opacity: 0; } }
   </style>
-  <?= vite('.dalt/resources/js/app.js') ?>
+  <?= dalt_vite('resources/js/app.js') ?>
 </head>
 <body class="min-h-screen antialiased bg-[#0f1117] text-gray-300">
 <a href="#app" class="skip-link">Skip to main content</a>

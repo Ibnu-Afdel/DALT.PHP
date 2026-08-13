@@ -33,8 +33,6 @@
     ],
     "require": {
         "php": "^8.2",
-        "league/commonmark": "^2.7",
-        "scrivo/highlight.php": "^9.18",
         "vlucas/phpdotenv": "^5.6"
     },
     "require-dev": {
@@ -42,10 +40,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Core\\": [
-                "framework/Core/",
-                ".dalt/Core/"
-            ],
+            "Core\\": "framework/Core/",
             "App\\Http\\": "app/Http/"
         }
     },
@@ -69,11 +64,7 @@
         "migrate:fresh": "php artisan migrate:fresh",
         "make:migration": "php artisan make:migration",
         "post-root-package-install": [
-            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
-            "@php .dalt/scripts/remove-vcs.php"
-        ],
-        "post-create-project-cmd": [
-            "@php .dalt/scripts/post-create.php"
+            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
         ]
     },
     "bin": [
@@ -89,6 +80,8 @@
             "/.dalt/challenge-state.json",
             "/.dalt/challenge.lock",
             "/.dalt/node_modules",
+            "/.dalt/vendor",
+            "/.dalt/build",
             "/.dalt/progress.json",
             "/.dalt-removing-*",
             "/.env",

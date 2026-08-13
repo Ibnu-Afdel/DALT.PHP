@@ -13,3 +13,6 @@ $router->get("/learn/challenges/{challenge}", "learn/challenge.php");
 
 // API routes for verification
 $router->post("/api/verify/{challenge}", "api/verify.php")->only('csrf');
+
+// DALT build output remains inside .dalt and is reachable only while DALT is installed.
+$router->get('/dalt-assets/assets/{asset}', static fn (string $asset): \Core\Response => \Core\DaltAssets::response($asset));

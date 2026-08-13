@@ -1,7 +1,5 @@
 import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
-import FullReload from 'vite-plugin-full-reload'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -26,23 +24,18 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, '.dalt/resources'),
-      'vue': 'vue/dist/vue.esm-bundler.js'
+      '@': resolve(__dirname, 'resources')
     }
   },
   plugins: [
-    vue(),
-    tailwindcss(),
-    FullReload([
-      resolve(__dirname, '.dalt/resources/views/**/*.php')
-    ])
+    tailwindcss()
   ],
   build: {
     manifest: true,
     outDir: resolve(__dirname, 'public/build'),
     emptyOutDir: true,
     rollupOptions: {
-      input: resolve(__dirname, '.dalt/resources/js/app.js')
+      input: resolve(__dirname, 'resources/js/app.js')
     }
   }
 })
