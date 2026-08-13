@@ -196,6 +196,8 @@ final class ChallengeVerifier
             $config['query'] = $this->validScalarMap($config, 'query', $name);
             $config['input'] = $this->validScalarMap($config, 'input', $name);
             $config['route'] = $this->validScalarMap($config, 'route', $name);
+            $config['session'] = $this->validSessionSeed($config, $name);
+            $config['inspect'] = $this->validOptionalSql($config, 'inspect', $name);
             $config['expect'] = $this->validExpectation($config, $name);
         }
         if (in_array($type, ['file_contains', 'file_not_contains'], true)) {
@@ -320,6 +322,37 @@ final class ChallengeVerifier
     }
 
     /**
+     * Pre-populates $_SESSION before the handler runs. Unlike 'seed' this is not
+     * SQL, so it accepts arbitrary nested arrays (flash data is a nested bag),
+     * not just a flat scalar map.
+     *
+     * @param array<string, mixed> $config @return array<string, mixed>
+     */
+    private function validSessionSeed(array $config, string $name): array
+    {
+        $value = $config['session'] ?? [];
+        if (!is_array($value)) {
+            throw new RuntimeException("Check '{$name}' requires 'session' to be an array.");
+        }
+
+        return $value;
+    }
+
+    /** @param array<string, mixed> $config */
+    private function validOptionalSql(array $config, string $field, string $name): ?string
+    {
+        $value = $config[$field] ?? null;
+        if ($value === null) {
+            return null;
+        }
+        if (!is_string($value) || trim($value) === '') {
+            throw new RuntimeException("Check '{$name}' requires '{$field}' to be a non-empty SQL string when set.");
+        }
+
+        return $value;
+    }
+
+    /**
      * A compose_config check names exactly one assertion against the value at
      * 'path'. Resist growing this into a query language: three flat modes
      * cover every case Phase 01 needs.
@@ -358,7 +391,7 @@ final class ChallengeVerifier
             throw new RuntimeException("Check '{$name}' requires an 'expect' block describing the response.");
         }
 
-        $allowed = ['status', 'count', 'count_key', 'contains', 'not_contains'];
+        $allowed = ['status', 'count', 'count_key', 'contains', 'not_contains', 'source'];
         foreach (array_keys($expect) as $key) {
             if (!in_array($key, $allowed, true)) {
                 throw new RuntimeException("Check '{$name}' has an unsupported expectation '{$key}'.");
@@ -377,6 +410,14 @@ final class ChallengeVerifier
         }
         if (isset($expect['count_key']) && !isset($expect['count'])) {
             throw new RuntimeException("Check '{$name}' sets 'count_key' without a 'count'.");
+        }
+        if (isset($expect['source'])) {
+            if (!in_array($expect['source'], ['body', 'session', 'inspect'], true)) {
+                throw new RuntimeException("Check '{$name}' has an unsupported expectation 'source'.");
+            }
+            if ($expect['source'] === 'inspect' && $config['inspect'] === null) {
+                throw new RuntimeException("Check '{$name}' expects from 'inspect' but sets no 'inspect' query.");
+            }
         }
 
         return $expect;
@@ -761,6 +802,8 @@ final class ChallengeVerifier
             'query' => $config['query'],
             'input' => $config['input'],
             'route' => $config['route'],
+            'session' => $config['session'],
+            'inspect' => $config['inspect'],
         ]);
 
         $command = escapeshellarg(PHP_BINARY)
@@ -786,36 +829,72 @@ final class ChallengeVerifier
             ];
         }
 
-        return $this->compareExpectation($config['expect'], (int) $report['status'], (string) $report['body']);
+        return $this->compareExpectation(
+            $config['expect'],
+            (int) $report['status'],
+            (string) $report['body'],
+            is_array($report['session'] ?? null) ? $report['session'] : [],
+            is_array($report['inspect'] ?? null) ? $report['inspect'] : null,
+        );
     }
 
-    /** @param array<string, mixed> $expect @return array{passed: bool, message: string} */
-    private function compareExpectation(array $expect, int $status, string $body): array
+    /**
+     * Compares the probe's report against the check's 'expect' block. 'source'
+     * picks which part of the report 'contains'/'not_contains'/'count' read from
+     * — 'body' (default) is the HTTP response; 'session' and 'inspect' exist
+     * because some bugs (stale flash data, a transaction that partially
+     * commits) never appear in the response at all. 'status' always reads the
+     * HTTP status regardless of 'source'; it is a property of the response,
+     * not of what the check is inspecting.
+     *
+     * @param array<string, mixed> $expect
+     * @param array<string, mixed> $session
+     * @param list<array<string, mixed>>|null $inspect
+     * @return array{passed: bool, message: string}
+     */
+    private function compareExpectation(array $expect, int $status, string $body, array $session, ?array $inspect): array
     {
         if (isset($expect['status']) && $status !== $expect['status']) {
             return ['passed' => false, 'message' => "Expected status {$expect['status']}, the handler returned {$status}."];
         }
-        if (isset($expect['contains']) && !str_contains($body, $expect['contains'])) {
-            return ['passed' => false, 'message' => "The response is missing '{$expect['contains']}'. It returned: " . $this->preview($body)];
+
+        $source = $expect['source'] ?? 'body';
+        $haystack = match ($source) {
+            'body' => $body,
+            'session' => (string) json_encode($session, JSON_UNESCAPED_SLASHES),
+            'inspect' => (string) json_encode($inspect, JSON_UNESCAPED_SLASHES),
+        };
+        $label = match ($source) {
+            'body' => 'response',
+            'session' => 'session state',
+            'inspect' => 'inspection query',
+        };
+
+        if (isset($expect['contains']) && !str_contains($haystack, $expect['contains'])) {
+            return ['passed' => false, 'message' => "The {$label} is missing '{$expect['contains']}'. It was: " . $this->preview($haystack)];
         }
-        if (isset($expect['not_contains']) && str_contains($body, $expect['not_contains'])) {
-            return ['passed' => false, 'message' => "The response should not contain '{$expect['not_contains']}', but it does."];
+        if (isset($expect['not_contains']) && str_contains($haystack, $expect['not_contains'])) {
+            return ['passed' => false, 'message' => "The {$label} should not contain '{$expect['not_contains']}', but it does."];
         }
         if (isset($expect['count'])) {
-            $decoded = json_decode($body, true);
-            $rows = isset($expect['count_key']) ? ($decoded[$expect['count_key']] ?? null) : $decoded;
+            $decoded = match ($source) {
+                'body' => json_decode($body, true),
+                'session' => $session,
+                'inspect' => $inspect,
+            };
+            $rows = isset($expect['count_key']) && is_array($decoded) ? ($decoded[$expect['count_key']] ?? null) : $decoded;
 
             if (!is_array($rows)) {
                 $where = isset($expect['count_key'])
-                    ? "a JSON list under the key '{$expect['count_key']}'"
-                    : 'a JSON list';
+                    ? "a list under the key '{$expect['count_key']}'"
+                    : 'a list';
 
-                return ['passed' => false, 'message' => "Expected {$where}. The response was: " . $this->preview($body)];
+                return ['passed' => false, 'message' => "Expected {$where} in the {$label}. It was: " . $this->preview($haystack)];
             }
             if (count($rows) !== $expect['count']) {
                 return [
                     'passed' => false,
-                    'message' => "Expected {$expect['count']} row(s), the handler returned " . count($rows) . '.',
+                    'message' => "Expected {$expect['count']} row(s) in the {$label}, found " . count($rows) . '.',
                 ];
             }
         }

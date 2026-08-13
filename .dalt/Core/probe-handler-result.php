@@ -14,8 +14,20 @@ declare(strict_types=1);
  * fatal, print, or exit, none of which the verifier should absorb.
  *
  * Usage: php probe-handler-result.php <projectRoot> <controllerFile> <jsonSpec>
- * where jsonSpec is {"seed": [...sql], "query": {...}, "input": {...}, "route": {...}}.
+ * where jsonSpec is {"seed": [...sql], "query": {...}, "input": {...}, "route": {...},
+ * "session": {...}, "inspect": "SELECT ..."|null}.
  * Prints a single JSON object on stdout.
+ *
+ * "session" pre-populates $_SESSION before dispatch (e.g. simulating flash data left
+ * over from a previous request), and \Core\Session::ageFlashData() runs immediately
+ * before the handler, mirroring the real front-controller's request-start boundary.
+ * The final $_SESSION is always reported back, win or lose — this is the only way to
+ * observe session state, since the controller's HTTP response rarely carries it.
+ *
+ * "inspect" is an optional read-only SQL statement run against the same seeded
+ * database once the handler returns successfully. It exists for the same reason
+ * "session" does: some bugs (a transaction that partially commits) are invisible in
+ * the response body and only show up in the data the handler left behind.
  */
 
 if ($argc !== 4) {
@@ -51,6 +63,7 @@ use Core\Container;
 use Core\Database;
 use Core\Request;
 use Core\Response;
+use Core\Session;
 
 try {
     $database = new Database(['driver' => 'sqlite', 'database' => ':memory:']);
@@ -67,10 +80,15 @@ try {
 $query = is_array($spec['query'] ?? null) ? $spec['query'] : [];
 $input = is_array($spec['input'] ?? null) ? $spec['input'] : [];
 $route = is_array($spec['route'] ?? null) ? $spec['route'] : [];
+$inspect = is_string($spec['inspect'] ?? null) ? $spec['inspect'] : null;
 
 $_GET = $query;
 $_POST = $input;
-$_SESSION = [];
+$_SESSION = is_array($spec['session'] ?? null) ? $spec['session'] : [];
+
+// Mirrors Session::start()'s request-start boundary so a seeded "previous
+// request" flash state ages the same way it would in a real request.
+Session::ageFlashData();
 
 $request = new Request(
     query: $query,
@@ -98,10 +116,21 @@ try {
     $fail('The handler threw ' . $exception::class . ': ' . $exception->getMessage());
 }
 
+$inspected = null;
+if ($inspect !== null) {
+    try {
+        $inspected = $database->query($inspect)->get();
+    } catch (Throwable $exception) {
+        $fail('The check could not inspect the database after the handler ran: ' . $exception->getMessage());
+    }
+}
+
 fwrite(STDOUT, json_encode([
     'ok' => true,
     'status' => $response->status(),
     'body' => $response->content(),
+    'session' => $_SESSION,
+    'inspect' => $inspected,
 ]));
 
 exit(0);

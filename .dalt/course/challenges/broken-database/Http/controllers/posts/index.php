@@ -28,7 +28,7 @@ if ($search) {
 
     <div class="warning">
         <strong>⚠️ SQL Injection Vulnerability!</strong><br>
-        Try: <code>?search=1' OR '1'='1</code>
+        Try: <code>?search=' OR '1'='1</code>
     </div>
 
     <form method="GET">

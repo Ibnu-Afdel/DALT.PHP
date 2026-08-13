@@ -72,7 +72,7 @@ Fix the lookup order while preserving the `exists()`/`has()` distinction and nul
 php artisan challenge:verify
 ```
 
-The verifier checks structural evidence in the learner-owned file. It does not execute learner PHP, so use the browser/server observations as the runtime proof and the verifier as a focused completion check.
+Three checks run the `contact/precedence.php` and `contact/success.php` controllers against a seeded session and judge the result — including one that reads the session state left behind, since a stale flash value never shows up in a response body on its own. The rest check structural evidence in `framework/Core/Session.php` directly. Still use the browser/server observations as your own proof; the verifier is a completion signal, not a substitute for reading the trace yourself.
 
 ## Stop and restore
 

@@ -68,9 +68,9 @@ Catch `\Throwable` rather than `\Exception` so a `TypeError` in the block is han
 ## Success criteria
 
 - A successful transfer still returns success and moves the credits.
-- A failing transfer returns a controlled error response, not an uncaught exception.
-- The rollback is explicit, and guarded so it cannot throw on its own.
-- Balances are consistent after a failure.
+- A failing transfer returns a controlled error response — `Response::json(['success' => false, ...], 422)`, not an uncaught exception.
+- The rollback is explicit, runs before the response is built, and is guarded so it cannot throw on its own.
+- Balances are consistent after a failure: a `rollBack()` that never actually runs (a catch block reached but wired to a `finally` that commits anyway, for example) is invisible in the response — the verifier checks the row directly.
 
 ## Verify
 

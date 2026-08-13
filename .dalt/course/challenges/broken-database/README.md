@@ -25,10 +25,10 @@ Visit `/posts/1`. The post is in the database and the controller binds `:id` cor
 Visit `/posts` and search for something ordinary, then try:
 
 ```
-/posts?search=1' OR '1'='1
+/posts?search=' OR '1'='1
 ```
 
-Every post comes back regardless of its title. Try `/posts?search='` on its own and read what happens.
+Every post comes back regardless of its title. (A leading digit before the quote, e.g. `1' OR '1'='1`, does **not** reproduce this — the query wraps the term in `'%...%'`, so a prefix before the injected quote leaves a dangling `LIKE '%1'` clause and the trailing `'1'='1%'` compares two unequal string literals instead of matching everything. The bare `' OR '1'='1` closes the leading `%` wrapper cleanly and does not have this problem.) Try `/posts?search='` on its own and read what happens.
 
 Before opening any file, write down what each symptom implies about where the submitted value ends up.
 

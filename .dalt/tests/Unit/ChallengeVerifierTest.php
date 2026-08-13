@@ -217,17 +217,54 @@ test('verification logging rejects untrusted result and challenge fields', funct
         ->toThrow(RuntimeException::class, 'invalid challenge verification result');
 });
 
+function copyTree(string $source, string $destination): void
+{
+    mkdir($destination, 0700, true);
+    foreach (new FilesystemIterator($source) as $entry) {
+        $target = $destination . '/' . $entry->getFilename();
+        if ($entry->isDir()) {
+            copyTree($entry->getPathname(), $target);
+        } else {
+            copy($entry->getPathname(), $target);
+        }
+    }
+}
+
 test('the broken-session specification rejects its fixture and accepts the verified base session', function () {
     $path = '.dalt/course/challenges/broken-session';
+    $challenge = base_path($path);
 
     $broken = (new ChallengeVerifier($path, false))->verify();
-    $fixed = (new ChallengeVerifier($path, true))->verify();
 
-    expect($broken['status'])->toBe('fail')
-        ->and($broken['failed'])->toBeGreaterThan(0)
-        ->and($fixed['status'])->toBe('pass')
-        ->and($fixed['failed'])->toBe(0)
-        ->and($fixed['total'])->toBe(6);
+    // The handler_result checks need Http/controllers/contact/{precedence,success}.php
+    // in place under app/ — challenge-only demo routes the tracked base skeleton
+    // does not (and should not) ship — so simulate what challenge:start would
+    // have copied in, against a real, correctly-fixed framework/Core/Session.php.
+    // framework is copied rather than symlinked: verification walks every parent
+    // directory of a target and refuses a symbolic link anywhere in that chain.
+    $root = verifierFixture();
+    symlink(base_path('vendor'), $root . '/vendor');
+    copyTree(base_path('framework'), $root . '/framework');
+    mkdir($root . '/app/Http/controllers/contact', 0700, true);
+    foreach (['precedence.php', 'success.php'] as $controller) {
+        copy(
+            $challenge . '/Http/controllers/contact/' . $controller,
+            $root . '/app/Http/controllers/contact/' . $controller,
+        );
+    }
+    copyTree($challenge, $root . '/.dalt/course/challenges/broken-session');
+
+    try {
+        $fixed = (new ChallengeVerifier($path, true, $root))->verify();
+
+        expect($broken['status'])->toBe('fail')
+            ->and($broken['failed'])->toBeGreaterThan(0)
+            ->and($fixed['status'])->toBe('pass')
+            ->and($fixed['failed'])->toBe(0)
+            ->and($fixed['total'])->toBe(9);
+    } finally {
+        removeVerifierFixture($root);
+    }
 });
 
 test('every shipped specification is valid and rejects its broken source fixture', function () {
@@ -412,6 +449,139 @@ test('handler result checks refuse non-controller targets and malformed expectat
     'unknown expectation' => [
         ['type' => 'handler_result', 'file' => 'Http/controllers/posts/index.php', 'seed' => ['SELECT 1'], 'expect' => ['body' => 'x']],
         'unsupported expectation',
+    ],
+    'inspect source without an inspect query' => [
+        ['type' => 'handler_result', 'file' => 'Http/controllers/posts/index.php', 'seed' => ['SELECT 1'], 'expect' => ['source' => 'inspect', 'contains' => 'x']],
+        "sets no 'inspect' query",
+    ],
+    'unsupported source' => [
+        ['type' => 'handler_result', 'file' => 'Http/controllers/posts/index.php', 'seed' => ['SELECT 1'], 'expect' => ['source' => 'headers', 'contains' => 'x']],
+        "unsupported expectation 'source'",
+    ],
+    'session must be an array' => [
+        ['type' => 'handler_result', 'file' => 'Http/controllers/posts/index.php', 'seed' => ['SELECT 1'], 'session' => 'not-an-array', 'expect' => ['status' => 200]],
+        "'session' to be an array",
+    ],
+]);
+
+test('handler result checks can assert on session state left behind by the handler', function (
+    array $session,
+    string $body,
+    bool $expectedPass,
+    string $expectedFragment,
+) {
+    $root = verifierFixture();
+    symlink(base_path('vendor'), $root . '/vendor');
+    symlink(base_path('framework'), $root . '/framework');
+    writeVerifierFixture($root, '.dalt/course/challenges/example/Http/controllers/contact/precedence.php', $body);
+    writeVerifierTests($root, [
+        'flash_wins_over_persistent' => [
+            'type' => 'handler_result',
+            'file' => 'Http/controllers/contact/precedence.php',
+            'seed' => ['SELECT 1'],
+            'session' => $session,
+            'expect' => ['source' => 'session', 'contains' => 'probe'],
+            'hint' => 'Flash should win.',
+        ],
+    ]);
+
+    try {
+        $result = (new ChallengeVerifier('.dalt/course/challenges/example', false, $root))->verify();
+
+        expect($result['status'])->toBe($expectedPass ? 'pass' : 'fail')
+            ->and($result['results'][0]['message'])->toContain($expectedFragment);
+    } finally {
+        removeVerifierFixture($root);
+    }
+})->with([
+    'seeded flash data survives ageFlashData and is visible after the handler runs' => [
+        ['_flash' => ['new' => ['probe' => 'flash value'], 'old' => ['stale' => 'must not survive']]],
+        "<?php\n\\Core\\Session::put('probe', 'ignored');\nreturn ['done' => true];\n",
+        true,
+        'expected response',
+    ],
+    'session state without the expected key fails' => [
+        ['_flash' => ['new' => [], 'old' => []]],
+        "<?php\nreturn ['done' => true];\n",
+        false,
+        'session state is missing',
+    ],
+]);
+
+test('handler result checks can assert on a post-handler inspect query', function (
+    string $body,
+    bool $expectedPass,
+    string $expectedFragment,
+) {
+    $root = verifierFixture();
+    symlink(base_path('vendor'), $root . '/vendor');
+    symlink(base_path('framework'), $root . '/framework');
+    writeVerifierFixture($root, '.dalt/course/challenges/example/Http/controllers/db/transfer.php', $body);
+    writeVerifierTests($root, [
+        'balance_is_untouched_after_a_failed_transfer' => [
+            'type' => 'handler_result',
+            'file' => 'Http/controllers/db/transfer.php',
+            'seed' => [
+                'CREATE TABLE users (id INTEGER PRIMARY KEY, credits INTEGER CHECK (credits <= 100))',
+                'INSERT INTO users VALUES (1, 50)',
+                'INSERT INTO users VALUES (2, 80)',
+            ],
+            'inspect' => 'SELECT credits FROM users WHERE id = 1',
+            'expect' => ['source' => 'inspect', 'contains' => '"credits":50'],
+            'hint' => 'A failed second update must not leave the first one committed.',
+        ],
+    ]);
+
+    try {
+        $result = (new ChallengeVerifier('.dalt/course/challenges/example', false, $root))->verify();
+
+        expect($result['status'])->toBe($expectedPass ? 'pass' : 'fail')
+            ->and($result['results'][0]['message'])->toContain($expectedFragment);
+    } finally {
+        removeVerifierFixture($root);
+    }
+})->with([
+    'genuine rollback leaves the balance untouched' => [
+        <<<'PHP'
+<?php
+$db = \Core\App::resolve(\Core\Database::class);
+$pdo = $db->getConnection();
+$pdo->beginTransaction();
+try {
+    $db->query('UPDATE users SET credits = credits - 10 WHERE id = 1');
+    $db->query('UPDATE users SET credits = credits + 30 WHERE id = 2');
+    $pdo->commit();
+    return ['success' => true];
+} catch (\Throwable $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    return ['success' => false];
+}
+PHP,
+        true,
+        'expected response',
+    ],
+    'a fix that catches the error but still commits leaves a partial write' => [
+        <<<'PHP'
+<?php
+$db = \Core\App::resolve(\Core\Database::class);
+$pdo = $db->getConnection();
+$pdo->beginTransaction();
+try {
+    $db->query('UPDATE users SET credits = credits - 10 WHERE id = 1');
+    $db->query('UPDATE users SET credits = credits + 30 WHERE id = 2');
+} catch (\Throwable $e) {
+    // caught, but forgets to roll back
+} finally {
+    if ($pdo->inTransaction()) {
+        $pdo->commit();
+    }
+}
+return ['success' => false];
+PHP,
+        false,
+        "is missing '\"credits\":50'",
     ],
 ]);
 
