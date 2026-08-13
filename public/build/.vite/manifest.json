@@ -1,17 +1,16 @@
 {
   ".dalt/resources/js/app.js": {
-    "file": "assets/app-Cpsj_qlC.js",
+    "file": "assets/app-_UBGTR9a.js",
     "name": "app",
     "src": ".dalt/resources/js/app.js",
     "isEntry": true,
     "dynamicImports": [
       "node_modules/vue/dist/vue.esm-bundler.js",
-      ".dalt/resources/js/components/RoadmapGraph.vue",
       ".dalt/resources/js/components/ChallengeVerifier.vue",
       ".dalt/resources/js/components/UnlockButton.vue"
     ],
     "css": [
-      "assets/app-DnaYpit6.css"
+      "assets/app-BMwu1bne.css"
     ],
     "assets": [
       "assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2",
@@ -29,7 +28,7 @@
     ]
   },
   ".dalt/resources/js/components/ChallengeVerifier.vue": {
-    "file": "assets/ChallengeVerifier-Qjvnl4qB.js",
+    "file": "assets/ChallengeVerifier-hjh6pc2c.js",
     "name": "ChallengeVerifier",
     "src": ".dalt/resources/js/components/ChallengeVerifier.vue",
     "isDynamicEntry": true,
@@ -37,17 +36,8 @@
       "node_modules/vue/dist/vue.esm-bundler.js"
     ]
   },
-  ".dalt/resources/js/components/RoadmapGraph.vue": {
-    "file": "assets/RoadmapGraph-CI01HBTv.js",
-    "name": "RoadmapGraph",
-    "src": ".dalt/resources/js/components/RoadmapGraph.vue",
-    "isDynamicEntry": true,
-    "imports": [
-      "node_modules/vue/dist/vue.esm-bundler.js"
-    ]
-  },
   ".dalt/resources/js/components/UnlockButton.vue": {
-    "file": "assets/UnlockButton-QnFuEsUm.js",
+    "file": "assets/UnlockButton-CZRFxJ8h.js",
     "name": "UnlockButton",
     "src": ".dalt/resources/js/components/UnlockButton.vue",
     "isDynamicEntry": true,
@@ -104,7 +94,7 @@
     "src": "node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-vietnamese-wght-normal.woff2"
   },
   "node_modules/vue/dist/vue.esm-bundler.js": {
-    "file": "assets/vue.esm-bundler-DVVsp_Xq.js",
+    "file": "assets/vue.esm-bundler-BeRbFe5p.js",
     "name": "vue.esm-bundler",
     "src": "node_modules/vue/dist/vue.esm-bundler.js",
     "isDynamicEntry": true

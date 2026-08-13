@@ -112,8 +112,11 @@ test('learning pages expose navigation state prerequisites and no-script content
         ->and($postgresTrack->statusCode)->toBe(200)
         ->and($postgresTrack->body)->toContain('You can still start PostgreSQL now.')
         ->and($roadmap->statusCode)->toBe(200)
-        ->and($roadmap->body)->toContain('Competency roadmap')
-        ->and($roadmap->body)->toContain('The graph')
+        ->and($roadmap->body)->toContain('Learning roadmap')
+        ->and($roadmap->body)->toContain('Foundation')
+        ->and($roadmap->body)->toContain('Docker')
+        ->and($roadmap->body)->toContain('PostgreSQL')
+        ->and($roadmap->body)->toContain('Operations')
         ->and($roadmap->body)->toContain('Roadmap')
         ->and($lesson->statusCode)->toBe(200)
         ->and($lesson->body)->toContain('Recommended prerequisites')
@@ -127,6 +130,75 @@ test('learning pages expose navigation state prerequisites and no-script content
         ->and($challenge->body)->toContain('<h2>What This Challenge Is</h2>')
         ->and($challenge->body)->not->toContain('challenge-content-data')
         ->and($challenge->body)->toContain('meta name="csrf-token"');
+});
+
+test('roadmap is a server-rendered curriculum view of effective learning progress', function () {
+    $root = p05ProjectFixture();
+
+    try {
+        file_put_contents($root . '/.dalt/progress.json', json_encode([
+            'passed' => ['broken-routing'],
+            'completed_lessons' => ['06-docker-basics'],
+            'last_visited_lesson' => '08-docker-compose',
+        ], JSON_THROW_ON_ERROR));
+        $client = new ApplicationTestClient($root);
+        $roadmap = $client->request('GET', '/learn/roadmap');
+
+        expect($roadmap->statusCode)->toBe(200)
+            ->and($roadmap->body)->toContain('2 of 17 lessons completed')
+            ->and($roadmap->body)->toContain('1 verified through practice')
+            ->and($roadmap->body)->toContain('Routing')
+            ->and($roadmap->body)->toContain('>Verified</span>')
+            ->and($roadmap->body)->toContain('Docker Basics')
+            ->and($roadmap->body)->toContain('>Completed</span>')
+            ->and($roadmap->body)->toContain('Docker Compose')
+            ->and($roadmap->body)->toContain('>In progress</span>')
+            ->and($roadmap->body)->toContain('Recommended first: <a href="/learn/lessons/08-docker-compose"')
+            ->and($roadmap->body)->toContain('/learn/tracks/foundation')
+            ->and($roadmap->body)->toContain('/learn/tracks/docker')
+            ->and($roadmap->body)->toContain('/learn/tracks/postgres')
+            ->and($roadmap->body)->toContain('/learn/tracks/operations')
+            ->and($roadmap->body)->toContain('/learn/lessons/17-observability')
+            ->and($roadmap->body)->not->toContain('localStorage')
+            ->and($roadmap->body)->not->toContain('Marked understood')
+            ->and($roadmap->body)->not->toContain('Needs prerequisites first')
+            ->and($roadmap->body)->not->toContain('>Ready<');
+
+        foreach ([
+            'foundation' => ['Request Lifecycle', 'Routing', 'Middleware', 'Authentication', 'Database', 'DALT Database Layer'],
+            'docker' => ['Docker Basics', 'Writing Dockerfiles', 'Docker Compose', 'Docker Intermediate', 'Docker Production Patterns'],
+            'postgres' => ['PostgreSQL First Contact', 'PostgreSQL Core', 'PostgreSQL Advanced', 'PostgreSQL Reliability', 'Advanced PostgreSQL'],
+        ] as $section => $titles) {
+            $sectionStart = strpos($roadmap->body, '<h2 id="' . $section . '-title"');
+            $sectionEnd = strpos($roadmap->body, 'View ', $sectionStart);
+            $sectionHtml = substr($roadmap->body, $sectionStart, $sectionEnd - $sectionStart);
+            $positions = array_map(static fn (string $title): int => strpos($sectionHtml, '>' . $title . '<'), $titles);
+            $sortedPositions = $positions;
+            sort($sortedPositions);
+            expect($positions)->each->toBeGreaterThanOrEqual(0);
+            expect($positions)->toBe($sortedPositions);
+        }
+    } finally {
+        p05RemoveTree($root);
+    }
+});
+
+test('roadmap reports a complete curriculum without a fake next lesson', function () {
+    $root = p05ProjectFixture();
+
+    try {
+        file_put_contents($root . '/.dalt/progress.json', json_encode([
+            'passed' => [],
+            'completed_lessons' => array_column(\Core\CourseLoader::getLessons(), 'id'),
+            'last_visited_lesson' => '17-observability',
+        ], JSON_THROW_ON_ERROR));
+        $roadmap = (new ApplicationTestClient($root))->request('GET', '/learn/roadmap');
+
+        expect($roadmap->body)->toContain('17 of 17 lessons completed')
+            ->and($roadmap->body)->not->toContain('Continue from');
+    } finally {
+        p05RemoveTree($root);
+    }
 });
 
 test('learning paths and resource filters keep navigation intentions separate', function () {

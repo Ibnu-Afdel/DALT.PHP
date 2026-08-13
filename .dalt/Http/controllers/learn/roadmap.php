@@ -2,49 +2,51 @@
 
 declare(strict_types=1);
 
-use Core\ChallengeManager;
 use Core\CourseLoader;
-use Core\MarkdownRenderer;
+use Core\ProgressManager;
 
-$roadmapPath = base_path('documentation/competency-roadmap.md');
-
-if (!is_file($roadmapPath) || !is_readable($roadmapPath)) {
-    abort(404, 'The competency roadmap is not available.');
-}
-
-$content = file_get_contents($roadmapPath);
-
-if ($content === false) {
-    abort(500, 'The competency roadmap could not be read.');
-}
-
-// The page header owns the title; keep the Markdown body as the canonical content.
-$content = preg_replace('/\A# DALT\.PHP Competency Roadmap\R+/', '', $content, 1) ?? $content;
-$renderedContent = (new MarkdownRenderer())->render($content);
-
-// The graph is a visualization over the lessons themselves — the same prerequisite
-// data and IDs CourseLoader already validates — rather than a separately authored
-// dataset. This keeps the graph and the lesson content from drifting apart.
+$sections = CourseLoader::getSections();
 $lessons = CourseLoader::getLessons();
-$passedChallenges = ChallengeManager::getPassedChallenges();
+$challenges = CourseLoader::getChallenges();
+$completedLessonIds = ProgressManager::completedLessonIds($challenges);
+$verifiedLessonIds = ProgressManager::verifiedLessonIds($challenges);
+$lastVisitedLesson = ProgressManager::lastVisitedLesson();
+$lessonsById = array_column($lessons, null, 'id');
 
-$nodes = array_map(static function (array $lesson) use ($passedChallenges): array {
-    $challenge = CourseLoader::getChallengesForLesson($lesson['id'])[0] ?? null;
+$paths = array_map(static fn (array $section): array => [
+    'section' => $section,
+    'lessons' => [],
+], $sections);
 
-    return [
-        'id' => $lesson['id'],
-        'order' => $lesson['order'],
-        'title' => $lesson['title'],
-        'description' => $lesson['description'],
-        'section' => $lesson['section'],
-        'prerequisites' => $lesson['prerequisites'],
-        'challenge_id' => $challenge['id'] ?? null,
-        'challenge_title' => $challenge['title'] ?? null,
-        'verified' => $challenge !== null && in_array($challenge['id'], $passedChallenges, true),
-    ];
-}, $lessons);
+foreach ($lessons as $lesson) {
+    $paths[$lesson['section']]['lessons'][] = $lesson;
+}
+
+foreach ($paths as &$path) {
+    usort($path['lessons'], static fn (array $left, array $right): int => $left['section_order'] <=> $right['section_order']);
+
+    foreach ($path['lessons'] as &$lesson) {
+        $lesson['recommended_first'] = array_values(array_filter(
+            array_map(static fn (string $id): ?array => $lessonsById[$id] ?? null, $lesson['prerequisites']),
+            static fn (?array $prerequisite): bool => $prerequisite !== null && $prerequisite['section'] !== $lesson['section'],
+        ));
+    }
+    unset($lesson);
+
+    $path['completed_count'] = count(array_filter(
+        $path['lessons'],
+        static fn (array $lesson): bool => isset($completedLessonIds[$lesson['id']]),
+    ));
+}
+unset($path);
+
+$continuation = ProgressManager::continuation($lessons, $completedLessonIds);
 
 return view('learn/roadmap.view.php', [
-    'renderedContent' => $renderedContent,
-    'nodes' => $nodes,
+    'paths' => $paths,
+    'lessons' => $lessons,
+    'completedLessonIds' => $completedLessonIds,
+    'verifiedLessonIds' => $verifiedLessonIds,
+    'lastVisitedLesson' => $lastVisitedLesson,
+    'continuation' => $continuation,
 ]);
