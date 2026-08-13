@@ -11,6 +11,7 @@ final class ChallengeVerifier
 {
     private const TEST_TYPES = [
         'class_contract',
+        'compose_config',
         'file_contains',
         'file_not_contains',
         'function_call',
@@ -28,6 +29,12 @@ final class ChallengeVerifier
      * files. Controllers execute on require and are not eligible.
      */
     private const CLASS_CONTRACT_PATH = '~\Aframework/Core/[A-Za-z][A-Za-z0-9]*(?:/[A-Za-z][A-Za-z0-9]*)*\.php\z~D';
+
+    /** compose_config shells out to `docker compose config`, so only the compose file is eligible. */
+    private const COMPOSE_CONFIG_PATH = '~\Adocker-compose\.yml\z~D';
+
+    /** Dotted path into the normalized compose config, e.g. "services.app.depends_on.db.condition". */
+    private const COMPOSE_CONFIG_KEY_PATH = '~\A[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*\z~D';
 
     private readonly string $projectRoot;
     private readonly string $challengeDirectory;
@@ -151,7 +158,7 @@ final class ChallengeVerifier
         }
         $config['hint'] = trim($config['hint'] ?? 'Review the challenge README and the failed check.');
 
-        if (in_array($type, ['class_contract', 'file_contains', 'file_not_contains', 'function_call', 'handler_result', 'session_key'], true)) {
+        if (in_array($type, ['class_contract', 'compose_config', 'file_contains', 'file_not_contains', 'function_call', 'handler_result', 'session_key'], true)) {
             $this->requireString($config, 'file', $name);
             $this->assertAllowedSourcePath($config['file']);
             $this->assertSpecificationSource($config['file']);
@@ -170,6 +177,16 @@ final class ChallengeVerifier
             if ($config['implements'] === [] && $config['methods'] === []) {
                 throw new RuntimeException("Check '{$name}' must assert at least one interface or method.");
             }
+        }
+        if ($type === 'compose_config') {
+            if (preg_match(self::COMPOSE_CONFIG_PATH, $config['file']) !== 1) {
+                throw new RuntimeException("Check '{$name}' may only inspect docker-compose.yml.");
+            }
+            $this->requireString($config, 'path', $name);
+            if (preg_match(self::COMPOSE_CONFIG_KEY_PATH, $config['path']) !== 1) {
+                throw new RuntimeException("Check '{$name}' has an invalid 'path'.");
+            }
+            $config = $this->validComposeAssertion($config, $name);
         }
         if ($type === 'handler_result') {
             if (preg_match(self::HANDLER_RESULT_PATH, $config['file']) !== 1) {
@@ -302,6 +319,36 @@ final class ChallengeVerifier
         return $result;
     }
 
+    /**
+     * A compose_config check names exactly one assertion against the value at
+     * 'path'. Resist growing this into a query language: three flat modes
+     * cover every case Phase 01 needs.
+     *
+     * @param array<string, mixed> $config @return array<string, mixed>
+     */
+    private function validComposeAssertion(array $config, string $name): array
+    {
+        $modes = array_intersect_key($config, ['equals' => true, 'exists' => true, 'contains' => true]);
+        if (count($modes) !== 1) {
+            throw new RuntimeException("Check '{$name}' must set exactly one of 'equals', 'exists', or 'contains'.");
+        }
+
+        if (array_key_exists('equals', $modes)) {
+            if (!is_scalar($config['equals'])) {
+                throw new RuntimeException("Check '{$name}' requires 'equals' to be a scalar value.");
+            }
+            $config['equals'] = (string) $config['equals'];
+        } elseif (array_key_exists('exists', $modes)) {
+            if (!is_bool($config['exists'])) {
+                throw new RuntimeException("Check '{$name}' requires 'exists' to be a boolean.");
+            }
+        } else {
+            $this->requireString($config, 'contains', $name);
+        }
+
+        return $config;
+    }
+
     /** @param array<string, mixed> $config @return array<string, mixed> */
     private function validExpectation(array $config, string $name): array
     {
@@ -348,6 +395,7 @@ final class ChallengeVerifier
     {
         return match ($config['type']) {
             'class_contract' => $this->testClassContract($config),
+            'compose_config' => $this->testComposeConfig($config),
             'handler_result' => $this->testHandlerResult($config),
             'route_exists' => $this->testRouteExists($config),
             'route_order' => $this->testRouteOrder($config),
@@ -597,6 +645,101 @@ final class ChallengeVerifier
         }
 
         return ['passed' => true, 'message' => "{$config['class']} satisfies the expected contract."];
+    }
+
+    /**
+     * Normalizes the compose file with `docker compose config` and asserts on
+     * the parsed structure at 'path'. This is what distinguishes "the magic
+     * word is present" from "the file structurally means what it needs to
+     * mean": a keyword sitting under the wrong service, or inside a comment,
+     * cannot satisfy this the way it could satisfy a file_contains check.
+     *
+     * @param array<string, mixed> $config
+     * @return array{passed: bool, message: string}
+     */
+    private function testComposeConfig(array $config): array
+    {
+        $path = $this->resolveTargetPath($config['file']);
+        $probe = __DIR__ . DIRECTORY_SEPARATOR . 'probe-compose-config.php';
+        $this->assertRegularFile($probe, 'compose config probe');
+
+        $command = escapeshellarg(PHP_BINARY)
+            . ' ' . escapeshellarg($probe)
+            . ' ' . escapeshellarg($path)
+            . ' 2>/dev/null';
+
+        $output = shell_exec($command);
+        $report = is_string($output) ? json_decode(trim($output), true) : null;
+
+        if (!is_array($report) || !isset($report['ok'])) {
+            return [
+                'passed' => false,
+                'message' => "Running `docker compose config` on {$config['file']} produced no usable result.",
+            ];
+        }
+        if ($report['ok'] !== true) {
+            return [
+                'passed' => false,
+                'message' => is_string($report['error'] ?? null) ? $report['error'] : 'Docker Compose could not evaluate the file.',
+            ];
+        }
+
+        [$found, $value] = $this->composeConfigLookup(is_array($report['config'] ?? null) ? $report['config'] : [], $config['path']);
+
+        if (isset($config['exists'])) {
+            $passed = $config['exists'] ? $found : !$found;
+
+            return [
+                'passed' => $passed,
+                'message' => $passed
+                    ? ($config['exists'] ? "{$config['path']} is present." : "{$config['path']} is absent, as expected.")
+                    : ($config['exists'] ? "{$config['path']} is missing from the compose configuration." : "{$config['path']} should not be set, but it is."),
+            ];
+        }
+
+        if (!$found) {
+            return ['passed' => false, 'message' => "{$config['path']} is missing from the compose configuration."];
+        }
+
+        if (isset($config['equals'])) {
+            $passed = is_scalar($value) && (string) $value === $config['equals'];
+
+            return [
+                'passed' => $passed,
+                'message' => $passed
+                    ? "{$config['path']} equals '{$config['equals']}'."
+                    : "{$config['path']} is " . $this->preview((string) json_encode($value, JSON_UNESCAPED_SLASHES)) . ", expected '{$config['equals']}'.",
+            ];
+        }
+
+        $haystack = is_string($value) ? $value : (string) json_encode($value, JSON_UNESCAPED_SLASHES);
+        $passed = str_contains($haystack, $config['contains']);
+
+        return [
+            'passed' => $passed,
+            'message' => $passed
+                ? "{$config['path']} contains '{$config['contains']}'."
+                : "{$config['path']} does not contain '{$config['contains']}'. It is: " . $this->preview($haystack),
+        ];
+    }
+
+    /**
+     * Walks a dotted path through the normalized compose config.
+     *
+     * @param array<string, mixed> $config
+     * @return array{0: bool, 1: mixed}
+     */
+    private function composeConfigLookup(array $config, string $path): array
+    {
+        $value = $config;
+        foreach (explode('.', $path) as $segment) {
+            if (!is_array($value) || !array_key_exists($segment, $value)) {
+                return [false, null];
+            }
+            $value = $value[$segment];
+        }
+
+        return [true, $value];
     }
 
     /**

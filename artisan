@@ -597,7 +597,7 @@ SQL;
             $icon = $test['passed'] ? '✓' : '✗';
             $color = $test['passed'] ? "\033[32m" : "\033[31m";
             $reset = "\033[0m";
-            echo "{$color}{$icon}{$reset} {$test['message']}\n";
+            echo "{$color}{$icon}{$reset} [{$test['name']}] {$test['message']}\n";
             if (!$test['passed'] && !empty($test['hint'])) {
                 echo "  💡 Hint: {$test['hint']}\n";
             }

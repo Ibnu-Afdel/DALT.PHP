@@ -414,3 +414,180 @@ test('handler result checks refuse non-controller targets and malformed expectat
         'unsupported expectation',
     ],
 ]);
+
+const COMPOSE_WITH_HEALTHCHECK = <<<'YAML'
+services:
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: postgres:16-alpine
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+YAML;
+
+const COMPOSE_WITHOUT_HEALTHCHECK = <<<'YAML'
+services:
+  app:
+    build: .
+    depends_on:
+      - db
+  db:
+    image: postgres:16-alpine
+YAML;
+
+test('compose_config checks assert on the normalized structure, not raw text', function (
+    string $composeYaml,
+    array $checkConfig,
+    bool $expectedPass,
+    string $expectedFragment,
+) {
+    $root = verifierFixture();
+    writeVerifierFixture($root, '.dalt/course/challenges/example/docker-compose.yml', $composeYaml);
+    writeVerifierTests($root, ['probe' => $checkConfig + ['type' => 'compose_config', 'file' => 'docker-compose.yml']]);
+
+    try {
+        $result = (new ChallengeVerifier('.dalt/course/challenges/example', false, $root))->verify();
+
+        expect($result['status'])->toBe($expectedPass ? 'pass' : 'fail')
+            ->and($result['results'][0]['message'])->toContain($expectedFragment);
+    } finally {
+        removeVerifierFixture($root);
+    }
+})->with([
+    'exists passes when the path is present' => [
+        COMPOSE_WITH_HEALTHCHECK,
+        ['path' => 'services.db.healthcheck.test', 'exists' => true],
+        true,
+        'is present',
+    ],
+    'exists fails when the path is absent' => [
+        COMPOSE_WITHOUT_HEALTHCHECK,
+        ['path' => 'services.db.healthcheck.test', 'exists' => true],
+        false,
+        'is missing from the compose configuration',
+    ],
+    'equals passes on the real value' => [
+        COMPOSE_WITH_HEALTHCHECK,
+        ['path' => 'services.app.depends_on.db.condition', 'equals' => 'service_healthy'],
+        true,
+        "equals 'service_healthy'",
+    ],
+    'equals fails against a decoy value under the wrong condition' => [
+        COMPOSE_WITHOUT_HEALTHCHECK,
+        ['path' => 'services.app.depends_on.db.condition', 'equals' => 'service_healthy'],
+        false,
+        "expected 'service_healthy'",
+    ],
+    'equals fails outright when the path is missing' => [
+        COMPOSE_WITHOUT_HEALTHCHECK,
+        ['path' => 'services.db.healthcheck.test', 'equals' => 'pg_isready'],
+        false,
+        'is missing from the compose configuration',
+    ],
+    'contains checks the value at the path, not the whole file' => [
+        COMPOSE_WITH_HEALTHCHECK,
+        ['path' => 'services.db.healthcheck.test', 'contains' => 'pg_isready'],
+        true,
+        "contains 'pg_isready'",
+    ],
+    'contains does not match a keyword sitting under the wrong key' => [
+        <<<'YAML'
+        services:
+          app:
+            build: .
+            environment:
+              DECOY: "pg_isready mentioned here but unused"
+          db:
+            image: postgres:16-alpine
+        YAML,
+        ['path' => 'services.db.healthcheck.test', 'contains' => 'pg_isready'],
+        false,
+        'is missing from the compose configuration',
+    ],
+]);
+
+test('compose_config reports a malformed compose file as a failed check, not a crash', function () {
+    $root = verifierFixture();
+    writeVerifierFixture($root, '.dalt/course/challenges/example/docker-compose.yml', "services: [this is not valid\n");
+    writeVerifierTests($root, [
+        'probe' => ['type' => 'compose_config', 'file' => 'docker-compose.yml', 'path' => 'services.db.image', 'exists' => true],
+    ]);
+
+    try {
+        $result = (new ChallengeVerifier('.dalt/course/challenges/example', false, $root))->verify();
+
+        expect($result['status'])->toBe('fail')
+            ->and($result['results'][0]['message'])->toContain('could not parse the file');
+    } finally {
+        removeVerifierFixture($root);
+    }
+});
+
+test('compose_config reports a missing Docker CLI as a failure, never a silent pass', function () {
+    $root = verifierFixture();
+    writeVerifierFixture($root, '.dalt/course/challenges/example/docker-compose.yml', COMPOSE_WITH_HEALTHCHECK);
+    writeVerifierTests($root, [
+        'probe' => ['type' => 'compose_config', 'file' => 'docker-compose.yml', 'path' => 'services.db.healthcheck.test', 'exists' => true],
+    ]);
+
+    $originalPath = getenv('PATH');
+    putenv('PATH=' . sys_get_temp_dir());
+    try {
+        $result = (new ChallengeVerifier('.dalt/course/challenges/example', false, $root))->verify();
+
+        expect($result['status'])->toBe('fail')
+            ->and($result['results'][0]['passed'])->toBeFalse()
+            ->and($result['results'][0]['message'])->toContain('Docker CLI');
+    } finally {
+        putenv($originalPath === false ? 'PATH' : "PATH={$originalPath}");
+        removeVerifierFixture($root);
+    }
+});
+
+test('compose_config refuses any target other than docker-compose.yml', function () {
+    $root = verifierFixture();
+    writeVerifierFixture($root, '.dalt/course/challenges/example/Dockerfile', "FROM php:8.4\n");
+    writeVerifierTests($root, [
+        'probe' => ['type' => 'compose_config', 'file' => 'Dockerfile', 'path' => 'services.db.image', 'exists' => true],
+    ]);
+
+    try {
+        $result = (new ChallengeVerifier('.dalt/course/challenges/example', false, $root))->verify();
+
+        expect($result['status'])->toBe('error')
+            ->and($result['message'])->toContain('may only inspect docker-compose.yml');
+    } finally {
+        removeVerifierFixture($root);
+    }
+});
+
+test('compose_config assertion config must name exactly one mode', function (array $checkConfig, string $expectedFragment) {
+    $root = verifierFixture();
+    writeVerifierFixture($root, '.dalt/course/challenges/example/docker-compose.yml', COMPOSE_WITH_HEALTHCHECK);
+    writeVerifierTests($root, ['probe' => $checkConfig + ['type' => 'compose_config', 'file' => 'docker-compose.yml']]);
+
+    try {
+        $result = (new ChallengeVerifier('.dalt/course/challenges/example', false, $root))->verify();
+
+        expect($result['status'])->toBe('error')
+            ->and($result['message'])->toContain($expectedFragment);
+    } finally {
+        removeVerifierFixture($root);
+    }
+})->with([
+    'neither mode set' => [
+        ['path' => 'services.db.image'],
+        "exactly one of 'equals', 'exists', or 'contains'",
+    ],
+    'both equals and exists set' => [
+        ['path' => 'services.db.image', 'equals' => 'postgres:16-alpine', 'exists' => true],
+        "exactly one of 'equals', 'exists', or 'contains'",
+    ],
+    'invalid path syntax' => [
+        ['path' => 'services..db', 'exists' => true],
+        "invalid 'path'",
+    ],
+]);

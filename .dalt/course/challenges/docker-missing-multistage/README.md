@@ -69,3 +69,24 @@ php artisan challenge:verify
 ```
 
 All five checks must pass.
+
+## Testing the Build
+
+The checks above confirm shape — the right instructions in the right form — not that an image actually builds. A full build is not part of `challenge:verify`: `docker-php-ext-install pdo_pgsql` compiles against `postgresql-dev`, which on Alpine pulls in a full `clang`/`llvm` toolchain and can take several minutes even with a warm layer cache. (This is the same slow step documented for Lesson 07's Dockerfile — it is not specific to your fix.)
+
+A fast sanity check that *is* worth running before and after, because it costs under a second:
+
+```bash
+docker build --check -f Dockerfile .
+```
+
+Read this for what it is: a linter, not a functional check. It confirms the Dockerfile parses and follows BuildKit's own best-practice rules — it reports "no warnings" on both the broken single-stage version and a correct multi-stage one, because neither the missing builder stage nor the leftover `COPY --from=composer:2 /usr/bin/composer` is a syntax problem. It cannot replace `challenge:verify` or a real build.
+
+If you want to confirm the actual point of a multi-stage build — that Composer never reaches the image that runs in production — build it and check:
+
+```bash
+docker build -t dalt-php-multistage .
+docker run --rm dalt-php-multistage which composer
+```
+
+Before your fix, this prints `/usr/bin/composer` — the interpreter is standard `which`, so the exact path matches what the `COPY --from=composer:2 /usr/bin/composer /usr/bin/composer` line put there. After your fix, `which` should exit non-zero and print nothing: the runtime stage never had Composer, only `builder` did, and `builder` was discarded.
