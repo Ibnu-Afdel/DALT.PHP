@@ -262,7 +262,7 @@ If you see this, Docker is working correctly.
 
 ## Your Task for This Lesson
 
-1. Install Docker Desktop if you haven't yet: https://docs.docker.com/get-docker/
+1. Install Docker Desktop if you haven't yet: https://docs.docker.com/get-docker/ (verified live 2026-08-13)
 2. Run `docker --version` to confirm it's installed
 3. Run `docker run --rm php:8.2-cli php -v` — confirm PHP 8.2 responds from inside a container
 4. Run `docker run --rm php:8.2-cli php -r "echo phpversion();"` — you're running PHP code in a container

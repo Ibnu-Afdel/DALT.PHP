@@ -58,4 +58,5 @@ return view('learn/lesson.view.php', [
     'nextLesson' => $nextLesson,
     'sections' => $sections,
     'sectionLessonCount' => $sectionLessonCount,
+    'goDeeperLinks' => \Core\ResourceCatalog::forLesson($lessonId),
 ]);

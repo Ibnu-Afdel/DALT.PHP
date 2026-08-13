@@ -76,6 +76,8 @@ The verifier checks:
 - `SCRIPT_FILENAME` is set
 - No `# TODO` comments remain
 
+These confirm the config's *shape* — the right directives, in the right form — not that Nginx actually loads it or forwards a request correctly. Nginx isn't running during `challenge:verify`; there's no container to test against yet. See "Testing With the Full Stack" below to confirm the real behavior once you have one.
+
 ## Testing With the Full Stack
 
 After verifying, you can test the full stack once you have a `docker-compose.yml` (covered in Lesson 08). For now, confirming the verifier passes is the goal.

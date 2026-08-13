@@ -32,4 +32,5 @@ return view('learn/resources.view.php', [
     'activeChallenge' => $activeChallenge,
     'section' => $section,
     'sections' => $sections,
+    'externalCategories' => \Core\ResourceCatalog::categoriesForLessons(array_column($lessons, 'id')),
 ]);

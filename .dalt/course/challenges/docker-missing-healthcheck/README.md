@@ -45,3 +45,5 @@ The `docker-compose.yml` file is copied to your project root.
 ```bash
 php artisan challenge:verify
 ```
+
+This reports 3 checks, not 2 — the healthcheck fix is confirmed by two checks (the block exists, and it uses `pg_isready`), the `depends_on` fix by one. Still two things to fix.

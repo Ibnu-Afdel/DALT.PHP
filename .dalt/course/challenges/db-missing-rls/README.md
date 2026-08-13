@@ -1,6 +1,6 @@
 # Challenge: Missing Row-Level Security
 
-**Difficulty:** Hard · **Bugs:** 2 · **Lesson:** [16 — Advanced PostgreSQL Patterns](../../lessons/16-postgres-advanced-patterns/README.md)
+**Difficulty:** Hard · **Bugs:** 3 · **Lesson:** [16 — Advanced PostgreSQL Patterns](../../lessons/16-postgres-advanced-patterns/README.md)
 
 ## Prerequisites
 

@@ -1,6 +1,6 @@
 # DALT.PHP Competency Roadmap
 
-DALT is a framework-learning system, so this roadmap is organized around abilities you can demonstrate rather than a calendar. Follow the recommended path until the core request and data boundaries are clear, then choose the Docker, PostgreSQL, or learning-platform branch that matches the system you want to understand.
+DALT is a framework-learning system, so this roadmap is organized around abilities you can demonstrate rather than a calendar. Follow the recommended path until the core request and data boundaries are clear, then choose the Docker or PostgreSQL branch that matches the system you want to understand.
 
 The roadmap is based on the current repository contracts. Each node tells you what to read, what to trace, what to predict, what to build, and what evidence closes the node. A green challenge is useful evidence, but it is not the whole checkpoint: you must be able to explain the mechanism and test a new case.
 
@@ -44,11 +44,10 @@ Docker branch:  DKR01 ─> DKR02 ─> DKR03 ─> DKR04 ─> DKR05
 PostgreSQL:     PG01 ─> PG02 ─> PG03 ─> PG04 ─> PG05 ─> PG06 ─> PG07
                          └───────────────────────────────┘       └─> PG07
 
-Platform branch: R01 + R07 + R14 ─> P-R01 ─> P-R02 ─> P-R03 ─> P-R04
-                                          └─> P-R05 ─> P-R06
-
 Out of scope (owner's call, 2026-08-13): R00 (repository boundaries and PHP execution),
-R12 (controllers, views, escaping), R13 (console entry points and project tooling).
+R12 (controllers, views, escaping), R13 (console entry points and project tooling),
+P-R01–P-R06 (the learning-platform internals branch — maintaining the course is not
+studying it; see D-05 in the maintainer decision log).
 ```
 
 The current course metadata makes Docker Compose a prerequisite for the PostgreSQL lessons because it supplies the declared PostgreSQL environment. Conceptually, PostgreSQL begins at the database boundary after R10; a learner may use a local PostgreSQL installation instead, provided the lesson's database assumptions are satisfied.
@@ -161,7 +160,7 @@ The current course metadata makes Docker Compose a prerequisite for the PostgreS
 
 **Folded, not cut.** Unlike R00/R12/R13, this competency is genuinely taught — it now lives inside [Lesson 01: Request Lifecycle](../.dalt/course/lessons/01-request-lifecycle/README.md) §3, which covers `bind()`/`singleton()`/`instance()`, why registration is not construction, and why `Database` is registered lazily. A separate R05 checkpoint would have asked the learner to re-read files (`Container.php`, `bootstrap.php`) already read for R01, for a competency (bind/resolve/singleton) that is inseparable from R01's own "the database stays lazy" trace. Wherever another node below lists a prerequisite of "R05," read it as "R01" — R01 now includes this competency.
 
-**Next:** R06, R07, R10, and the platform branch.
+**Next:** R06, R07, and R10.
 
 ### R06 — Errors, exceptions, logging, and debugging
 
@@ -319,7 +318,7 @@ The current course metadata makes Docker Compose a prerequisite for the PostgreS
 
 **DALT boundary:** DALT uses Pest/PHPUnit and a small verifier. It does not provide Laravel's HTTP test client, model factories, database refresh traits, browser tests, or parallel test orchestration.
 
-**Next:** platform branch, DKR branch, PG branch, and contribution project.
+**Next:** DKR branch, PG branch, and contribution project.
 
 ## Optional infrastructure branches
 
@@ -401,45 +400,9 @@ These branches deepen backend deployment and database reasoning. They are visual
 
 **Prerequisites:** PG05 and either PG03 or PG04. **Read:** [Lesson 17: Observability](../.dalt/course/lessons/17-observability/README.md). **Trace/predict:** inspect a query plan or statistics entry, identify the filtering/order column, and compare before/after behavior. **Practice:** `db-slow-queries`. **Build:** an observability note with a reproducible slow query, index rationale, and rollback. **Test/checkpoint:** explain what the index improves and what it does not; include a write-cost or selectivity consideration. **Laravel bridge:** [Database](https://laravel.com/docs/13.x/database) and the [query source](https://github.com/laravel/framework/tree/13.x/src/Illuminate/Database/Query). **DALT boundary:** DALT does not ship a metrics backend, query profiler, or automatic index advisor.
 
-## Learning-platform branch
+## Learning-platform internals branch — out of scope
 
-This branch is for learners who want to understand how a course system discovers content, changes files safely, verifies repairs, and teaches through HTTP. Unlock it after R01, R07, and R14. (The original blueprint also listed R05 and R12 — R05 is now part of R01, and R12's view-rendering competency is out of scope; neither blocks this branch in practice, since P-R05 reads the learning platform's own views directly rather than assuming general view-layer competency.)
-
-### P-R01 — Optional platform bootstrapping
-
-**Competency:** Explain how `.dalt` is discovered, validated, booted, and removed without making the application depend on it.
-
-**Read:** `framework/Core/Platform.php`, `.dalt/bootstrap.php`, `.dalt/routes/routes.php`, and `.dalt/Core/`. **Trace:** run the app with `.dalt` present and absent; predict route/view/controller precedence. **Practice/build:** create a minimal optional integration with required paths and a no-op absence case. **Test/checkpoint:** prove the core application works without the platform. **Laravel bridge:** [Package Development](https://laravel.com/docs/13.x/packages), [Service Providers](https://laravel.com/docs/13.x/providers), and the [package source](https://github.com/laravel/framework/tree/13.x/src/Illuminate/Support). **DALT boundary:** `.dalt` is a repository-local optional package, not Composer package discovery.
-
-### P-R02 — Metadata-driven course discovery
-
-**Competency:** Add a lesson or challenge whose metadata is valid, ordered, connected, and rejected clearly when malformed.
-
-**Read:** `.dalt/Core/CourseLoader.php`, `.dalt/course/lessons/`, `.dalt/course/challenges/`, and [Contributor Content Guide](contributor-content.md). **Trace:** change an isolated metadata fixture to duplicate an order, unknown prerequisite, or invalid icon and predict the loader error. **Practice:** create a temporary lesson metadata fixture and validate it. **Build:** one lesson/challenge pair with a dependency edge and a navigation expectation. **Test/checkpoint:** explain why explicit order and prerequisites are separate concepts. **Laravel bridge:** [Package Development](https://laravel.com/docs/13.x/packages). **DALT boundary:** the loader is filesystem/JSON-based and has no database content registry.
-
-### P-R03 — Safe challenge transactions and recovery
-
-**Competency:** Start, reset, stop, and recover a challenge without overwriting unrelated learner work or following unsafe paths.
-
-**Read:** `.dalt/Core/ChallengeManager.php`, `.dalt/baseline/`, and `.dalt/scripts/`. **Trace:** start a challenge, inspect the recovery manifest, modify an unrelated file, reset, stop, and verify only the challenge paths change. **Practice:** use any small framework challenge, then stop it. **Build:** a fixture transaction test covering interruption and preservation. **Test/checkpoint:** explain the allowlist, backup, lock, and stop behavior without relying on the UI. **Laravel bridge:** [Testing](https://laravel.com/docs/13.x/testing) and [Package Development](https://laravel.com/docs/13.x/packages). **DALT boundary:** this is a local educational file transaction, not a version-control replacement or sandbox for arbitrary code.
-
-### P-R04 — A verifier that resists false positives
-
-**Competency:** Choose static versus executable verification, validate a test specification, isolate learner code, and reject a plausible dead-code repair.
-
-**Read:** `.dalt/Core/ChallengeVerifier.php`, `.dalt/Core/probe-class-contract.php`, and challenge `tests.php` files. **Trace:** compare `file_contains` with `class_contract` and `handler_result` against the corresponding broken fixture. **Practice:** extend one source-matched challenge with an executable check. **Build:** an authoring test that fails the broken fixture, passes the canonical fix, and rejects a source-only false positive. **Test/checkpoint:** explain what the isolated process protects and why `handler_result` is restricted to controllers. **Laravel bridge:** [Testing](https://laravel.com/docs/13.x/testing) and [HTTP Tests](https://laravel.com/docs/13.x/http-tests). **DALT boundary:** the verifier does not execute arbitrary learner PHP, SQL, containers, or database behavior outside its explicit probes.
-
-### P-R05 — Framework concepts in educational HTTP/UI flow
-
-**Competency:** Connect lesson discovery, challenge state, API responses, CSRF, navigation, and graceful JavaScript failure into a usable learning flow.
-
-**Read:** `.dalt/Http/controllers/`, `.dalt/resources/views/`, `.dalt/resources/js/`, and the learning-flow tests under `tests/Feature/`. **Trace:** load a lesson, start a challenge, verify with and without CSRF, and observe the UI when JavaScript is unavailable. **Practice:** inspect the existing learning flow tests. **Build:** a small lesson status view with server-rendered fallback and an accessible error state. **Test/checkpoint:** prove that progress is recorded only after a real pass. **Laravel bridge:** [HTTP Tests](https://laravel.com/docs/13.x/http-tests), [CSRF Protection](https://laravel.com/docs/13.x/csrf), and [Views](https://laravel.com/docs/13.x/views). **DALT boundary:** the UI is an optional Vue layer over server routes, not a general LMS or SPA framework.
-
-### P-R06 — Authoring and validating content
-
-**Competency:** Write a lesson/challenge pair whose prerequisites, behavior claims, hints, tests, and transfer exercise survive review.
-
-**Read:** [Contributor Content Guide](contributor-content.md), `.dalt/stubs/`, `.dalt/scripts/`, and the existing lesson/challenge catalog. **Trace:** author metadata, run the catalog loader, run the broken fixture, apply the fix, verify, and stop. **Practice:** convert one static check to an executable check where behavior is the competency. **Build:** the learning-content contribution project below. **Test/checkpoint:** pass the authoring rubric and explain every claim from an executed output. **Laravel bridge:** [Contribution Guide](https://laravel.com/docs/13.x/contributions) and [Package Development](https://laravel.com/docs/13.x/packages). **DALT boundary:** content is validated by repository tooling; there is no remote course marketplace or automatic pedagogical review.
+**Cut (owner's call, 2026-08-13).** A prior draft of this roadmap unlocked a "Learning-platform branch" after R01, R07, and R14 — six nodes (P-R01…P-R06) on how `.dalt` discovers content, transacts challenge files, verifies repairs, and renders the learning UI. Its last node, P-R06, was explicitly "authoring and validating a lesson/challenge pair" — which makes maintaining this course part of the curriculum. That contradicts the point of finishing it: the course is frozen after this roadmap's Phase 06 precisely so the owner studies it instead of continuing to maintain it, and a branch whose competency is "extend the platform" is the specific pull back into maintaining. Nothing about `.dalt/` is hidden — it's real, audited code, just not a roadmap node.
 
 ## Project ladder
 
@@ -453,7 +416,8 @@ Projects unlock when their prerequisite nodes are complete. A project can use an
 6. **CRUD application** — R10–R11, with R04 for validation. Use prepared SQL, validation, authorization, pagination, and explicit failures.
 7. **Migration failure lab** — R11 and PG05. Create, fail, inspect, recover, and explain schema state.
 8. **Mini framework extension** — R01, R06, R14. Add one scoped mechanism, test it, document it, and test misuse.
-9. **Learning-content contribution** — R14 and P-R01–P-R06. Ship a lesson, challenge, verifier check, and catalog/UI integration that passes review.
+
+A ninth project, "learning-content contribution," unlocked by the now-cut platform branch, is cut with it — see "Learning-platform internals branch" above.
 
 ## Completion rubric
 

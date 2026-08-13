@@ -36,6 +36,22 @@
       <div class="learn-prose prose prose-invert prose-headings:scroll-mt-24 prose-a:font-medium prose-a:text-[#93DA97] prose-a:no-underline hover:prose-a:text-[#b5edb8]">
         <?= $renderedContent ?>
       </div>
+
+      <?php if ($goDeeperLinks !== []): ?>
+        <aside class="mt-10 rounded-xl border border-[#1e293b] bg-[#0d1117] p-6" aria-labelledby="go-deeper-title">
+          <h2 id="go-deeper-title" class="text-sm font-semibold text-gray-200">Go deeper</h2>
+          <p class="mt-1 text-sm text-gray-500">Optional outside reading for this lesson — free, brief, verified live.</p>
+          <ul class="mt-4 space-y-3">
+            <?php foreach ($goDeeperLinks as $link): ?>
+              <li>
+                <a href="<?= htmlspecialchars($link['url']) ?>" target="_blank" rel="noopener noreferrer" class="text-sm font-semibold text-[#93DA97] hover:text-[#b5edb8]"><?= htmlspecialchars($link['title']) ?> <span aria-hidden="true">↗</span></a>
+                <p class="mt-1 text-sm leading-6 text-gray-500"><?= htmlspecialchars($link['read']) ?></p>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+          <a href="/learn/resources?section=<?= htmlspecialchars($lesson['section']) ?>" class="mt-5 inline-block text-xs font-medium text-gray-500 hover:text-[#93DA97]">More resources for this section <span aria-hidden="true">→</span></a>
+        </aside>
+      <?php endif; ?>
     </div>
 
     <aside class="border-y border-[#1e293b] py-8" aria-labelledby="practice-title">
