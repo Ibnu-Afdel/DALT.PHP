@@ -192,7 +192,8 @@ final class ChallengeVerifier
             if (preg_match(self::HANDLER_RESULT_PATH, $config['file']) !== 1) {
                 throw new RuntimeException("Check '{$name}' may only execute a controller under Http/controllers.");
             }
-            $config['seed'] = $this->validSqlList($config, $name);
+            $config['driver'] = $this->validDriver($config, $name);
+            $config['seed'] = $this->validSqlList($config, $name, $config['driver']);
             $config['query'] = $this->validScalarMap($config, 'query', $name);
             $config['input'] = $this->validScalarMap($config, 'input', $name);
             $config['route'] = $this->validScalarMap($config, 'route', $name);
@@ -281,12 +282,23 @@ final class ChallengeVerifier
         return $result;
     }
 
-    /** @param array<string, mixed> $config @return list<string> */
-    private function validSqlList(array $config, string $name): array
+    /**
+     * sqlite handler_result checks build a database from nothing but 'seed', so an
+     * empty list can never be reproducible. pgsql checks connect to schema and data
+     * the learner already built by hand (see DECISIONS.md D-09) and often assert on
+     * that live state directly — e.g. db-slow-queries reads pg_indexes left behind
+     * by the learner's own `php artisan migrate`, with nothing to seed at all.
+     *
+     * @param array<string, mixed> $config @return list<string>
+     */
+    private function validSqlList(array $config, string $name, string $driver): array
     {
         $values = $config['seed'] ?? [];
 
-        if (!is_array($values) || $values === []) {
+        if (!is_array($values)) {
+            throw new RuntimeException("Check '{$name}' requires 'seed' to be a list of SQL strings.");
+        }
+        if ($values === [] && $driver === 'sqlite') {
             throw new RuntimeException("Check '{$name}' requires a non-empty 'seed' list so the result is reproducible.");
         }
 
@@ -299,6 +311,17 @@ final class ChallengeVerifier
         }
 
         return $result;
+    }
+
+    /** @param array<string, mixed> $config */
+    private function validDriver(array $config, string $name): string
+    {
+        $driver = $config['driver'] ?? 'sqlite';
+        if (!is_string($driver) || !in_array($driver, ['sqlite', 'pgsql'], true)) {
+            throw new RuntimeException("Check '{$name}' has an unsupported 'driver'.");
+        }
+
+        return $driver;
     }
 
     /** @param array<string, mixed> $config @return array<string, string> */
@@ -391,7 +414,7 @@ final class ChallengeVerifier
             throw new RuntimeException("Check '{$name}' requires an 'expect' block describing the response.");
         }
 
-        $allowed = ['status', 'count', 'count_key', 'contains', 'not_contains', 'source'];
+        $allowed = ['status', 'count', 'count_key', 'contains', 'not_contains', 'before', 'after', 'source'];
         foreach (array_keys($expect) as $key) {
             if (!in_array($key, $allowed, true)) {
                 throw new RuntimeException("Check '{$name}' has an unsupported expectation '{$key}'.");
@@ -403,13 +426,16 @@ final class ChallengeVerifier
         if (isset($expect['count']) && (!is_int($expect['count']) || $expect['count'] < 0)) {
             throw new RuntimeException("Check '{$name}' has an invalid expected count.");
         }
-        foreach (['count_key', 'contains', 'not_contains'] as $field) {
+        foreach (['count_key', 'contains', 'not_contains', 'before', 'after'] as $field) {
             if (isset($expect[$field]) && (!is_string($expect[$field]) || $expect[$field] === '')) {
                 throw new RuntimeException("Check '{$name}' has an invalid '{$field}' expectation.");
             }
         }
         if (isset($expect['count_key']) && !isset($expect['count'])) {
             throw new RuntimeException("Check '{$name}' sets 'count_key' without a 'count'.");
+        }
+        if (isset($expect['before']) !== isset($expect['after'])) {
+            throw new RuntimeException("Check '{$name}' must set 'before' and 'after' together — one names what must appear earlier in the response than the other.");
         }
         if (isset($expect['source'])) {
             if (!in_array($expect['source'], ['body', 'session', 'inspect'], true)) {
@@ -804,6 +830,7 @@ final class ChallengeVerifier
             'route' => $config['route'],
             'session' => $config['session'],
             'inspect' => $config['inspect'],
+            'driver' => $config['driver'],
         ]);
 
         $command = escapeshellarg(PHP_BINARY)
@@ -847,6 +874,11 @@ final class ChallengeVerifier
      * HTTP status regardless of 'source'; it is a property of the response,
      * not of what the check is inspecting.
      *
+     * 'before'/'after' assert relative order rather than mere presence — added
+     * for db-broken-fts's "ordered by relevance, not recency" criterion, where
+     * substring presence alone can't distinguish a ranked result set from one
+     * sorted by an unrelated column.
+     *
      * @param array<string, mixed> $expect
      * @param array<string, mixed> $session
      * @param list<array<string, mixed>>|null $inspect
@@ -875,6 +907,16 @@ final class ChallengeVerifier
         }
         if (isset($expect['not_contains']) && str_contains($haystack, $expect['not_contains'])) {
             return ['passed' => false, 'message' => "The {$label} should not contain '{$expect['not_contains']}', but it does."];
+        }
+        if (isset($expect['before'])) {
+            $beforePosition = strpos($haystack, $expect['before']);
+            $afterPosition = strpos($haystack, $expect['after']);
+            if ($beforePosition === false || $afterPosition === false) {
+                return ['passed' => false, 'message' => "The {$label} must contain both '{$expect['before']}' and '{$expect['after']}'. It was: " . $this->preview($haystack)];
+            }
+            if ($beforePosition >= $afterPosition) {
+                return ['passed' => false, 'message' => "The {$label} has '{$expect['after']}' before '{$expect['before']}', not after."];
+            }
         }
         if (isset($expect['count'])) {
             $decoded = match ($source) {

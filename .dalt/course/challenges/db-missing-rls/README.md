@@ -90,7 +90,7 @@ Once the database enforces the rule, the hand-written `WHERE tenant_id = :id` is
 php artisan challenge:verify
 ```
 
-The checks confirm the shape, not the isolation. Prove the isolation yourself — request both tenants and compare. If both return everything, check which role you are connected as before suspecting your policy.
+The checks connect as `app_user` and prove the isolation directly — including a raw, unfiltered read that bypasses the controller entirely, so a fix that keeps the hand-written PHP filter and skips real RLS still fails. If they report a connection error, confirm `DB_USERNAME`/`DB_PASSWORD` in `.env` point at `app_user`, not `postgres`. It's still worth requesting both tenants yourself and comparing — the checks tell you *that* isolation holds, watching the two responses side by side is how you see *why*.
 
 ## Finish
 

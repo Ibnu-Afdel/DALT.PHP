@@ -69,10 +69,11 @@ An index is not free: it consumes storage and every write must update it. That i
 ## Verify
 
 ```bash
+php artisan migrate
 php artisan challenge:verify
 ```
 
-The checks confirm the statements exist. They cannot tell you the queries got faster — re-run both `EXPLAIN ANALYZE` commands and compare with your baseline.
+The checks read `pg_indexes` — Postgres's own catalog of what indexes actually exist — after your migration has run, so they can tell a real index apart from a comment or a `CREATE INDEX` statement on the wrong column. They still can't tell you the queries got *faster*: re-run both `EXPLAIN ANALYZE` commands and compare with your baseline.
 
 ## Finish
 

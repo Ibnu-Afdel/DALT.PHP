@@ -35,7 +35,7 @@ php artisan serve
 `GET /posts/search?q=...` works, in the sense that it returns rows. Three things are wrong with *how*.
 
 1. Search for a word that appears in the middle of a title. Fine.
-2. Now search for a word with a different ending — `container` when the title says `containers`, or `simplify` when it says `simplifies`. Nothing comes back.
+2. Now search for a word with a different ending — `containers` when the title says `container`, or `simplify` when it says `simplifies`. Nothing comes back. (Searching `container` when the title says `containers` will *not* reproduce this — `containers` contains `container` as a literal substring, so `ILIKE '%container%'` matches it by accident. The word ending has to be *longer* than what's in the title for the substring match to fail.)
 3. Search for a common word that appears in many posts. Note the order of the results, then ask what decides it.
 4. Run the query plan:
 

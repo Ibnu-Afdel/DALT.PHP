@@ -462,6 +462,55 @@ test('handler result checks refuse non-controller targets and malformed expectat
         ['type' => 'handler_result', 'file' => 'Http/controllers/posts/index.php', 'seed' => ['SELECT 1'], 'session' => 'not-an-array', 'expect' => ['status' => 200]],
         "'session' to be an array",
     ],
+    'before without after' => [
+        ['type' => 'handler_result', 'file' => 'Http/controllers/posts/index.php', 'seed' => ['SELECT 1'], 'expect' => ['before' => 'x']],
+        "must set 'before' and 'after' together",
+    ],
+]);
+
+test('handler result checks can assert relative order with before/after', function (
+    string $body,
+    bool $expectedPass,
+    string $expectedFragment,
+) {
+    $root = verifierFixture();
+    symlink(base_path('vendor'), $root . '/vendor');
+    symlink(base_path('framework'), $root . '/framework');
+    writeVerifierFixture($root, '.dalt/course/challenges/example/Http/controllers/posts/ranked.php', $body);
+    writeVerifierTests($root, [
+        'strong_match_ranks_first' => [
+            'type' => 'handler_result',
+            'file' => 'Http/controllers/posts/ranked.php',
+            'seed' => ['SELECT 1'],
+            'expect' => ['before' => 'strong-match', 'after' => 'weak-match'],
+            'hint' => 'Sort by relevance, not recency.',
+        ],
+    ]);
+
+    try {
+        $result = (new ChallengeVerifier('.dalt/course/challenges/example', false, $root))->verify();
+
+        expect($result['status'])->toBe($expectedPass ? 'pass' : 'fail')
+            ->and($result['results'][0]['message'])->toContain($expectedFragment);
+    } finally {
+        removeVerifierFixture($root);
+    }
+})->with([
+    'ranked correctly, strong match first' => [
+        "<?php\nreturn ['results' => ['strong-match', 'weak-match']];\n",
+        true,
+        'expected response',
+    ],
+    'sorted the other way round' => [
+        "<?php\nreturn ['results' => ['weak-match', 'strong-match']];\n",
+        false,
+        "has 'weak-match' before 'strong-match', not after",
+    ],
+    'missing one of the two markers entirely' => [
+        "<?php\nreturn ['results' => ['strong-match']];\n",
+        false,
+        "must contain both 'strong-match' and 'weak-match'",
+    ],
 ]);
 
 test('handler result checks can assert on session state left behind by the handler', function (
@@ -584,6 +633,88 @@ PHP,
         "is missing '\"credits\":50'",
     ],
 ]);
+
+test('a pgsql handler result check accepts an empty seed but reports a loud, actionable failure when Postgres is unreachable', function () {
+    $root = verifierFixture();
+    symlink(base_path('vendor'), $root . '/vendor');
+    symlink(base_path('framework'), $root . '/framework');
+    // Deliberately unreachable: port 1 refuses connections immediately, no daemon required.
+    writeVerifierFixture($root, 'config/database.php', <<<'PHP'
+<?php
+return ['database' => [
+    'driver' => 'pgsql', 'host' => '127.0.0.1', 'port' => 1,
+    'dbname' => 'nope', 'username' => 'nope', 'password' => 'nope', 'charset' => 'utf8',
+]];
+PHP);
+    writeVerifierFixture($root, '.dalt/course/challenges/example/Http/controllers/posts/index.php', "<?php\nreturn ['data' => []];\n");
+    writeVerifierTests($root, [
+        'reads_live_catalog_state' => [
+            'type' => 'handler_result',
+            'driver' => 'pgsql',
+            'file' => 'Http/controllers/posts/index.php',
+            // No 'seed' at all — pgsql checks may read state the learner already built.
+            'expect' => ['status' => 200],
+            'hint' => 'Confirm Postgres is reachable.',
+        ],
+    ]);
+
+    try {
+        $result = (new ChallengeVerifier('.dalt/course/challenges/example', false, $root))->verify();
+
+        expect($result['status'])->toBe('fail')
+            ->and($result['results'][0]['message'])->toContain('could not reach PostgreSQL')
+            ->and($result['results'][0]['message'])->toContain('database container is running');
+    } finally {
+        removeVerifierFixture($root);
+    }
+});
+
+test('a pgsql handler result check against a project still configured for sqlite fails loud instead of silently passing', function () {
+    $root = verifierFixture();
+    symlink(base_path('vendor'), $root . '/vendor');
+    symlink(base_path('framework'), $root . '/framework');
+    writeVerifierFixture($root, 'config/database.php', <<<'PHP'
+<?php
+return ['database' => ['driver' => 'sqlite', 'database' => ':memory:']];
+PHP);
+    writeVerifierFixture($root, '.dalt/course/challenges/example/Http/controllers/posts/index.php', "<?php\nreturn ['data' => []];\n");
+    writeVerifierTests($root, [
+        'reads_live_catalog_state' => [
+            'type' => 'handler_result',
+            'driver' => 'pgsql',
+            'file' => 'Http/controllers/posts/index.php',
+            'expect' => ['status' => 200],
+            'hint' => 'Confirm Postgres is reachable.',
+        ],
+    ]);
+
+    try {
+        $result = (new ChallengeVerifier('.dalt/course/challenges/example', false, $root))->verify();
+
+        expect($result['status'])->toBe('fail')
+            ->and($result['results'][0]['message'])->toContain('This check requires PostgreSQL')
+            ->and($result['results'][0]['message'])->toContain('DB_DRIVER=pgsql');
+    } finally {
+        removeVerifierFixture($root);
+    }
+});
+
+test('sqlite handler result checks still reject an empty seed', function () {
+    $root = verifierFixture();
+    writeVerifierFixture($root, '.dalt/course/challenges/example/Http/controllers/posts/index.php', '<?php');
+    writeVerifierTests($root, [
+        'bad' => ['type' => 'handler_result', 'file' => 'Http/controllers/posts/index.php', 'seed' => [], 'expect' => ['status' => 200]],
+    ]);
+
+    try {
+        $result = (new ChallengeVerifier('.dalt/course/challenges/example', false, $root))->verify();
+
+        expect($result['status'])->toBe('error')
+            ->and($result['message'])->toContain("non-empty 'seed' list");
+    } finally {
+        removeVerifierFixture($root);
+    }
+});
 
 const COMPOSE_WITH_HEALTHCHECK = <<<'YAML'
 services:
