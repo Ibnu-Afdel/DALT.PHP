@@ -310,6 +310,21 @@ Check the image name and tag at hub.docker.com. Tags are case-sensitive.
 - **Registry**: where images are stored (Docker Hub is the default)
 - Core commands: `docker run`, `docker ps`, `docker logs`, `docker exec`, `docker stop`, `docker rm`
 
+## Laravel bridge
+
+Compared against Laravel 13.x ([laravel.com/docs/13.x/sail](https://laravel.com/docs/13.x/sail), consulted 2026-08-13).
+
+Laravel's own Docker environment is called Sail. It is the same three concepts — images, containers, layers — wrapped in a thinner CLI:
+
+| Laravel 13.x (Sail) | DALT |
+|---|---|
+| `php artisan sail:install` scaffolds `compose.yaml` and a `sail` wrapper script for you | you write `Dockerfile` and `docker-compose.yml` yourself (Lessons 07–08) |
+| `sail up`, `sail artisan migrate`, `sail composer install` — the `sail` script prefixes host commands so they run inside the `laravel.test` container | plain `docker compose` and `docker exec` — no project-specific wrapper |
+| ships prebuilt images per PHP version (`laravelsail/php8.3-composer`) that you rarely edit | you author every `Dockerfile` instruction yourself, including the extension list |
+| `sail artisan sail:publish` copies the underlying Dockerfiles into `docker/` if you need to customize them | there is nothing pre-generated to publish — the Dockerfile you write in Lesson 07 *is* the customization |
+
+Sail is what most Laravel projects reach for first specifically so a new contributor never has to learn what an image, container, or layer is. This lesson is that missing layer: once you understand what `sail up` is actually driving, Sail's own `compose.yaml` stops looking like magic and starts looking like the file you write yourself in Lesson 08.
+
 ## Next Step
 
 **Lesson 07: Writing Dockerfiles** — Now that you understand what Docker is, you'll write the `Dockerfile` that packages DALT.PHP into an image. Then you'll complete it yourself in the first challenge.

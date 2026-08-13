@@ -1,165 +1,105 @@
 # Challenge: Broken First Queries
 
-## Difficulty: Easy — 3 bugs across 2 files
+**Difficulty:** Easy · **Bugs:** 3 · **Lesson:** [09 — PostgreSQL First Contact](../../lessons/09-postgres-first-contact/README.md)
 
-## What This Challenge Is
-
-Two controller files handle simple user API endpoints — one lists users, one fetches a single user. Together they have three bugs that cover the most common mistakes when writing raw SQL in PHP for the first time.
-
-Load the broken files:
+## Start
 
 ```bash
 php artisan challenge:start db-first-queries
+php artisan migrate
+php artisan serve
 ```
 
-This adds:
-- `app/Http/controllers/users/index.php` — `GET /users`
-- `app/Http/controllers/users/show.php` — `GET /users/{id}`
+`php artisan challenge:stop` restores everything when you are done — never copy or delete these files by hand.
 
-Start the dev server (`php artisan serve`) and visit `http://localhost:8000/users` to see the broken behavior.
+The `users` table exists but starts empty. Insert one row to have something real to query:
 
-## The Three Bugs
-
-### Bug 1 — SQL Injection in `users/index.php`
-
-The search query concatenates the `$search` variable directly into the SQL string:
-
-```php
-// BROKEN — string interpolation puts raw user input inside the SQL
-$users = $db->query(
-    "SELECT id, name, email FROM users WHERE email LIKE '%{$search}%'"
-)->get();
+```bash
+sqlite3 database/app.sqlite "INSERT INTO users (name, email, password) VALUES ('Alice', 'alice@example.com', 'x')"
 ```
 
-An attacker can send `?search=%' OR '1'='1` and bypass the WHERE clause entirely.
+(Running against Postgres instead? Use `psql` and the `INSERT ... RETURNING id` form from Lesson 09 to get the new row's id back.)
 
-**Fix:** Replace string concatenation with a named parameter.
+## Observe the symptoms first
 
-```php
-// CORRECT
-$users = $db->query(
-    'SELECT id, name, email FROM users WHERE email ILIKE :search ORDER BY created_at DESC',
-    ['search' => '%' . $search . '%']
-)->get();
+Do this before opening either controller file. Use the id your insert above actually returned — the examples below assume it was `1`.
+
+```bash
+curl -i http://localhost:8000/users
+curl -i -G http://localhost:8000/users --data-urlencode "search=' OR '1'='1"
+curl -i http://localhost:8000/users/1        # the row you just inserted
+curl -i http://localhost:8000/users/9999     # does not exist
 ```
 
-Note `ILIKE` — Postgres's case-insensitive LIKE. If you're running SQLite, use `LIKE` (SQLite's LIKE is case-insensitive by default for ASCII).
+(Use `-G --data-urlencode` as shown, not a hand-built `?search=...` string — an unescaped `'` and spaces in a raw URL get mangled by some shells and clients before the request ever reaches DALT, which looks exactly like the bug being "fixed" when it is not.)
 
-When `$search` is empty, you can skip the WHERE clause entirely:
-```php
-if ($search) {
-    $users = $db->query(
-        'SELECT id, name, email FROM users WHERE email ILIKE :search ORDER BY created_at DESC',
-        ['search' => '%' . $search . '%']
-    )->get();
-} else {
-    $users = $db->query('SELECT id, name, email FROM users ORDER BY created_at DESC')->get();
-}
-```
+Two different failures, and one surprise:
 
-### Bug 2 — Wrong Column Name in `users/show.php`
+- The search term above is nonsense — it matches no real email — yet every user in the table comes back.
+- `/users/1` **and** `/users/9999` both fail the same way: a `500` with a `PDOException` naming a column. That is not a coincidence — read the error message before opening any file. It already tells you which of the two bugs in `show.php` you are looking at, and it is blocking the second bug in that file from being observable at all until it is fixed.
 
-The query uses `WHERE user_id = :id`, but the `users` table has no `user_id` column. The primary key column is simply `id`.
+(A leading character before the quote, e.g. `1' OR '1'='1`, does **not** reproduce the search symptom the same way — try it and compare. The bare `' OR '1'='1` is the one that matters.)
 
-```php
-// BROKEN
-$user = $db->query(
-    'SELECT id, name, email FROM users WHERE user_id = :id',
-    ['id' => $id]
-)->find();
-```
+Write down what the error message tells you about where the submitted value ends up, and about what decides an HTTP status.
 
-On Postgres this throws an error: `column "user_id" does not exist`. On SQLite it returns no results silently.
+## Hints
 
-**Fix:** Change `user_id` to `id`.
+Work down this list only as far as you need. Two files, three bugs: one in `Http/controllers/users/index.php`, two in `Http/controllers/users/show.php`. Neither `framework/Core/Database.php` nor `framework/Core/Response.php` needs changing.
 
-```php
-// CORRECT
-$user = $db->query(
-    'SELECT id, name, email FROM users WHERE id = :id',
-    ['id' => $id]
-)->find();
-```
+<details>
+<summary>Hint 1 — the search that matches everyone</summary>
 
-How to confirm the correct column name: run `\d users` in psql, or open `database/migrations/001_create_users_table.sql`.
+Compare how `index.php` builds its `WHERE` clause for `search` against how `show.php` passes `:id` to the database. One of them assembles the SQL string in PHP, with the submitted value already inside it, before the database ever parses anything. Only a value passed the other way can never become part of the query itself.
+</details>
 
-### Bug 3 — `var_dump` Instead of `json_encode` in `users/show.php`
+<details>
+<summary>Hint 2 — the column the error message already named</summary>
 
-The controller claims to return JSON (`Content-Type: application/json`) but the body contains PHP's `var_dump` output — not valid JSON. Any API client will fail to parse it.
+The `PDOException` from the "Observe" step names the exact column `show.php` queried. Compare it against the real column names on `users` — `\d users` in psql, or `database/migrations/001_create_users_table.sql`, settles it either way. This bug crashes the request before the `if (!$user)` check below it ever runs, which is why `/users/1` and `/users/9999` looked identical.
+</details>
 
-```php
-// BROKEN — both the 404 and 200 paths are wrong
-var_dump(['error' => 'User not found']);
-// ...
-echo $user;   // PHP arrays can't be echoed — prints "Array"
-```
+<details>
+<summary>Hint 3 — the 404 that isn't one</summary>
 
-**Fix:** Replace `var_dump` with `json_encode` on the error response, and use `json_encode` on the success response too.
+Fix Hint 2's bug first — `/users/9999` will stop crashing and start reaching the not-found branch. Once it does, read the status line again, not just the body. `show.php` calls a PHP function to set the status, then returns an array. Re-read Lesson 02's response-boundary table: what actually decides the status the client receives when a controller returns a value instead of a `Response`?
+</details>
 
-```php
-// CORRECT
-if (!$user) {
-    http_response_code(404);
-    header('Content-Type: application/json');
-    echo json_encode(['error' => 'User not found']);
-    exit;
-}
+<details>
+<summary>Hint 4 — the concepts</summary>
 
-header('Content-Type: application/json');
-echo json_encode($user);
-```
+- A bound parameter can only ever become a value; a string assembled with `.` or `"{$var}"` is exposed to the SQL parser before the database runs it, so quotes and operators inside the submitted value become part of the query's own syntax.
+- A query naming a column that does not exist is not "close enough" — the database matches column names exactly, and a query against the wrong one raises an error before it ever gets to compare rows.
+- `http_response_code()` sets a global PHP value that DALT's response boundary does not read. `Response::send()` sets the status from the `Response` object it was actually given. Setting one and returning the other means the one that reaches the client is never the one you set.
+</details>
 
-## Files to Edit
+## Success criteria
 
-- `app/Http/controllers/users/index.php` — fix Bug 1
-- `app/Http/controllers/users/show.php` — fix Bugs 2 and 3
+- `/users` lists users.
+- `?search=' OR '1'='1` returns no rows — only a genuine substring match should.
+- `/users/{id}` finds a row that really exists.
+- `/users/{id}` for a missing id returns a real `404` status, not `200` with an error body.
+- No submitted value is concatenated into a SQL string.
 
-## Verify Your Solution
+## Verify
 
 ```bash
 php artisan challenge:verify
 ```
 
-The verifier checks:
-- No string concatenation with `$search` in `index.php`
-- `:search` parameter binding is used in `index.php`
-- `WHERE id = :id` in `show.php`
-- No `WHERE user_id` in `show.php`
-- `json_encode` used in `show.php`
-- No `var_dump` in `show.php`
+Then confirm the behavior yourself — the checks are a completion signal, not proof:
 
-## Testing Manually
-
-With `php artisan serve` running:
-
-**List users:**
 ```bash
-curl http://localhost:8000/users
+curl -i -G http://localhost:8000/users --data-urlencode "search=' OR '1'='1"   # expect: no rows
+curl -i http://localhost:8000/users/9999                                        # expect: a 404 status line
 ```
 
-**Search users:**
+## Finish
+
 ```bash
-curl "http://localhost:8000/users?search=alice"
+php artisan challenge:stop
 ```
 
-**Show one user (use a real id from the list):**
-```bash
-curl http://localhost:8000/users/1
-```
+## Related
 
-**404 case:**
-```bash
-curl http://localhost:8000/users/9999
-```
-
-Expected: all responses return valid JSON with a `Content-Type: application/json` header.
-
-## Hints
-
-- Confirm column names by running `\d users` in psql, or reading `database/migrations/001_create_users_table.sql`
-- PHP arrays cannot be `echo`ed — you always need `json_encode()`
-- `ILIKE` is Postgres's case-insensitive LIKE; use plain `LIKE` if running SQLite
-
-## Next Steps
-
-- **Lesson 10: PostgreSQL Core** — JOINs, aggregations, indexes, and transactions
+- **Lesson 09: PostgreSQL First Contact** — read this first
+- **Next:** Lesson 10 — PostgreSQL Core

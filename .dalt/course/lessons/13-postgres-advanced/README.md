@@ -22,6 +22,20 @@ Each section ends with a DALT.PHP example so you can see how it maps to a contro
 - Index JSONB with GIN for fast containment queries
 - Wire all of these into DALT controllers
 
+## Predict before reading
+
+Before reading further, write down what you expect for each:
+
+| Question | What do you expect? |
+|---|---|
+| `ROW_NUMBER() OVER (ORDER BY views DESC)` with no `PARTITION BY`, on posts from 3 different authors. Does the counter reset per author? | ? |
+| Two posts tied at the same view count. `ROW_NUMBER()` gives them consecutive numbers; does `RANK()` too? | ? |
+| `metadata @> '{"published": true}'` on a `JSONB` column with no GIN index. Does the query return wrong results, or just run slower? | ? |
+| `search_vector` is a `GENERATED ALWAYS AS (...) STORED` column. You `UPDATE posts SET title = 'new title' WHERE id = 1` and never touch `search_vector` directly. Does it stay stale? | ? |
+| `WHERE title ILIKE '%docker%'` vs `WHERE search_vector @@ plainto_tsquery('english', 'docker')` — searching for "container" against a row containing the word "containers". Does `ILIKE` match it? | ? |
+
+The last one is the one worth being wrong about — it is the exact gap between substring matching and the stemming full-text search does for you.
+
 ---
 
 ## Window Functions
@@ -388,6 +402,17 @@ Bitmap Heap Scan on posts  (cost=12.50..89.20 rows=50 width=40)
 
 ---
 
+## Checkpoint
+
+Close the source files and answer from memory:
+
+1. Explain what `PARTITION BY` does to a window function, and what happens when it is omitted.
+2. Give a concrete pair of rows where `RANK()` and `ROW_NUMBER()` disagree, and state why.
+3. Explain the difference between `->>`  and `@>` on a JSONB column, and which one a GIN index actually speeds up.
+4. A `search_vector` column is `GENERATED ALWAYS AS (...) STORED`. Explain what keeps it in sync after an `UPDATE` to `title`, without application code doing anything.
+5. `ILIKE '%container%'` does not match a row containing "containers". Explain why `plainto_tsquery` does, in terms of what `to_tsvector` does to each word.
+6. State what a `Bitmap Heap Scan` in `EXPLAIN ANALYZE` output tells you that `Seq Scan` does not.
+
 ## Your Task
 
 Load the broken full-text search controller:
@@ -589,6 +614,21 @@ ALTER TABLE urls ADD COLUMN metadata JSONB;
 ```
 
 Accept it in `POST /shorten` and return it in `GET /stats/{code}`.
+
+## Laravel bridge
+
+Compared against Laravel 13.x ([laravel.com/docs/13.x/eloquent-mutators#array-and-json-casting](https://laravel.com/docs/13.x/eloquent-mutators), [laravel.com/docs/13.x/queries#full-text-where-clauses](https://laravel.com/docs/13.x/queries), and [laravel.com/docs/13.x/scout](https://laravel.com/docs/13.x/scout), consulted 2026-08-13).
+
+| Laravel 13.x | DALT |
+|---|---|
+| no query-builder wrapper for window functions — `ROW_NUMBER() OVER (...)` is written with `DB::raw()` / `selectRaw()` | same primitive, written directly — no gap to explain here |
+| no CTE builder either; a `WITH` clause is also raw SQL passed through `DB::raw()` or a leading raw string | same |
+| `protected function casts(): array { return ['metadata' => 'array']; }` on an Eloquent model — reading/writing the attribute transparently (de)serializes JSON | `json_encode()` on the way in, and the driver returns the JSONB value as PHP already deserialized on the way out — see the "Inserting JSONB from PHP" example above |
+| `whereFullText('body', 'docker')` — Laravel detects the driver and emits `to_tsvector(...) @@ plainto_tsquery(...)` for Postgres, `MATCH ... AGAINST` for MySQL/MariaDB | `search_vector @@ plainto_tsquery('english', :q)` written directly against the generated column |
+| **Important gap:** Laravel's own docs note `whereFullText` on Postgres only *filters* — it does not rank by relevance. For ranked results, Laravel points you at **Scout**'s `database` engine (`SCOUT_DRIVER=database`), a separate package | `ORDER BY ts_rank(search_vector, plainto_tsquery('english', :q)) DESC` is one line, no extra package — full relevance ranking is native SQL once you're writing it directly |
+| a `GENERATED ALWAYS AS (...) STORED` column has no first-class migration helper; you'd drop to `DB::statement()` inside a migration | `ALTER TABLE posts ADD COLUMN search_vector TSVECTOR GENERATED ALWAYS AS (...) STORED` written directly in the migration file |
+
+The full-text row is the one worth sitting with: Laravel's query builder can generate the *search* half of what this lesson teaches, but reaches for an entirely separate package (Scout) to get the *ranking* half, on Postgres specifically. Having written `ts_rank()` by hand, you now know exactly what Scout's database engine is doing under the label "automatically ordered by relevance."
 
 ## Next Steps
 

@@ -24,6 +24,20 @@ By the end of this lesson, you will:
 - Configure DALT.PHP to use Postgres instead of SQLite
 - Run migrations against Postgres with `php artisan migrate`
 
+## Predict before reading
+
+Before reading further, write down what you expect for each:
+
+| Question | What do you expect? |
+|---|---|
+| A migration written with `INTEGER PRIMARY KEY AUTOINCREMENT` runs against Postgres. Does it fail? | ? |
+| You insert a row with `$db->query(..., ['email' => $userInput])` where `$userInput` is `' OR '1'='1`. How many rows match? | ? |
+| `POSTGRES_DB` in `.env` is changed on a stack that already has a data volume, and the stack is restarted (no `-v`). Does the new database exist? | ? |
+| `\d users` is run before `php artisan migrate` has ever been executed. What do you see? | ? |
+| A controller calls `http_response_code(404)` and then `return Response::json($data)`. What status code reaches the client? | ? |
+
+The third and fifth are the ones worth being wrong about — both fail silently, with no error message pointing at the real cause.
+
 ## Connecting to Postgres
 
 With your Compose stack running (`docker compose up -d`), connect to Postgres:
@@ -409,6 +423,21 @@ Answer from memory:
 - **Always use parameterized queries** — never concatenate user input into SQL
 - DALT switches to Postgres by changing `DB_DRIVER=pgsql` and running `php artisan migrate`
 - `$db->query($sql, $params)->get()` / `->find()` / `->findOrFail()` are your three fetch methods
+
+## Laravel bridge
+
+Compared against Laravel 13.x ([laravel.com/docs/13.x/database](https://laravel.com/docs/13.x/database) and [laravel.com/docs/13.x/migrations](https://laravel.com/docs/13.x/migrations), consulted 2026-08-13).
+
+| Laravel 13.x | DALT |
+|---|---|
+| `DB_CONNECTION=pgsql` in `.env`, one of five supported drivers (MySQL, Postgres, SQLite, SQL Server, MariaDB) | `DB_DRIVER=pgsql`, one of two (SQLite, Postgres) — same variable name for the same concept |
+| `DB::select('select * from users where email = ?', [$email])` — positional `?` bindings by default | `$db->query('SELECT * FROM users WHERE email = :email', ['email' => $email])` — named `:placeholder` bindings only |
+| the query builder and Eloquent generate parameterized SQL for you; raw bindings are the escape hatch | raw SQL and bindings are the *only* layer — see Lesson 05 |
+| `Schema::create('posts', function (Blueprint $table) { $table->id(); ... })` — one PHP DSL, translated per-driver by the grammar class | one `.sql` file per migration, written once in SQLite syntax; `Migration::convertSqliteSqlToPgsql()` rewrites four specific idioms for Postgres (see "Running Migrations Against Postgres" above) — not a general translator |
+| `$id = DB::table('users')->insertGetId([...])` | `INSERT ... RETURNING id` in the SQL itself — Postgres-native, no wrapper method needed |
+| migrations run automatically in CI/deploy pipelines via `php artisan migrate --force` | `php artisan migrate` is always a manual step; nothing in DALT's boot path applies migrations for you (see "Migrations do not run by themselves" in Lesson 08) |
+
+The biggest gap is conceptual, not syntactic: Laravel's query builder and Eloquent exist specifically so you rarely write raw SQL by hand. DALT keeps you at the raw-SQL layer through Lesson 17 on purpose — the parameter-binding discipline this lesson teaches is the same discipline Eloquent automates away, and it is worth doing by hand at least once.
 
 ## Next Steps
 

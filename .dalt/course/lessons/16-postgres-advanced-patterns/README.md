@@ -14,6 +14,20 @@ Postgres has advanced features specifically designed to handle these scale and s
 - Use **Range Partitioning** to split massive tables without changing application code
 - Understand **`pg_cron`** for scheduling tasks directly inside Postgres
 
+## Predict before reading
+
+Before reading further, write down what you expect for each:
+
+| Question | What do you expect? |
+|---|---|
+| `ALTER TABLE posts ENABLE ROW LEVEL SECURITY;` runs, but no `CREATE POLICY` follows. Does `SELECT * FROM posts` as an ordinary user return all rows, no rows, or an error? | ? |
+| The exact same table, policy, and connection details, but the app connects as `postgres` (a superuser) instead of `app_user`. Does the policy still filter rows? | ? |
+| `set_config('app.tenant_id', '5', false)` is called once at the start of a request; a second, unrelated query later in the *same* request reads `current_setting('app.tenant_id', true)`. Does it still see `'5'`? | ? |
+| A table is `PARTITION BY RANGE (created_at)` into monthly children. You run `DELETE FROM event_logs WHERE created_at < '2024-01-01'` instead of dropping the January partition. Is it as fast as `DROP TABLE`? | ? |
+| `pg_cron`'s `shared_preload_libraries=pg_cron` line is left out of `docker-compose.yml`, but `CREATE EXTENSION IF NOT EXISTS pg_cron;` is still run. What happens? | ? |
+
+The second is the one worth being wrong about — it is the exact trap "The trap: RLS does nothing for a superuser" below is named after, and nothing about it produces an error.
+
 ---
 
 ## Row-Level Security (RLS)
@@ -211,6 +225,17 @@ You have all the building blocks. Your final project is to build a multi-tenant 
 
 ---
 
+## Checkpoint
+
+Close the source files and answer from memory:
+
+1. Explain what happens to `SELECT * FROM posts` for an ordinary role the moment RLS is enabled on the table but before any `CREATE POLICY` exists.
+2. State which two kinds of database role bypass RLS silently, and the statement that closes the gap for a table's own owner.
+3. Explain why `SET app.tenant_id = :id` cannot take a bind parameter, and name the function that does the same job safely.
+4. Explain the difference between `DELETE FROM event_logs WHERE created_at < ...` and `DROP TABLE event_logs_2024_01` on a partitioned table, in terms of locking and disk reclamation.
+5. State what "partition pruning" means, and the `EXPLAIN ANALYZE` evidence that shows it happened.
+6. Explain why "the checks pass" is not sufficient evidence that RLS isolation works, and what you should do instead before trusting it.
+
 ## Your Task
 
 Load the broken challenge:
@@ -223,8 +248,8 @@ A controller `Http/controllers/tenant/posts.php` lists posts for a tenant. It *t
 
 You must implement Row-Level Security to protect the data at the DB level.
 
-1. **Fix the Migration:** In `database/migrations/003_enable_rls.sql`, write the SQL to enable RLS on the `posts` table and create a policy that checks `tenant_id = current_setting('app.tenant_id')::INT`.
-2. **Fix the Controller:** In `Http/controllers/tenant/posts.php`, execute `SET app.tenant_id = :id` before the `SELECT` query runs. 
+1. **Fix the Migration:** In `database/migrations/003_enable_rls.sql`, write the SQL to enable RLS on the `posts` table and create a policy that checks `tenant_id = current_setting('app.tenant_id', true)::INT`.
+2. **Fix the Controller:** In `Http/controllers/tenant/posts.php`, execute `SELECT set_config('app.tenant_id', :id, false)` before the `SELECT` query runs — not `SET app.tenant_id = :id`, which cannot take a bind parameter (see "Step 3: Set the context in PHP" above).
 3. **Remove the WHERE clause:** Remove `WHERE tenant_id = :id` from the controller's `SELECT` query to prove that RLS is doing the filtering.
 
 Verify:
@@ -232,3 +257,16 @@ Verify:
 ```bash
 php artisan challenge:verify
 ```
+
+## Laravel bridge
+
+Compared against Laravel 13.x ([laravel.com/docs/13.x/eloquent#global-scopes](https://laravel.com/docs/13.x/eloquent) and [laravel.com/docs/13.x/scheduling](https://laravel.com/docs/13.x/scheduling), consulted 2026-08-13).
+
+| Laravel 13.x | DALT |
+|---|---|
+| **Global scopes** — `static::addGlobalScope(new TenantScope)` in a model's `booted()` method, or the `#[ScopedBy([TenantScope::class])]` attribute — silently adds a `WHERE tenant_id = ?` to *every* query Eloquent builds for that model | Row-Level Security adds the equivalent filter *inside Postgres*, so it also applies to raw SQL, `psql`, a forgotten endpoint, or any tool that connects with the right role — Eloquent's global scope only applies inside Eloquent |
+| a global scope is **application-layer** enforcement — bypassable with `Model::withoutGlobalScope(TenantScope::class)`, a raw `DB::table()` query, or a bug that constructs the model differently | RLS is **database-layer** enforcement — the same class of guarantee this course keeps returning to, and the reason DALT-0074 (see `FINDINGS_LEDGER.md`) treated a working-looking global-scope-shaped fix as a severe defect rather than a style choice |
+| no first-party partitioning support — Eloquent models map to one table; partitioning a MySQL/Postgres table underneath one is a manual DBA operation Laravel does not model | `PARTITION BY RANGE`, child tables, and `DROP TABLE` for instant deletion are written directly against Postgres, with no framework layer to configure |
+| **`pg_cron`'s closest bridge is the task scheduler** (`Schedule::call(...)->daily()`, defined in `routes/console.php`) — but the scheduler runs *PHP*, triggered by one system cron entry (`* * * * * php artisan schedule:run`) calling out to the app process | `pg_cron` runs *SQL* directly inside Postgres itself, with no PHP process, no HTTP server, and no application code involved at all — a categorically different place for the job to live, not just a different syntax for scheduling it |
+
+The RLS-vs-global-scope comparison is the one to internalize: they solve the identical stated problem ("don't let a developer forget the tenant filter") from two different trust boundaries. A global scope trusts every future line of application code to go through Eloquent correctly. RLS trusts the database connection's role instead — which is exactly why the superuser trap above ("no error, no warning, policies are simply not applied") is the load-bearing lesson here, not the `CREATE POLICY` syntax.

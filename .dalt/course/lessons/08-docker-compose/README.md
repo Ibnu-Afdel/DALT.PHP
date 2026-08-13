@@ -22,6 +22,20 @@ By the end of this lesson, you will:
 - Know the daily Compose commands you'll use
 - Be able to set up the full DALT.PHP stack: app + Postgres + Nginx
 
+## Predict before reading
+
+Before reading "Anatomy of the File" below, write down what you expect for each:
+
+| Question | What do you expect? |
+|---|---|
+| `db`'s `ports:` key is deleted entirely. Can `app` still reach Postgres? | ? |
+| `pgdata:/var/lib/postgresql/data` is removed from `db`'s volumes. You run `docker compose down` (no `-v`) then `up` again. Is your data still there? | ? |
+| `.env` sets `DB_HOST=localhost` instead of `DB_HOST=db`. What happens when `app` tries to connect? | ? |
+| The `nginx` service's bind mount for `.:/var/www/html` is deleted, but the config mount stays. Does the site look broken? | ? |
+| A fresh stack comes up with `docker compose up` and you immediately visit the site. What error, if any? | ? |
+
+The fourth one is the one worth being wrong about — the page still renders, which is exactly why it is a trap the first time.
+
 ## The Full `docker-compose.yml` for DALT.PHP
 
 Here is the complete file you're working toward. Every key is explained below.
@@ -303,6 +317,22 @@ Change the host port: `"8081:80"`.
 - `env_file:` injects `.env` into a container's environment
 - `depends_on:` controls startup order (not readiness)
 - `docker compose up` starts everything; `docker compose down` stops it
+
+## Laravel bridge
+
+Compared against Laravel 13.x ([laravel.com/docs/13.x/sail](https://laravel.com/docs/13.x/sail), consulted 2026-08-13).
+
+Sail's generated `compose.yaml` is the same shape as the file above — a PHP app service, a database service, named volumes for data — produced for you instead of hand-written:
+
+| Laravel 13.x (Sail) | DALT |
+|---|---|
+| `php artisan sail:install` generates `compose.yaml` with services chosen from a prompt (MySQL, PostgreSQL, Redis, Meilisearch, …) | one hand-written `docker-compose.yml` with exactly `app`, `db`, `nginx` — the services this course teaches |
+| service DNS works identically — Sail's app container reaches its database at the service name from `DB_HOST` in `.env` | same mechanism, same `DB_HOST=db` pattern |
+| ships with a bundled `laravel.test` service that serves HTTP itself (via the `fpm`+web-server-in-one Sail image) | a separate `nginx` service fronts the `app` service over FastCGI — the split this lesson's diagram shows |
+| `sail up` wraps `docker compose up` with the `sail` script's other conveniences (aliasing `sail artisan`, `sail composer`, …) | plain `docker compose up` / `exec` / `logs` — the commands under "Daily Compose Commands" above are the whole toolkit |
+| migrations still don't run themselves — `sail artisan migrate` is a command you run, not a boot step | same: `docker compose exec app php artisan migrate` after every fresh stack |
+
+The one thing Sail's default setup does not model well is the three-container split (`app` / `db` / `nginx`) this lesson relies on — Sail's own `laravel.test` container serves HTTP directly, so the "nginx needs the code too, not just the config" trap this lesson's checkpoint tests for has no Sail equivalent to compare against. That trap is specific to fronting PHP-FPM with a standalone web server, which is the production-realistic shape DALT deliberately keeps.
 
 ## Next Step
 

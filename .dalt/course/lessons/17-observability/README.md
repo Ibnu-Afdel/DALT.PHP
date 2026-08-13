@@ -18,6 +18,20 @@ With observability, you ask the database exactly which query is causing the prob
 - Read `EXPLAIN ANALYZE` output to verify if an index is missing
 - Safely log request metrics in PHP without crashing the user's request
 
+## Predict before reading
+
+Before reading further, write down what you expect for each:
+
+| Question | What do you expect? |
+|---|---|
+| `pg_stat_statements` shows a query with `calls = 50,000` and `mean_exec_time = 0.3ms`. Is this the query to investigate first? | ? |
+| The same table shows a different query with `calls = 12` and `mean_exec_time = 400ms`. Which of the two is more likely missing an index, and which is more likely an N+1 problem? | ? |
+| A request-logging middleware reads `http_response_code()` to record the status, instead of the `Response` object's own status. What value does it record for a request that fails with a 500? | ? |
+| The logging `INSERT` inside the middleware throws (say, the table is locked). The middleware's `catch` block swallows it. Does the user's actual request still succeed? | ? |
+| `CREATE INDEX idx_posts_user_status ON posts(user_id, status)` — without `CONCURRENTLY` — runs against a live table receiving writes. Does it block those writes while building? | ? |
+
+The third is the one worth being wrong about — it produces a plausible-looking dashboard that is wrong for every failed request, with no error anywhere to notice.
+
 ---
 
 ## `pg_stat_statements`
@@ -201,3 +215,16 @@ Verify:
 ```bash
 php artisan challenge:verify
 ```
+
+## Laravel bridge
+
+Compared against Laravel 13.x ([laravel.com/docs/13.x/database#listening-for-query-events](https://laravel.com/docs/13.x/database) and [laravel.com/docs/13.x/telescope](https://laravel.com/docs/13.x/telescope), consulted 2026-08-13).
+
+| Laravel 13.x | DALT |
+|---|---|
+| `DB::listen(function (QueryExecuted $query) { ... })` registered in a service provider's `boot()` — fires for every query, with `$query->sql`, `->bindings`, `->time` already parsed out | no query-event hook; the `RequestLog` middleware above times the *whole request*, not individual queries — there is nothing built in that observes SQL as it runs |
+| **Telescope** — a first-party package with a `QueryWatcher` that records every query's raw SQL, bindings, and execution time, and flags anything over a configurable threshold (`'slow' => 100`, milliseconds) as slow, all with a dashboard UI included | `pg_stat_statements` does the equivalent job *inside Postgres itself* — aggregated by query shape, not per-request, and queried with plain SQL rather than viewed in a bundled UI |
+| Telescope's watcher is opt-in per environment (typically local/staging only — it adds overhead and stores everything) | `pg_stat_statements` has near-zero overhead by design (it's the extension Postgres itself recommends leaving on in production) and this lesson's own admin endpoint is a deliberately minimal hand-built substitute for a Telescope-style dashboard |
+| `DB::listen()` and Telescope both operate at the **query** level — one row per SQL statement executed | `pg_stat_statements` operates at the **query shape** level — identical queries with different literal values are grouped into one row with a `calls` counter, which is exactly what makes the N+1-vs-genuinely-slow distinction in "What to look for" above possible from aggregate stats alone |
+
+The N+1 detection technique this lesson teaches — many `calls`, low `mean_exec_time`, high `total_exec_time` — is a Postgres-native version of what Telescope's request timeline view shows visually: the same query, run far more times than a human would expect for one page load. Telescope tells you by showing you the repeated rows; `pg_stat_statements` tells you by aggregating them into one row with a suspicious `calls` count. Recognizing the pattern from raw numbers, without the visualization, is the skill this lesson is actually after.

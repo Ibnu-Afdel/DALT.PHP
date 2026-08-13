@@ -16,6 +16,20 @@ By the end you'll be able to look at a slow query and know what to do about it.
 - Enforce data integrity with constraints (`NOT NULL`, `UNIQUE`, `CHECK`, `FOREIGN KEY`)
 - Wrap multi-step writes in transactions with proper `ROLLBACK` handling
 
+## Predict before reading
+
+Before reading further, write down what you expect for each:
+
+| Question | What do you expect? |
+|---|---|
+| `LEFT JOIN posts ON posts.user_id = users.id` with `GROUP BY` and `COUNT(posts.id)` — a user with zero posts: does their row disappear or show `0`? | ? |
+| The same query with `INNER JOIN` instead of `LEFT JOIN` — same user: disappears or shows `0`? | ? |
+| `SELECT user_id, name, COUNT(*) FROM posts GROUP BY user_id` — does this run? | ? |
+| Two `UPDATE`s inside `BEGIN`/`COMMIT`; the second violates a `CHECK` constraint and the code catches the exception but never calls `rollBack()` or `commit()`, then the connection closes. Does the first `UPDATE` survive? | ? |
+| `CREATE INDEX idx_posts_user_id ON posts(user_id)` is added to a 5-row table. Does `EXPLAIN ANALYZE` show a big speedup? | ? |
+
+The third is the one worth being wrong about — it is a rule about `GROUP BY`, not a suggestion, and Postgres rejects the query outright rather than guessing what you meant.
+
 ---
 
 ## JOINs — Combining Tables
@@ -434,6 +448,17 @@ Run `EXPLAIN ANALYZE` again and compare. On a small dataset the difference is su
 
 ---
 
+## Checkpoint
+
+Close the source files and answer from memory:
+
+1. Explain why `LEFT JOIN` is the right choice for "all users with their post count" and `INNER JOIN` is wrong for it, in terms of which rows disappear.
+2. State the `GROUP BY` rule about non-aggregated columns, and rewrite the "wrong" query from the JOIN mistakes section to satisfy it.
+3. Explain the difference between `WHERE` and `HAVING`, and give one query where swapping them changes the result.
+4. `EXPLAIN ANALYZE` reports `Seq Scan` with a large `Rows Removed by Filter`. State what that means and the fix.
+5. A `catch` block calls `rollBack()` unconditionally, even when `beginTransaction()` never succeeded. Name the exception this throws and the guard that prevents it.
+6. Explain why an uncommitted transaction on a connection that simply closes does not corrupt data, and why you should not rely on that fact instead of writing `rollBack()`.
+
 ## Summary
 
 - `INNER JOIN` — matching rows only; `LEFT JOIN` — all left rows, NULL on no match
@@ -443,6 +468,21 @@ Run `EXPLAIN ANALYZE` again and compare. On a small dataset the difference is su
 - Indexes speed up reads on large tables — use `EXPLAIN ANALYZE` to confirm they're being used
 - `NOT NULL`, `UNIQUE`, `CHECK`, `FOREIGN KEY` enforce integrity at the DB level
 - Transactions: `BEGIN` + `COMMIT` for success, `ROLLBACK` in the `catch` block for failure
+
+## Laravel bridge
+
+Compared against Laravel 13.x ([laravel.com/docs/13.x/queries](https://laravel.com/docs/13.x/queries), [laravel.com/docs/13.x/migrations](https://laravel.com/docs/13.x/migrations), and [laravel.com/docs/13.x/database#database-transactions](https://laravel.com/docs/13.x/database#database-transactions), consulted 2026-08-13).
+
+| Laravel 13.x | DALT |
+|---|---|
+| `DB::table('users')->join('posts', 'users.id', '=', 'posts.user_id')->leftJoin(...)` — fluent join builder | `INNER JOIN` / `LEFT JOIN` written directly in SQL |
+| `->groupBy(...)->having('post_count', '>', 5)`, with `DB::raw('COUNT(posts.id) as post_count')` for the aggregate itself | `GROUP BY` / `HAVING` / `COUNT()` in SQL, no builder layer between you and the aggregate |
+| `Schema::table('posts', fn (Blueprint $table) => $table->index(['user_id']))`, `->unique()`, `->foreignId('user_id')->constrained()` | `CREATE INDEX`, `UNIQUE`, `REFERENCES ... ON DELETE CASCADE` written directly in a migration's SQL |
+| Postgres-specific: `->unique()->online()` adds `CONCURRENTLY` so an index build doesn't lock the table | not covered in this lesson — `CREATE INDEX CONCURRENTLY` is a Lesson 17-adjacent production concern, not part of the base index syntax here |
+| `DB::transaction(function () { ... })` — auto-commits on return, auto-rolls-back on any thrown exception, no explicit `try`/`catch` needed | `beginTransaction()` / `commit()` / `rollBack()` written by hand inside `try`/`catch (\Throwable $e)` |
+| `DB::transaction($callback, $attempts = 3)` retries automatically on a deadlock | no retry wrapper — a caught deadlock is just an error response |
+
+`DB::transaction()`'s closure form is a real convenience — it is exactly the `try`/`catch`/`inTransaction()` block above, generalized so you stop writing it by hand. Writing it out yourself once, the way this lesson does, is what makes it obvious *why* the closure form is safe: it is doing nothing you couldn't write yourself, just consistently.
 
 ## Next Steps
 

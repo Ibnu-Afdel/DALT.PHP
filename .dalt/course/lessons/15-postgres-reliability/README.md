@@ -13,6 +13,20 @@ A database is only as good as its backup and its ability to evolve without break
 - Fix broken migration states
 - Build a concurrent job queue using `FOR UPDATE SKIP LOCKED`
 
+## Predict before reading
+
+Before reading further, write down what you expect for each:
+
+| Question | What do you expect? |
+|---|---|
+| `002_create_posts.sql` is not wrapped in `BEGIN`/`COMMIT`, has no `IF NOT EXISTS`, and fails halfway through on a syntax error. You fix the syntax and run `php artisan migrate` again. Does it succeed cleanly? | ? |
+| Three worker processes run `SELECT * FROM jobs WHERE status = 'pending' LIMIT 1` at the same instant, with no locking at all. How many distinct jobs get picked up? | ? |
+| Same query, but with `FOR UPDATE SKIP LOCKED` added, and worker 1 already holds the lock on job #1. Does worker 2 wait for it, or move on? | ? |
+| A worker crashes (process killed) between locking a job with `FOR UPDATE` and committing the `UPDATE ... SET status = 'processing'`. What happens to the lock? | ? |
+| `pg_dump` runs against a live database while writes are still happening. Does the resulting backup contain a consistent snapshot, or a corrupted mix of before/after states? | ? |
+
+The first is the one worth being wrong about — it is the exact failure mode "Dealing with Migration Failures" below exists to explain, and the fix is not "just re-run it."
+
 ---
 
 ## Backups with `pg_dump`
@@ -272,6 +286,17 @@ Now you have a production-grade, concurrently-safe job queue backed entirely by 
 
 ---
 
+## Checkpoint
+
+Close the source files and answer from memory:
+
+1. Explain why `pg_dump` produces a consistent snapshot even while writes are happening, in one sentence.
+2. A migration fails halfway through, uncommitted, and its filename never reaches the `migrations` table. Explain what happens on the next `php artisan migrate`, and the two ways to prevent the failure mode.
+3. Explain what `FOR UPDATE` locks, and what `SKIP LOCKED` changes about waiting for that lock.
+4. A worker crashes after `FOR UPDATE` but before its `UPDATE ... SET status = 'processing'` commits. State what happens to the row when the connection drops.
+5. Three workers query `SELECT ... LIMIT 1` with no locking at all. State how many of them can end up processing the same row, and name the one clause that fixes it.
+6. Explain why the worker script commits immediately after marking a job `'processing'`, rather than holding the transaction open for the entire job.
+
 ## Your Task
 
 Load the broken challenge:
@@ -293,3 +318,17 @@ Verify:
 ```bash
 php artisan challenge:verify
 ```
+
+## Laravel bridge
+
+Compared against Laravel 13.x ([laravel.com/docs/13.x/migrations](https://laravel.com/docs/13.x/migrations) and [laravel.com/docs/13.x/queues](https://laravel.com/docs/13.x/queues), consulted 2026-08-13).
+
+| Laravel 13.x | DALT |
+|---|---|
+| no first-party `pg_dump` wrapper — teams reach for the hosting platform's snapshot feature or a package (e.g. Spatie's backup tool) | `pg_dump` / `psql` run directly, by hand or from a small Compose `backup` service — no package layer |
+| `migrations` table tracked the same way: filename, batch number, timestamp — `php artisan migrate:status` shows pending vs. run | DALT's own `migrations` table (see "How DALT tracks migrations" above) is deliberately the same shape |
+| `--step` runs each migration file as its own batch so a partial failure can be rolled back one file at a time; `--pretend` previews the SQL without running it | migrations run in filename order with no per-file batching; "Dealing with Migration Failures" above is the manual version of the same problem `--step` exists to contain |
+| `php artisan make:queue-table` scaffolds a `jobs` table for the `database` queue driver; the query builder's own `lockForUpdate()` method (`->lockForUpdate()`, generating `SELECT ... FOR UPDATE`) is the documented tool for this exact "claim a row safely" pattern | this lesson's `jobs` table is hand-designed, and the worker uses `FOR UPDATE SKIP LOCKED` specifically — the `SKIP LOCKED` half is what lets *multiple* workers stay busy instead of queueing behind each other's locks |
+| `ShouldBeUnique` jobs, `--timeout`/`retry_after` tuning, and automatic retries are queue-driver features you configure, not write | `attempts`, `failed_at`, and the retry decision are columns and `catch` logic you write yourself in `worker.php` |
+
+The `FOR UPDATE` vs. `FOR UPDATE SKIP LOCKED` gap is worth sitting with: `lockForUpdate()` alone, under concurrent workers, still serializes them one at a time on lock acquisition — a second worker blocks until the first releases the row rather than moving on. `SKIP LOCKED` — what this lesson's worker actually uses — is the difference between "workers wait their turn" and "workers stay busy," and the query builder has no dedicated method for it; you'd still drop to `whereRaw`/`DB::raw` to add it, the same raw-SQL escape hatch this whole course stays inside.

@@ -18,6 +18,20 @@ By the end of this lesson, you will:
 - Understand why `pdo_pgsql` needs to be explicitly installed
 - Be ready to complete the `docker-incomplete-dockerfile` challenge
 
+## Predict before reading
+
+Before reading the instruction-by-instruction walkthrough below, write down what you expect for each:
+
+| Change to the Dockerfile above | What do you expect? |
+|---|---|
+| Delete the `WORKDIR` line entirely | ? |
+| Swap `docker-php-ext-install pdo pdo_pgsql` and `apk add --no-cache postgresql-dev` in order, still in one `RUN` | ? |
+| Move `COPY . .` to before `RUN composer install` | ? |
+| Change `CMD ["php-fpm"]` to `CMD "php-fpm"` | ? |
+| Change one line in a controller and rebuild | which numbered layer is the first to rebuild? |
+
+The third one is the one worth being wrong about — it changes cache behavior, not correctness, so `docker build` still succeeds either way and the mistake hides until the project grows.
+
 ## The Complete Dockerfile for DALT.PHP
 
 Here is the full Dockerfile you'll be building toward. Read through it — every line will be explained below.
@@ -381,6 +395,21 @@ Answer from memory:
 2. System dependencies (extensions, packages) — slow, rarely changes
 3. App dependencies (composer install) — medium, changes occasionally
 4. App source code — fast, changes constantly
+
+## Laravel bridge
+
+Compared against Laravel 13.x ([laravel.com/docs/13.x/sail](https://laravel.com/docs/13.x/sail), consulted 2026-08-13).
+
+Sail's default image (`laravelsail/php8.3-composer`) ships Composer and the common PHP extensions already baked in, so most Laravel projects never write a `RUN docker-php-ext-install` line at all:
+
+| Laravel 13.x (Sail) | DALT |
+|---|---|
+| pulls a prebuilt `laravelsail/php8.3-composer:*` image with Composer and common extensions already installed | starts from bare `php:8.2-fpm-alpine` and installs Composer (`COPY --from=composer:2`) and `pdo_pgsql` explicitly, one instruction at a time |
+| `sail artisan sail:publish` copies the underlying Dockerfiles into `docker/` **if and when** you need to customize an extension list | you write and own every instruction from the first line |
+| Sail's images are already `fpm`-based and tuned for local development, not layered for a minimal production build | this Dockerfile makes the system-deps-before-code cache ordering an explicit, graded decision (see "Layer Cache in Practice" above) |
+| Composer version is whatever the published image pins | `COPY --from=composer:2 /usr/bin/composer` — the version is a line you control and can bump deliberately |
+
+Sail hides exactly the two failure modes this lesson exists to explain — the missing `libpq-fe.h` header and the missing `composer` binary — by never making you hit them. That is a fine trade for shipping features quickly; it is a bad trade for learning what the base image does and does not include, which is why this lesson builds the image from `FROM` up instead of starting from Sail's.
 
 ## Next Steps
 

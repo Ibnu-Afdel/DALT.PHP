@@ -24,6 +24,20 @@ Multi-stage builds fix this.
 - Back up a named volume without stopping any containers
 - Write a `.dockerignore` that keeps your images clean
 
+## Predict before reading
+
+Before reading further, write down what you expect for each:
+
+| Question | What do you expect? |
+|---|---|
+| The `builder` stage installs Composer and `vendor/`; the runtime stage never runs `RUN composer install`. Is Composer present in the final image? | ? |
+| `docker compose up` starts `app` with plain `depends_on: [db]` (no `condition`). Does `app` ever try to connect before Postgres is ready to accept connections? | ? |
+| The same stack, but `db` has a `HEALTHCHECK` and `app` uses `depends_on: db: condition: service_healthy`. Same question. | ? |
+| `docker run -v pgdata:/data -v $(pwd):/backup busybox tar czf ...` runs while the `db` container is still up and accepting writes. Does the backup fail? | ? |
+| `.dockerignore` excludes `vendor/`, but the builder stage's `COPY composer.json composer.lock ./` happens before `.dockerignore` is even relevant to that stage. Does the builder stage still get `composer.json`? | ? |
+
+The first is the one worth being wrong about — the answer is the entire reason multi-stage builds exist, and it is easy to assume something so central to the build must leak through by accident.
+
 ---
 
 ## Multi-Stage Builds
@@ -307,6 +321,19 @@ Verify:
 ```bash
 php artisan challenge:verify
 ```
+
+## Laravel bridge
+
+Compared against Laravel 13.x ([laravel.com/docs/13.x/sail](https://laravel.com/docs/13.x/sail), consulted 2026-08-13).
+
+| Laravel 13.x (Sail) | DALT |
+|---|---|
+| Sail's published images are already built and slimmed by the Sail team; `sail artisan sail:publish` gives you the Dockerfiles to customize, but most projects never touch multi-stage layout themselves | you write the `builder`/`runtime` split yourself and can see exactly what each stage discards |
+| no first-party `HEALTHCHECK` wiring documented for Sail's own `compose.yaml` — container readiness is typically handled by application-level retry logic instead | `HEALTHCHECK` + `depends_on: condition: service_healthy` push readiness into Docker itself, so a connection is never attempted before Postgres accepts one |
+| service DNS works the same way — Sail's app service reaches its database at the compose service name | identical mechanism, same `db`/`app`/`nginx` names from Lesson 08 |
+| no documented built-in volume-backup command; teams reach for `pg_dump` (Lesson 15) or a third-party backup tool | the `busybox`+`tar` snapshot above is a Docker-level backup of the whole volume, independent of what's running inside it — useful, but `pg_dump` is the one you actually want for a live Postgres backup (Lesson 15 covers why) |
+
+There is no Laravel-specific concept mapping onto multi-stage builds or `HEALTHCHECK` — these are Docker primitives Sail's prebuilt images use for you without ever showing you the Dockerfile that does it. Writing the split yourself here is what makes Sail's own images legible later, if you ever `sail:publish` them.
 
 ## Next Steps
 

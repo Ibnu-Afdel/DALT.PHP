@@ -18,6 +18,20 @@ This lesson covers the essential patterns to make your stack secure, resilient, 
 - Configure log rotation so your disk doesn't fill up
 - Understand why PgBouncer is required for scaling PHP with Postgres
 
+## Predict before reading
+
+Before reading further, write down what you expect for each:
+
+| Question | What do you expect? |
+|---|---|
+| `db`'s Compose service sets `POSTGRES_PASSWORD_FILE` and mounts a secret. `app`'s `.env` still has `DB_PASSWORD=` (empty). Does the app pick up the secret's value automatically? | ? |
+| `restart: on-failure` on a background worker that exits with code `0` on purpose (a scheduled one-shot task). Does Docker restart it? | ? |
+| `app` has no `deploy.resources.limits`, and a bug causes it to leak memory until the host runs out. Which container does the Linux OOM killer usually kill? | ? |
+| PHP opens and closes a Postgres connection on every request, at 150 concurrent requests, with Postgres's default 100-connection limit and no pooler in front. What happens to request 101? | ? |
+| `db`'s `healthcheck` reports `healthy`. Does that guarantee the app's own queries will succeed? | ? |
+
+The first is the one worth being wrong about — mounting the secret file changes nothing in the running app by itself, which is exactly the gap "Docker Secrets" below spends the most time on.
+
 ---
 
 ## Docker Secrets
@@ -280,6 +294,19 @@ Verify:
 ```bash
 php artisan challenge:verify
 ```
+
+## Laravel bridge
+
+Compared against Laravel 13.x ([laravel.com/docs/13.x/octane](https://laravel.com/docs/13.x/octane), consulted 2026-08-13).
+
+| Laravel 13.x | DALT |
+|---|---|
+| production secrets are typically injected by the hosting platform (Forge, Cloud, a CI/CD pipeline's env store) directly as environment variables — Sail's `compose.yaml` is a *development* file and is not the documented path to production secrets | Docker Secrets is the mechanism this lesson teaches directly: a file at `/run/secrets/...`, bridged into `env('DB_PASSWORD')` by hand in an entrypoint script |
+| no first-party Docker `HEALTHCHECK`/`restart`/resource-limit guidance in the docs — these are deployment-platform concerns Forge/Cloud handle for you | `depends_on: condition: service_healthy`, `restart: unless-stopped`, and `deploy.resources.limits` are written and understood explicitly |
+| **Octane is the interesting comparison for PgBouncer.** Octane (Swoole, RoadRunner, FrankenPHP) boots the app once and keeps it in memory across requests — which also means it can keep **one persistent database connection alive per worker**, sidestepping the "new connection per request" problem PgBouncer solves from the other direction | PHP's default shared-nothing model opens and closes a Postgres connection every request; PgBouncer pools connections *outside* PHP so the per-request-connection cost stays but the strain on Postgres's own connection limit does not |
+| Octane's docs specifically warn against injecting the container or `Request` into a long-lived singleton constructor, because state that would normally die with the request now survives into the next one | not applicable — DALT's request lifecycle (Lesson 01) still tears everything down and rebuilds it per request, so this entire class of Octane bug cannot occur here |
+
+PgBouncer and Octane are solving the same underlying cost (connection setup is expensive, PHP's request model pays it constantly) from opposite ends: PgBouncer keeps PHP's shared-nothing model and pools *behind* it; Octane throws out shared-nothing and keeps the process — and its connections — alive *in front of* Postgres. Neither is "the" answer; they are different trade-offs on the same problem this lesson names.
 
 ## Next Steps
 
