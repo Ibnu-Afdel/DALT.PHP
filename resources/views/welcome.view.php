@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
   <title>DALT.PHP</title>
   <style>
-    :root { --bg:#0a0d12; --surface:#11161d; --border:#1e293b; --text:#f3f4f6; --muted:#94a3b8; --accent:#93da97; }
+    :root { color-scheme:dark; --bg:#0a0d12; --surface:#11161d; --border:#1e293b; --text:#f3f4f6; --muted:#94a3b8; --accent:#93da97; }
     * { box-sizing:border-box; } body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; } a { color:inherit; }
     .shell { min-height:100vh; display:flex; flex-direction:column; } .nav,.content,.footer { width:min(1120px,100% - 40px); margin:auto; } .nav { display:flex; align-items:center; justify-content:space-between; padding:20px 0; } .brand { display:flex; gap:10px; align-items:center; font-weight:800; letter-spacing:-.03em; text-decoration:none; } .mark { height:24px; width:8px; border-radius:6px; background:var(--accent); } .nav a:last-child { color:var(--accent); text-decoration:none; font-size:14px; font-weight:650; }
     .content { flex:1; padding:80px 0; } .eyebrow { color:var(--accent); font:700 12px ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.14em; text-transform:uppercase; } h1 { max-width:800px; margin:18px 0 0; font-size:clamp(44px,7vw,78px); line-height:1; letter-spacing:-.065em; } .intro { max-width:640px; margin:24px 0 0; color:var(--muted); font-size:19px; line-height:1.6; } .actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:32px; } .button { border:1px solid var(--border); border-radius:9px; padding:12px 16px; text-decoration:none; font-size:14px; font-weight:700; transition:.2s; } .primary { border-color:var(--accent); background:var(--accent); color:#0a0d12; } .primary:hover { background:#b5edb8; } .secondary { color:#d1d5db; background:var(--surface); } .secondary:hover { border-color:#506074; }
