@@ -1,0 +1,10 @@
+{
+  "title": "Components, JSX and typed props",
+  "description": "Describe an issue-tracker interface as typed React components and local data.",
+  "order": 29,
+  "section": "fullstack",
+  "section_order": 10,
+  "icon": "layers",
+  "color": "purple",
+  "prerequisites": ["28-fs02-5-runtime-boundaries"]
+}

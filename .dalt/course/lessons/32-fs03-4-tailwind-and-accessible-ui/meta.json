@@ -1,0 +1,10 @@
+{
+  "title": "Tailwind and accessible application UI",
+  "description": "Use semantic HTML and Tailwind utilities to make the local issue UI responsive and usable.",
+  "order": 32,
+  "section": "fullstack",
+  "section_order": 13,
+  "icon": "layers",
+  "color": "purple",
+  "prerequisites": ["31-fs03-3-forms-and-state-design"]
+}

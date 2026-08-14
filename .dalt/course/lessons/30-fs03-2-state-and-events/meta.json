@@ -1,0 +1,10 @@
+{
+  "title": "State and events",
+  "description": "Make a local issue-tracker interface respond predictably to user events.",
+  "order": 30,
+  "section": "fullstack",
+  "section_order": 11,
+  "icon": "layers",
+  "color": "purple",
+  "prerequisites": ["29-fs03-1-components-jsx-and-typed-props"]
+}
