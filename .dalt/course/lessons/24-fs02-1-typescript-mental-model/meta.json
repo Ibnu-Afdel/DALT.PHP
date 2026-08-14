@@ -1,0 +1,10 @@
+{
+  "title": "The TypeScript mental model",
+  "description": "Use compiler evidence to distinguish static TypeScript reasoning from JavaScript runtime behavior.",
+  "order": 24,
+  "section": "fullstack",
+  "section_order": 5,
+  "icon": "layers",
+  "color": "purple",
+  "prerequisites": ["23-fs01-2-modules-async-and-failure"]
+}

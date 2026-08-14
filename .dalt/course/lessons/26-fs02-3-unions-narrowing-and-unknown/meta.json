@@ -1,0 +1,10 @@
+{
+  "title": "Unions, narrowing and unknown",
+  "description": "Use runtime evidence and control flow to safely reason about values with several possibilities.",
+  "order": 26,
+  "section": "fullstack",
+  "section_order": 7,
+  "icon": "layers",
+  "color": "purple",
+  "prerequisites": ["25-fs02-2-modeling-application-data"]
+}

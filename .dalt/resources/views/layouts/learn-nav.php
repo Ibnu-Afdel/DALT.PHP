@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 $__learnPath = parse_url($_SERVER['REQUEST_URI'] ?? '/learn', PHP_URL_PATH) ?: '/learn';
 $__learnActive = static fn (string $path): bool => $__learnPath === $path
-    || ($path === '/learn/resources' && (str_starts_with($__learnPath, '/learn/lessons/') || str_starts_with($__learnPath, '/learn/challenges/')));
+    || ($path === '/learn' && (str_starts_with($__learnPath, '/learn/lessons/') || str_starts_with($__learnPath, '/learn/challenges/') || str_starts_with($__learnPath, '/learn/fullstack')));
 ?>
 <header class="sticky top-0 z-50 border-b border-[#1e293b] bg-[#0a0d12]/95 text-gray-200 backdrop-blur">
   <div class="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-4 sm:gap-5 sm:px-6">

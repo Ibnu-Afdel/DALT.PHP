@@ -1,0 +1,1 @@
+{"compilerOptions":{"target":"ES2022","module":"NodeNext","moduleResolution":"NodeNext","strict":true,"exactOptionalPropertyTypes":true,"verbatimModuleSyntax":true,"rootDir":"src","outDir":"dist"},"include":["src/**/*.ts"]}

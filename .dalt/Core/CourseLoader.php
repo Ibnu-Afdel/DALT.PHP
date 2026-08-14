@@ -16,13 +16,14 @@ final class CourseLoader
     private const LESSON_FIELDS = ['title', 'description', 'order', 'section', 'section_order', 'icon', 'color', 'prerequisites'];
     private const CHALLENGE_FIELDS = ['title', 'description', 'order', 'difficulty', 'bugs', 'lesson', 'color'];
     private const SECTIONS = [
-        'foundation' => ['id' => 'foundation', 'title' => 'Foundation', 'description' => 'Understand how backend requests and application fundamentals fit together.', 'display_order' => 1],
-        'docker' => ['id' => 'docker', 'title' => 'Docker', 'description' => 'Package and run applications reliably.', 'display_order' => 2],
-        'postgres' => ['id' => 'postgres', 'title' => 'PostgreSQL', 'description' => 'Learn to work confidently with PostgreSQL from first connection to advanced usage.', 'display_order' => 3],
-        'operations' => ['id' => 'operations', 'title' => 'Operations', 'description' => 'Understand how to observe and operate a running backend system.', 'display_order' => 4],
+        'foundation' => ['id' => 'foundation', 'title' => 'Foundation', 'description' => 'Understand how backend requests and application fundamentals fit together.', 'display_order' => 1, 'track' => 'core'],
+        'docker' => ['id' => 'docker', 'title' => 'Docker', 'description' => 'Package and run applications reliably.', 'display_order' => 2, 'track' => 'core'],
+        'postgres' => ['id' => 'postgres', 'title' => 'PostgreSQL', 'description' => 'Learn to work confidently with PostgreSQL from first connection to advanced usage.', 'display_order' => 3, 'track' => 'core'],
+        'operations' => ['id' => 'operations', 'title' => 'Operations', 'description' => 'Understand how to observe and operate a running backend system.', 'display_order' => 4, 'track' => 'core'],
+        'fullstack' => ['id' => 'fullstack', 'title' => 'Fullstack', 'description' => 'Build one real application across React, TypeScript, DALT and PostgreSQL.', 'display_order' => 5, 'track' => 'fullstack'],
     ];
 
-    /** @return array<string, array{id: string, title: string, description: string, display_order: int}> */
+    /** @return array<string, array{id: string, title: string, description: string, display_order: int, track: string}> */
     public static function getSections(): array
     {
         return self::SECTIONS;

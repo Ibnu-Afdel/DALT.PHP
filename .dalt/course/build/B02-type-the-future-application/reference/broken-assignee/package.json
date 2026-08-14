@@ -1,0 +1,1 @@
+{"name":"b02-reference-broken-assignee","private":true,"type":"module","scripts":{"typecheck":"tsc --noEmit"},"devDependencies":{"typescript":"5.9.3"}}

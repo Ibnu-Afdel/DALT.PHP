@@ -1,0 +1,1 @@
+export type UserSummary = { readonly id: number; name: string }; export type Issue = { readonly id: number; projectId: number; title: string; description: string | null; status: 'todo' | 'in_progress' | 'done'; priority: 'low' | 'medium' | 'high'; assignee: UserSummary | null };

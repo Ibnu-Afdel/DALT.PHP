@@ -1,0 +1,16 @@
+{
+  "name": "dalt-fs02-1-typescript-lab",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "runtime": "node src/runtime-failure.mjs",
+    "stage-a": "tsc --noEmit src/checker-catches-it.ts",
+    "typecheck": "tsc --noEmit",
+    "emit:erasure": "tsc --strict --target ES2022 --module NodeNext --moduleResolution NodeNext --verbatimModuleSyntax --outDir .tmp/erasure src/erasure.ts",
+    "run:erasure": "node .tmp/erasure/erasure.js",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

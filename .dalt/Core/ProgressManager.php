@@ -12,12 +12,12 @@ final class ProgressManager
     private const FILE = '.dalt/progress.json';
     private const LOCK = '.dalt/progress.lock';
 
-    /** @return array{passed: list<string>, completed_lessons: list<string>, last_visited_lesson: ?string} */
+    /** @return array{passed: list<string>, completed_lessons: list<string>, completed_milestones: list<string>, last_visited_lesson: ?string} */
     public static function state(): array
     {
         $path = base_path(self::FILE);
         if (!file_exists($path)) {
-            return ['passed' => [], 'completed_lessons' => [], 'last_visited_lesson' => null];
+            return ['passed' => [], 'completed_lessons' => [], 'completed_milestones' => [], 'last_visited_lesson' => null];
         }
 
         if (!is_file($path) || is_link($path)) {
@@ -39,6 +39,7 @@ final class ProgressManager
             // Optional new keys deliberately degrade to an empty/null value so an
             // old or partially edited progress file remains usable.
             'completed_lessons' => self::optionalIds($data['completed_lessons'] ?? []),
+            'completed_milestones' => self::optionalMilestoneIds($data['completed_milestones'] ?? []),
             'last_visited_lesson' => self::validId($data['last_visited_lesson'] ?? null)
                 ? $data['last_visited_lesson']
                 : null,
@@ -108,6 +109,25 @@ final class ProgressManager
                 $state['completed_lessons'],
                 static fn (string $id): bool => $id !== $lessonId,
             ));
+            return $state;
+        });
+    }
+
+    /** @return array<string, true> */
+    public static function completedMilestoneIds(): array
+    {
+        return array_fill_keys(self::state()['completed_milestones'], true);
+    }
+
+    public static function markMilestoneCompleted(string $milestoneId): void
+    {
+        if (!self::validMilestoneId($milestoneId)) {
+            throw new ChallengeStateException("Invalid milestone ID '{$milestoneId}'.");
+        }
+        self::update(static function (array $state) use ($milestoneId): array {
+            if (!in_array($milestoneId, $state['completed_milestones'], true)) {
+                $state['completed_milestones'][] = $milestoneId;
+            }
             return $state;
         });
     }
@@ -183,7 +203,7 @@ final class ProgressManager
         }
     }
 
-    /** @param callable(array{passed: list<string>, completed_lessons: list<string>, last_visited_lesson: ?string}): array{passed: list<string>, completed_lessons: list<string>, last_visited_lesson: ?string} $mutation */
+    /** @param callable(array{passed: list<string>, completed_lessons: list<string>, completed_milestones: list<string>, last_visited_lesson: ?string}): array{passed: list<string>, completed_lessons: list<string>, completed_milestones: list<string>, last_visited_lesson: ?string} $mutation */
     private static function update(callable $mutation): void
     {
         $lock = fopen(base_path(self::LOCK), 'c');
@@ -238,5 +258,19 @@ final class ProgressManager
     private static function validId(mixed $id): bool
     {
         return is_string($id) && preg_match('/\A[a-z0-9]+(?:-[a-z0-9]+)*\z/D', $id) === 1;
+    }
+
+    /** @return list<string> */
+    private static function optionalMilestoneIds(mixed $value): array
+    {
+        if (!is_array($value) || !array_is_list($value)) {
+            return [];
+        }
+        return array_values(array_unique(array_filter($value, static fn (mixed $id): bool => self::validMilestoneId($id))));
+    }
+
+    private static function validMilestoneId(mixed $id): bool
+    {
+        return is_string($id) && preg_match('/\A[BC][0-9]{2}\z/D', $id) === 1;
     }
 }

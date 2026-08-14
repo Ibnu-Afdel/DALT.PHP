@@ -9,7 +9,15 @@ $activeChallenge = \Core\ChallengeManager::getActiveChallenge();
 
 $completedLessonIds = \Core\ProgressManager::completedLessonIds($challenges);
 $verifiedLessonIds = \Core\ProgressManager::verifiedLessonIds($challenges);
-$nextLesson = \Core\ProgressManager::continuation($lessons, $completedLessonIds);
+$tracks = [];
+foreach (['core', 'fullstack'] as $trackId) {
+    $trackLessons = array_values(array_filter($lessons, fn (array $lesson): bool => $sections[$lesson['section']]['track'] === $trackId));
+    $tracks[$trackId] = [
+        'lessons' => $trackLessons,
+        'continuation' => \Core\ProgressManager::continuation($trackLessons, $completedLessonIds),
+        'completed_count' => count(array_filter($trackLessons, static fn (array $lesson): bool => isset($completedLessonIds[$lesson['id']]))),
+    ];
+}
 
 $currentChallenge = null;
 foreach ($challenges as $challenge) {
@@ -25,7 +33,7 @@ return view('learn/index.view.php', [
     'activeChallenge' => $activeChallenge,
     'completedLessonIds' => $completedLessonIds,
     'verifiedLessonIds' => $verifiedLessonIds,
-    'nextLesson' => $nextLesson,
+    'tracks' => $tracks,
     'currentChallenge' => $currentChallenge,
     'sections' => $sections,
 ]);

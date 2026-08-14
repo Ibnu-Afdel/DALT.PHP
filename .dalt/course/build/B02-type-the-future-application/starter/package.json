@@ -1,0 +1,1 @@
+{"name":"dalt-b02-future-application","private":true,"type":"module","scripts":{"typecheck":"tsc --noEmit","run":"tsc && node dist/main.js","test:parser":"tsc && node dist/parser.test.js"},"devDependencies":{"typescript":"5.9.3"}}

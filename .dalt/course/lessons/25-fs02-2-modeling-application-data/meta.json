@@ -1,0 +1,10 @@
+{
+  "title": "Modeling application data",
+  "description": "Turn application decisions into honest object shapes and finite valid states.",
+  "order": 25,
+  "section": "fullstack",
+  "section_order": 6,
+  "icon": "layers",
+  "color": "purple",
+  "prerequisites": ["24-fs02-1-typescript-mental-model"]
+}

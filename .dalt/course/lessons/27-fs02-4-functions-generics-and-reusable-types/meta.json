@@ -1,0 +1,10 @@
+{
+  "title": "Functions, generics and reusable types",
+  "description": "Preserve useful type relationships through functions and related application models.",
+  "order": 27,
+  "section": "fullstack",
+  "section_order": 8,
+  "icon": "layers",
+  "color": "purple",
+  "prerequisites": ["26-fs02-3-unions-narrowing-and-unknown"]
+}

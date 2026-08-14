@@ -1,0 +1,1 @@
+{"name":"b02-reference-initial","private":true,"type":"module","scripts":{"typecheck":"tsc --noEmit","run":"tsc && node dist/main.js"},"devDependencies":{"typescript":"5.9.3"}}

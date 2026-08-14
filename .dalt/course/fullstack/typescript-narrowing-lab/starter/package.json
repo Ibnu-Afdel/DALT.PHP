@@ -1,0 +1,18 @@
+{
+  "name": "dalt-fs02-3-typescript-narrowing-lab",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "run": "tsc && node dist/exercise.js",
+    "stage:union": "tsc --noEmit --strict src/stages/union.ts",
+    "stage:unknown": "tsc --noEmit --strict src/stages/unknown.ts",
+    "stage:truthiness": "tsc --strict --outDir .tmp/truthiness src/stages/truthiness.ts && node .tmp/truthiness/truthiness.js",
+    "stage:state": "tsc --noEmit --strict src/stages/state.ts",
+    "stage:exhaustive": "tsc --noEmit --strict src/stages/exhaustive.ts",
+    "stage:guard": "tsc --strict --outDir .tmp/guard src/stages/guard.ts && node .tmp/guard/guard.js"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

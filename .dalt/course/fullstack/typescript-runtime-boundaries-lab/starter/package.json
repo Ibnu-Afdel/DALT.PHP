@@ -1,0 +1,16 @@
+{
+  "name": "dalt-fs02-5-runtime-boundaries-lab",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "unsafe": "tsc && node dist/unsafe.js",
+    "stage:unknown": "tsc --noEmit --strict --target ES2022 src/stages/unknown.ts",
+    "stage:object-shape": "node src/stages/object-shape.mjs",
+    "run": "tsc && node dist/exercise.js",
+    "test": "tsc && node dist/parser.test.js"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

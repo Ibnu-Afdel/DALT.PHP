@@ -1,0 +1,16 @@
+{
+  "name": "dalt-fs02-4-typescript-functions-lab",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "run": "tsc && node dist/exercise.js",
+    "stage:return-contract": "tsc --noEmit --strict --target ES2022 src/stages/return-contract.ts",
+    "stage:callbacks": "tsc --noEmit --strict --target ES2022 src/stages/callbacks.ts",
+    "stage:constraint": "tsc --noEmit --strict --target ES2022 src/stages/constraint.ts",
+    "stage:utility-model-change": "tsc --noEmit --strict --target ES2022 src/stages/utility-model-change.ts"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

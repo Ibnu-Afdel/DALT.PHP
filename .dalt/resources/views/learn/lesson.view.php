@@ -1,21 +1,27 @@
 <?php require base_path('.dalt/resources/views/layouts/head.php') ?>
 <?php require base_path('.dalt/resources/views/layouts/learn-nav.php') ?>
+<?php
+$accentClasses = $isFullstack
+  ? ['hover:text-[#c4a7ff]', 'border-[#c4a7ff]/20', 'bg-[#c4a7ff]/10', 'text-[#c4a7ff]', 'hover:border-[#c4a7ff]/50', 'hover:text-[#d9c9ff]', 'prose-a:text-[#c4a7ff]', 'hover:prose-a:text-[#d9c9ff]']
+  : ['hover:text-[#93DA97]', 'border-[#93DA97]/20', 'bg-[#93DA97]/10', 'text-[#93DA97]', 'hover:border-[#93DA97]/50', 'hover:text-[#b5edb8]', 'prose-a:text-[#93DA97]', 'hover:prose-a:text-[#b5edb8]'];
+?>
 
 <main class="min-h-[calc(100vh-8rem)] bg-[#0a0d12] text-gray-300" id="app" tabindex="-1">
   <article class="mx-auto max-w-3xl px-5 py-10 sm:px-6 sm:py-16">
-    <a href="/learn/resources" class="inline-flex items-center text-sm font-medium text-gray-500 transition-colors hover:text-[#93DA97]">
-      <span class="mr-2" aria-hidden="true">←</span> All resources
+    <a href="<?= htmlspecialchars($backHref) ?>" class="inline-flex items-center text-sm font-medium text-gray-500 transition-colors <?= $accentClasses[0] ?>">
+      <span class="mr-2" aria-hidden="true">←</span> <?= htmlspecialchars($backLabel) ?>
     </a>
 
     <header class="mt-10 border-b border-[#1e293b] pb-10">
       <div class="flex items-start gap-5">
-        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#93DA97]/20 bg-[#93DA97]/10 text-[#93DA97]" aria-hidden="true">
+        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border <?= $accentClasses[1] ?> <?= $accentClasses[2] ?> <?= $accentClasses[3] ?>" aria-hidden="true">
           <?= \Core\Icon::render($lesson['icon']) ?>
         </div>
         <div class="min-w-0">
-          <p class="font-mono text-xs text-gray-500"><?= htmlspecialchars($sections[$lesson['section']]['title']) ?> · <?= $lesson['section_order'] ?> of <?= $sectionLessonCount ?></p>
+          <p class="font-mono text-xs text-gray-500"><?= $isFullstack ? 'DALT Fullstack' : htmlspecialchars($sections[$lesson['section']]['title']) . ' · ' . $lesson['section_order'] . ' of ' . $sectionLessonCount ?></p>
           <h1 class="mt-3 text-4xl font-bold tracking-tight text-gray-50 sm:text-5xl"><?= htmlspecialchars($lesson['title']) ?></h1>
           <p class="mt-5 max-w-2xl text-lg leading-8 text-gray-400"><?= htmlspecialchars($lesson['description']) ?></p>
+          <?php if ($isFullstack && $lessonHeaderMeta !== []): ?><p class="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500"><?php if (isset($lessonHeaderMeta['effort'])): ?><span><?= htmlspecialchars($lessonHeaderMeta['effort']) ?></span><?php endif; ?><?php if (isset($lessonHeaderMeta['difficulty'])): ?><span><?= htmlspecialchars($lessonHeaderMeta['difficulty']) ?></span><?php endif; ?></p><?php endif; ?>
         </div>
       </div>
 
@@ -25,7 +31,7 @@
           <p class="mt-1 text-sm leading-6 text-gray-500">These lessons give this topic its context.</p>
           <ul class="mt-4 flex flex-wrap gap-2">
             <?php foreach ($prerequisites as $prerequisite): ?>
-              <li><a class="inline-flex rounded-lg border border-gray-700 px-3 py-2 text-sm font-medium text-gray-300 transition-colors hover:border-[#93DA97]/50 hover:text-[#93DA97]" href="/learn/lessons/<?= $prerequisite['id'] ?>"><?= htmlspecialchars($prerequisite['title']) ?></a></li>
+              <li><a class="inline-flex rounded-lg border border-gray-700 px-3 py-2 text-sm font-medium text-gray-300 transition-colors <?= $accentClasses[4] ?> <?= $accentClasses[0] ?>" href="/learn/lessons/<?= $prerequisite['id'] ?>"><?= htmlspecialchars($prerequisite['title']) ?></a></li>
             <?php endforeach; ?>
           </ul>
         </aside>
@@ -33,7 +39,7 @@
     </header>
 
     <div class="py-12">
-      <div class="learn-prose prose prose-invert prose-headings:scroll-mt-24 prose-a:font-medium prose-a:text-[#93DA97] prose-a:no-underline hover:prose-a:text-[#b5edb8]">
+      <div class="learn-prose prose prose-invert prose-headings:scroll-mt-24 prose-a:font-medium <?= $accentClasses[6] ?> prose-a:no-underline <?= $accentClasses[7] ?>">
         <?= $renderedContent ?>
       </div>
 
@@ -44,7 +50,7 @@
           <ul class="mt-4 space-y-3">
             <?php foreach ($goDeeperLinks as $link): ?>
               <li>
-                <a href="<?= htmlspecialchars($link['url']) ?>" target="_blank" rel="noopener noreferrer" class="text-sm font-semibold text-[#93DA97] hover:text-[#b5edb8]"><?= htmlspecialchars($link['title']) ?> <span aria-hidden="true">↗</span></a>
+                <a href="<?= htmlspecialchars($link['url']) ?>" target="_blank" rel="noopener noreferrer" class="text-sm font-semibold <?= $accentClasses[3] ?> <?= $accentClasses[5] ?>"><?= htmlspecialchars($link['title']) ?> <span aria-hidden="true">↗</span></a>
                 <p class="mt-1 text-sm leading-6 text-gray-500"><?= htmlspecialchars($link['read']) ?></p>
               </li>
             <?php endforeach; ?>

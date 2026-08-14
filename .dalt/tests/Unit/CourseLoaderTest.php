@@ -220,7 +220,7 @@ test('the shipped course is complete and its full inventory is deterministic', f
         ->and(array_column($lessons, 'order'))->toBe(range(1, count($lessons)))
         ->and(array_column($challenges, 'order'))->toBe(range(1, count($challenges)));
 
-    foreach (['foundation', 'docker', 'postgres', 'operations'] as $section) {
+    foreach (['foundation', 'docker', 'postgres', 'operations', 'fullstack'] as $section) {
         $sectionOrders = array_column(
             array_filter($lessons, fn (array $lesson): bool => $lesson['section'] === $section),
             'section_order',

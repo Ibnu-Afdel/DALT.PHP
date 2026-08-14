@@ -1,0 +1,1 @@
+import type { Issue } from './model.js'; const issue: Issue = { id: 42, projectId: 7, title: 'Fix search', description: null, status: 'todo', priority: 'high', assigneeId: 1 }; console.log(issue.title);
