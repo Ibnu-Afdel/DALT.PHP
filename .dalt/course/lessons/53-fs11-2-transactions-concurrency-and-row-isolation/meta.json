@@ -1,0 +1,10 @@
+{
+  "title": "Transactions, concurrency and row isolation",
+  "description": "Keep multi-step issue changes correct under concurrent requests and enforce tenant isolation with meaningful RLS evidence.",
+  "order": 53,
+  "section": "fullstack",
+  "section_order": 34,
+  "icon": "shield",
+  "color": "purple",
+  "prerequisites": ["52-fs11-1-query-performance-and-postgresql-capabilities"]
+}

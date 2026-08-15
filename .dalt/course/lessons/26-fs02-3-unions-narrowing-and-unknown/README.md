@@ -12,6 +12,73 @@ Project milestone: B02 — Type the future application
 Primary source dossier: TYPESCRIPT_HANDBOOK.md; FSO_TYPESCRIPT.md  
 Last reviewed: 2026-08-14
 
+## Why this matters
+
+FS02.2 wrote down which values the application allows. That is the model. This lesson is about the other half: **at this exact line, which of those possibilities are still open?**
+
+That question is what makes typed code pleasant rather than defensive. Without narrowing you write guards the compiler cannot see and access properties it cannot vouch for, and `as` starts creeping in as a way to say "trust me". With narrowing, the guard you already wrote *is* the evidence, and the compiler tracks it for you.
+
+It also introduces the most important type in the course. `unknown` is how you say "a value arrived and I have not proved anything about it yet" — the honest starting point for every server response, every parsed JSON body, every form field. FS02.5 is built entirely on it.
+
+## Before you start
+
+Required:
+
+- FS02.2 — Modeling application data.
+- Node and npm, and an editor with TypeScript support.
+
+Recommended first:
+
+- Have your FS02.2 `Issue` model to hand. The narrowing examples use the same finite unions.
+
+Going deeper in DALT Core — optional:
+
+- None.
+
+## By the end
+
+You should be able to:
+
+- explain how a runtime check changes what the compiler knows below it;
+- narrow `null`, `undefined` and truthiness deliberately rather than by habit;
+- discriminate between object alternatives using a shared literal field;
+- say why `unknown` is safer than `any`, and what it demands before use;
+- write a small type guard and explain what its return annotation actually promises;
+- model states so that a contradictory combination cannot be written down;
+- use an exhaustiveness check to make the compiler find every place a new variant was forgotten.
+
+## Predict before reading
+
+Write answers down first.
+
+1. `if (typeof value === 'string')`. Inside that block, what does TypeScript believe about `value`? What about in the `else`?
+2. `if (issue.title)` — what values does that check reject besides `undefined`?
+3. A value is `unknown`. Can you read `.length` from it? What about if it were `any`?
+4. You add a fourth member to a status union. Which `switch` statements will the compiler complain about, and which will silently fall through?
+
+Question 4 is what exhaustiveness buys you, and question 2 is where a real bug hides.
+
+## Mental model
+
+Narrowing is the compiler following your runtime checks:
+
+```text
+value: string | null            ← what the type says is possible
+
+if (value === null) { … }       ← evidence
+                                  inside: null
+                                  after:  string
+
+typeof value === 'string'       ← evidence
+value.trim()                    ← now allowed, because you proved it
+```
+
+Two things follow.
+
+**The check is not overhead.** You would have written `if (value === null)` anyway. Narrowing means the compiler reads it too, so you never need a second, type-level assertion saying the same thing.
+
+**`unknown` is `any` with the honesty left in.** Both accept every value. `any` then lets you do anything with it and reports nothing; `unknown` lets you do nothing until you prove something. That difference is the whole reason `unknown` is the right type for data arriving from outside your program.
+
 ## Evidence changes what TypeScript knows
 
 FS02.2 asked which values the application allows. This lesson asks what we know about one particular value at this line of code.
@@ -163,6 +230,46 @@ npm run stage:exhaustive
 
 The new variant makes the existing handler incomplete. The compiler exposes the old assumption: it believed the listed cases were all possible. Add the refreshing member first, typecheck before changing the switch, then deliberately add its handler.
 
+## Common mistakes
+
+### Truthiness where you meant "not null"
+
+`if (issue.title)` also rejects the empty string; `if (count)` also rejects `0`. Answer to question 2: `''`, `0`, `NaN` and `false` all fail a truthiness check. Compare explicitly — `!== null`, `!== undefined`, `.length > 0` — unless you genuinely want all falsy values excluded.
+
+### Reaching for `as` instead of a check
+
+`(value as Issue).title` compiles and proves nothing. If you know enough to write the assertion, you know enough to write the check — and the check narrows for free.
+
+### Using `any` to get moving
+
+`any` disables checking for everything downstream of it, silently and transitively. Answer to question 3: `unknown` refuses `.length` until you prove it; `any` allows it and tells you nothing. Reach for `unknown`.
+
+### A type guard that does not check what it claims
+
+```ts
+function isIssue(value: unknown): value is Issue {
+  return typeof value === 'object';   // ✗ claims far more than it proved
+}
+```
+
+The `value is Issue` annotation is a promise to the compiler, not a check. A guard whose body is weaker than its signature is an `as` with extra steps — and a more convincing one. Severity: high.
+
+### A `default` case that hides the new variant
+
+Adding `default: return 'unknown'` to a `switch` makes it compile forever, which is exactly why the compiler stops telling you about a new status. Answer to question 4: only the exhaustive ones complain; the ones with a `default` fall through silently.
+
+### Modelling states as independent booleans
+
+`isLoading`, `isError` and `data` as three fields allow `isLoading: true, isError: true` — a state your application has no meaning for. A discriminated union makes it unwritable.
+
+## When this goes wrong
+
+1. **The narrowing "disappeared".** Something between the check and the use could have changed the value — often a function call, or reading through a mutable property rather than a local `const`. Assign to a local first.
+2. **`Object is possibly 'null'` after you checked.** You checked a different expression, or checked `a.b` and then used `a.b.c` where `a.b` is a getter the compiler cannot assume is stable.
+3. **A discriminated union will not narrow.** The discriminant must be a literal type on every member, not `string`.
+4. **Exhaustiveness check does not fire.** The `never` assignment must be in the `default` branch, and the switch must have no other `default` behaviour swallowing the case.
+5. **`unknown` blocks everything and it is tempting to give up.** That is the type working. Prove one property at a time — FS02.5 makes this a routine.
+
 ## Focused exercise — prove, model, then evolve
 
 **Mode: self-reported practice using your editor, tsc, and Node. This exercise is not automatically verified.**
@@ -239,6 +346,47 @@ Answer before revealing the comparison answers.
 9. Each allowed upload state has exactly its required data; invalid combinations are harder to express.
 </details>
 
-## Carry this forward
+## In the project
 
-Later these patterns will describe request/loading states, authentication, operation results, issue activity variants, errors, and runtime boundaries. Part 03 adds React; the union itself should already feel familiar. FS02.4 and FS02.5 remain unavailable.
+Discriminated unions are how **B02** models anything with alternatives, and the pattern recurs constantly after that: request state in Part 04 (`idle | loading | success | error` — not three booleans), authentication state in Part 06, and every operation that can succeed or fail with a reason.
+
+`unknown` matters even more. It is the type every value crossing into your program should start as, and FS02.5 turns that from a principle into a routine. When Part 04 receives a JSON body from DALT, `unknown` is the honest starting point and narrowing is the road out of it.
+
+## Resources
+
+### Read
+
+- [TypeScript Handbook: Narrowing](https://www.typescriptlang.org/docs/handbook/2/narrowing.html) — typeof guards, truthiness, equality, discriminated unions, exhaustiveness with `never`.
+
+### Go deeper
+
+- [TypeScript Handbook: Using type predicates](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#using-type-predicates) — what `value is Issue` promises, and why it is your responsibility.
+- [TypeScript Handbook: `unknown`](https://www.typescriptlang.org/docs/handbook/2/functions.html#unknown)
+
+### Reference
+
+- [TypeScript Handbook: Discriminated unions](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#discriminated-unions)
+
+## You are done when
+
+- [ ] I narrowed `null`, `undefined` and truthiness deliberately, and can say what a bare truthiness check also rejects.
+- [ ] I discriminated a union by a literal field and watched the compiler follow it.
+- [ ] I held a value as `unknown` and proved my way to using it, without `as`.
+- [ ] I wrote a type guard whose body genuinely establishes what its signature claims.
+- [ ] I remodelled a state so a contradictory combination cannot be written.
+- [ ] I added a union member and let the exhaustiveness check find every stale assumption.
+- [ ] I attempted the closed-book checkpoint without notes.
+
+FS02.4 and FS02.5 remain unavailable until this lesson is complete.
+
+---
+
+## Maintainer source record
+
+- Source dossier: `docs/dalt-fullstack/sources/TYPESCRIPT_HANDBOOK.md`; `docs/dalt-fullstack/sources/FSO_TYPESCRIPT.md`
+- Official sources: TypeScript Handbook — Narrowing (typeof guards, truthiness, equality, type predicates, discriminated unions, exhaustiveness with `never`), `unknown`
+- Versions: TypeScript 5.9.3, Node 25 (CR-08 pinned toolchain)
+- Consulted: 2026-08-14
+- DALT files inspected: `.dalt/course/fullstack/typescript-narrowing-lab/starter/**`
+- Curriculum authority: `CURRICULUM.md` §12 FS02.3 — the important exercise is making contradictory state unrepresentable
+- Laravel bridge: not applicable — control-flow narrowing has no DALT or Laravel counterpart

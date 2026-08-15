@@ -1,0 +1,10 @@
+{
+  "title": "Designing the application API",
+  "description": "Replace fixture assumptions with a small, explicit contract between the React client and DALT.",
+  "order": 36,
+  "section": "fullstack",
+  "section_order": 17,
+  "icon": "layers",
+  "color": "purple",
+  "prerequisites": ["35-fs04-3-separating-transport-from-ui"]
+}

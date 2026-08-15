@@ -12,6 +12,69 @@ Project milestone: B02 — Type the future application
 Primary source dossier: TYPESCRIPT_HANDBOOK.md; FSO_TYPESCRIPT.md  
 Last reviewed: 2026-08-14
 
+## Why this matters
+
+So far every type has described one shape. This lesson is about types that describe a **relationship between** shapes — "whatever goes in comes out", "this container holds one of those", "these keys, but all optional".
+
+That sounds abstract and is intensely practical. Without it you write the same type three times with different names, and the three copies drift. With it, one declaration says the relationship once and the compiler propagates it: change `Issue` and every dependent type follows, or fails loudly at the place that needs a decision.
+
+The trap is the opposite: generics used as decoration. `<T>` on a function that always receives an `Issue` adds a type parameter, a mental cost, and nothing else. The skill is knowing **when a relationship is real** — and this lesson spends as much time on "use the concrete type" as on `<T>`.
+
+## Before you start
+
+Required:
+
+- FS02.3 — Unions, narrowing and `unknown`.
+- Node and npm, and an editor with TypeScript support.
+
+Recommended first:
+
+- FS01.1's treatment of functions as values. A function type is that idea written down.
+
+Going deeper in DALT Core — optional:
+
+- None.
+
+## By the end
+
+You should be able to:
+
+- write a function's contract — parameters, return, optional and default arguments — and say what each part promises callers;
+- type a callback parameter so the caller's function is checked against it;
+- decide whether a type parameter preserves a real relationship or is decoration;
+- constrain a type parameter to the capability you actually use, and no more;
+- build one reusable container type and narrow it with the tools from FS02.3;
+- derive a related type from an existing one instead of redeclaring it;
+- use `keyof` and indexed access at small depth without turning the model into a puzzle.
+
+## Predict before reading
+
+Write answers down first.
+
+1. `function first(items: Issue[]): Issue` versus `function first<T>(items: T[]): T`. What can the caller do with the second that the first prevents?
+2. A function takes `(items: T[], predicate: (item: T) => boolean)`. If you call it with `Issue[]`, what type does the compiler give `item` inside your inline callback?
+3. `<T extends { id: string }>`. What does that let the function body do, and what does it still forbid?
+4. You add a required field to `Issue`. Which is more useful — a hand-written `IssueSummary`, or one derived from `Issue`?
+
+Question 1 is the difference between a real relationship and a `<T>` that does nothing.
+
+## Mental model
+
+A generic is a **promise to preserve a connection**, not a way to accept more things:
+
+```text
+concrete       (items: Issue[]) => Issue
+               one shape in, one shape out — fine when there is only ever one shape
+
+generic        <T>(items: T[]) => T
+               "whatever element type you give me is the element type you get back"
+               the compiler carries the caller's actual type through
+```
+
+The test for whether you need one: **is there a connection between two positions that would be lost if you wrote the concrete type?** If input and output types move together, that is a relationship — use a parameter. If the function only ever handles issues, the relationship is "it is an issue", and the honest way to say that is `Issue`.
+
+Constraints are the same idea narrowed. `<T extends { id: string }>` says "any type, provided it has an id" — it buys you access to `.id` inside the body while keeping the caller's exact type on the way out. Constrain to the capability you use; anything more is a restriction you never needed.
+
 ## Preserve a relationship on purpose
 
 FS02.1 asked what TypeScript knows before runtime. FS02.2 asked which values our application permits. FS02.3 asked what TypeScript knows at this exact control-flow point.
@@ -224,6 +287,44 @@ type Status = Issue['status'];
 
 It reuses the property type. Stop here: this helper is useful precisely because it remains readable; no keyof puzzle or type-level machinery is needed.
 
+## Common mistakes
+
+### `<T>` where a concrete type was meant
+
+A type parameter used in exactly one position preserves no relationship. `function label<T>(issue: T): string` is `function label(issue: Issue): string` with extra ceremony and less checking. Answer to question 1: the generic version keeps the caller's element type on the way out; if the function only ever handles issues, that buys nothing.
+
+### Over-constraining
+
+`<T extends Issue>` when the body only reads `.id` locks out every other shape that would have worked. Constrain to the capability, not to the domain type.
+
+### Under-constraining, then asserting
+
+`<T>` with `(item as { id: string }).id` inside. If the body needs an id, say so in the constraint and let the compiler enforce it at the call site.
+
+### Redeclaring instead of deriving
+
+A hand-written `IssueSummary` and an `Issue` will drift the first time one changes. Answer to question 4: derive it, so the change surfaces as a diagnostic rather than as two types that quietly disagree.
+
+### Utility types stacked until nothing is readable
+
+`Partial<Pick<Omit<Issue, 'id'>, 'title' | 'status'>>` typechecks and cannot be read. If a derived type needs a comment to explain it, write the type out. Depth is not sophistication.
+
+### Generic parameters named for their position
+
+`<T, U, V>` on the same signature. Name them for what they mean — `<TIssue, TResult>` — as soon as there is more than one.
+
+### Treating any of this as runtime behaviour
+
+Generics are erased with everything else. `<T>` cannot construct, validate, or inspect a `T` at runtime. FS02.5 next.
+
+## When this goes wrong
+
+1. **The compiler inferred `unknown` for a type parameter.** Nothing at the call site pinned it. Pass a value that determines it, or supply it explicitly.
+2. **A callback's parameter is implicitly `any`.** The function type is missing or too loose; type the callback parameter in the signature and inference flows into the caller's inline function. Answer to question 2: the compiler gives `item` the type `Issue`.
+3. **A generic function will not accept a valid argument.** The constraint is wider than the body needs, or narrower than the argument satisfies. Read which side the diagnostic is complaining about.
+4. **A derived type has a property you expected to be gone.** Check whether you wanted `Omit` or `Pick`, and remember `Partial` makes properties optional rather than removing them.
+5. **An error points inside a utility type.** Read it from the outside in: what did you ask for, what did the compiler produce, where did they stop agreeing.
+
 ## Focused exercise — evolve typed issue utilities
 
 **Mode: self-reported practice using your editor, TypeScript, and Node. This exercise is not automatically verified.**
@@ -307,6 +408,49 @@ Answer before revealing the comparison answers.
 10. Not unconstrained: the body needs `name`. Use `<T extends { name: string }>` only if multiple shapes truly need it, otherwise use the concrete domain type.
 </details>
 
-## Carry this forward
+## In the project
 
-Later you will meet typed React props, `useState<Issue[]>`, generic library APIs, TanStack Query result types, reusable hooks, and derived input/summary models. React is not involved yet. `<T>` is ordinary TypeScript for preserving a real relationship, not React magic. FS02.5 will separately address how runtime data becomes trustworthy.
+The reusable container you build here — a `RequestState<T>` or equivalent — is the shape **B02** declares and Part 04 fills in for real. It is also your first sight of a pattern that dominates the rest of the course: one type describing "an operation over some payload", narrowed at the point of use.
+
+Everything ahead is an instance of it. `useState<Issue[]>` in FS03.2 is a generic call. Part 04's fetch helper preserves the relationship between what you asked for and what you get back. Part 08's TanStack Query result types are the same idea with more surface. None of it is React magic — it is this lesson's `<T>`, which is worth knowing before a library hands it to you pre-assembled.
+
+## Resources
+
+### Read
+
+- [TypeScript Handbook: More on Functions](https://www.typescriptlang.org/docs/handbook/2/functions.html) — function type expressions, call signatures, optional and default parameters.
+- [TypeScript Handbook: Generics](https://www.typescriptlang.org/docs/handbook/2/generics.html) — through "Generic Constraints".
+
+### Go deeper
+
+- [TypeScript Handbook: Utility Types](https://www.typescriptlang.org/docs/handbook/utility-types.html) — `Partial`, `Pick`, `Omit`, `Record`.
+- [TypeScript Handbook: Keyof Type Operator](https://www.typescriptlang.org/docs/handbook/2/keyof-types.html)
+
+### Reference
+
+- [TypeScript Handbook: Indexed Access Types](https://www.typescriptlang.org/docs/handbook/2/indexed-access-types.html)
+
+## You are done when
+
+- [ ] Every function I wrote has a contract I can explain to a caller.
+- [ ] I typed a callback parameter and watched inference flow into an inline function.
+- [ ] For each `<T>` I kept, I can name the two positions whose relationship it preserves.
+- [ ] I removed at least one type parameter that preserved nothing.
+- [ ] My constraints match the capability the body uses, not the domain type.
+- [ ] I derived a related type from `Issue` rather than redeclaring it, and saw a model change propagate.
+- [ ] No `as` was used to work around a constraint.
+- [ ] I attempted the closed-book checkpoint without notes.
+
+FS02.5 remains unavailable until this lesson is complete. It addresses separately how runtime data becomes trustworthy — nothing here does that.
+
+---
+
+## Maintainer source record
+
+- Source dossier: `docs/dalt-fullstack/sources/TYPESCRIPT_HANDBOOK.md`; `docs/dalt-fullstack/sources/FSO_TYPESCRIPT.md`
+- Official sources: TypeScript Handbook — More on Functions, Generics (including Generic Constraints), Utility Types, Keyof Type Operator, Indexed Access Types
+- Versions: TypeScript 5.9.3, Node 25 (CR-08 pinned toolchain)
+- Consulted: 2026-08-14
+- DALT files inspected: `.dalt/course/fullstack/typescript-functions-lab/starter/**`
+- Curriculum authority: `CURRICULUM.md` §12 FS02.4 — the boundary is reusable relationships, not advanced type-level programming (`VISION_AND_SCOPE.md` §19)
+- Laravel bridge: not applicable — generics have no DALT or Laravel counterpart

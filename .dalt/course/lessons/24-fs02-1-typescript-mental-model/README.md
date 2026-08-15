@@ -12,6 +12,69 @@ Project milestone: B02 — Type the future application
 Primary source dossier: TYPESCRIPT_HANDBOOK.md; FSO_TYPESCRIPT.md  
 Last reviewed: 2026-08-14
 
+## Why this matters
+
+Every remaining part of this course puts typed code between a browser and a server. Before that is useful, you need an accurate answer to one question: **what has TypeScript actually established when it says nothing is wrong?**
+
+Get that answer wrong in either direction and you pay for it. Believe too little and you write defensive checks the compiler already covered, and you sprinkle `as` to make honest feedback go away. Believe too much and you ship a green typecheck over data the compiler never saw — which is the failure FS02.5 is entirely about, and the reason this lesson comes first.
+
+This is the smallest lesson in Part 02 and the one the other four stand on. It is about the boundary of the compiler's knowledge, not about syntax.
+
+## Before you start
+
+Required:
+
+- Part 01 complete (B01).
+- Node and npm available (`node --version`).
+- An editor with TypeScript support, so you can hover a value and read what was inferred.
+
+Recommended first:
+
+- Nothing. This lesson assumes no TypeScript.
+
+Going deeper in DALT Core — optional:
+
+- None.
+
+## By the end
+
+You should be able to:
+
+- state the difference between a type error and a runtime error, in terms of when each occurs;
+- read what TypeScript inferred instead of annotating by reflex;
+- say which parts of a TypeScript file survive into the emitted JavaScript, and which vanish;
+- explain structural typing well enough to predict which assignments are accepted;
+- explain what `import type` communicates;
+- say precisely what a green typecheck does and does not establish.
+
+## Predict before reading
+
+Write answers down first.
+
+1. A function declares `title: string`. At runtime a server sends `{ title: 42 }`. Does the compiler catch it?
+2. Does `type Issue = { … }` produce anything in the emitted JavaScript?
+3. Can you write `issue instanceof IssueSummary` for a type alias named `IssueSummary`?
+4. An object has four properties; a contract requires two of them. Is it accepted?
+
+Question 1 is the one the rest of Part 02 keeps returning to.
+
+## Mental model
+
+Two separate programs, running at two separate times:
+
+```text
+BEFORE you run anything          WHEN the program runs
+────────────────────────         ─────────────────────
+the checker reads your source    JavaScript executes real values
+compares declared relationships  values arrive from files, servers, users
+reports disagreements            behaves, or fails
+                                 knows nothing about your types
+```
+
+The checker never runs your program, and your program never consults your types. They do not meet. Everything TypeScript proves is a statement about **the source you showed it**; everything that goes wrong at runtime is about **values it never saw**.
+
+Hold that separation deliberately. Most confusion about TypeScript — including most misuse of `as` — comes from quietly imagining the two columns are one.
+
 ## Start with a JavaScript surprise
 
 An issue title is meant to be text. JavaScript lets a program state that assumption only through the code it tries to run.
@@ -191,6 +254,36 @@ Run `npm run typecheck`, read what relationship TypeScript cannot establish, the
 
 We are deliberately not walking every compiler option. The durable model is that a TypeScript project has rules, and those rules affect what the checker accepts.
 
+## Common mistakes
+
+### Reading a green typecheck as a runtime guarantee
+
+The most consequential misunderstanding in this part. A clean check says the relationships *in your source* agree. It says nothing about a value arriving from outside that source. Severity: high — it is the exact hole FS02.5 exists to close.
+
+### Silencing a diagnostic with `as` or `any`
+
+`value as string` does not check anything; it tells the checker to stop asking. Sometimes that is right, and it is never free. Run the five-question protocol above before reaching for it.
+
+### Annotating everything
+
+`const inferredTitle: string = triageIssue.title` teaches the checker nothing. Annotate boundaries — parameters, exported returns — and let inference describe local values.
+
+### Expecting a type to exist at runtime
+
+`instanceof` against a type alias or interface cannot work; there is no runtime value to inspect. Answer to question 3: no.
+
+### Disabling `strict` to make feedback stop
+
+Strictness is what makes the checker ask for information it needs. Turning it off does not remove the uncertainty, only the notification.
+
+## When this goes wrong
+
+1. **A diagnostic makes no sense.** Read the relationship, not the wording: what type do I have, what is expected, where do they stop matching?
+2. **The editor and `tsc` disagree.** The editor may be using a different TypeScript version. `npm run typecheck` is the authority.
+3. **An import fails at runtime but typechecks.** You imported a value with `import type`, or imported a type without it. `import type` is erased.
+4. **`Parameter implicitly has an 'any' type`.** Strict mode asking for a contract it cannot infer. Supply the type; do not disable the rule.
+5. **Emitted JavaScript looks wrong.** Remember `.tmp/` is a scratch artifact of the experiment, not a build output to keep.
+
 ## Focused exercise — What survives?
 
 **Mode: self-reported practice using your editor, `tsc`, emitted JavaScript, and Node. This exercise is not automatically verified.**
@@ -274,16 +367,49 @@ Close the source and answer these from memory before opening the comparison answ
 8. It established that the checked source relationships agree under the project configuration. It did not prove that every future runtime value from outside that source will really be a string.
 </details>
 
-## Before you mark this lesson complete
+## In the project
 
-You are ready to self-report completion when you have:
+This is the foundation of **B02 — Type the future application**, and of every typed line after it. Nothing is written here; what carries forward is the two-column model.
 
-- predicted and observed the JavaScript runtime failure;
-- seen TypeScript reject the related incompatible call;
-- inspected editor inference;
-- inspected emitted JavaScript;
-- repaired the focused exercise’s deliberate contract mismatch;
-- explained structural typing and `import type` from the lab;
-- attempted the closed-book checkpoint without notes.
+It is also the reason Part 02 spends five lessons before React. FS03.1 types a component's props on day one, and a learner who thinks a typed prop validates a server response will build Part 04 on a false assumption. The boundary you set up here is the one Part 04 and Part 05 keep testing.
 
-The next TypeScript lessons remain unavailable. You have established the model they will use; you have not yet studied all TypeScript syntax or runtime data validation.
+## Resources
+
+### Read
+
+- [TypeScript Handbook: The Basics](https://www.typescriptlang.org/docs/handbook/2/basic-types.html) — static checking, and what the compiler is doing.
+- [TypeScript Handbook: Everyday Types](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html) — through type aliases and interfaces.
+
+### Go deeper
+
+- [TypeScript Handbook: Type Compatibility](https://www.typescriptlang.org/docs/handbook/type-compatibility.html) — structural typing in its own right.
+- [TypeScript: `import type`](https://www.typescriptlang.org/docs/handbook/modules/reference.html#type-only-imports-and-exports)
+
+### Reference
+
+- [TypeScript: `tsconfig` `strict`](https://www.typescriptlang.org/tsconfig/#strict)
+
+## You are done when
+
+- [ ] I predicted and observed the JavaScript runtime failure.
+- [ ] I saw TypeScript reject the same relationship before execution.
+- [ ] I inspected inference by hovering, before annotating.
+- [ ] I read real emitted JavaScript and can say what disappeared.
+- [ ] I repaired the lab's deliberate contract mismatch without widening the type to silence it.
+- [ ] I can explain structural typing and `import type` using the lab as the example.
+- [ ] I can state what a green typecheck established and what it did not.
+- [ ] I attempted the closed-book checkpoint without notes.
+
+FS02.2 remains unavailable until this lesson is complete. You have established the model the rest of Part 02 uses; you have not yet studied all TypeScript syntax, and you have not touched runtime data validation.
+
+---
+
+## Maintainer source record
+
+- Source dossier: `docs/dalt-fullstack/sources/TYPESCRIPT_HANDBOOK.md`; `docs/dalt-fullstack/sources/FSO_TYPESCRIPT.md`
+- Official sources: TypeScript Handbook — The Basics, Everyday Types, Type Compatibility, type-only imports; `tsconfig` reference for `strict`
+- Versions: TypeScript 5.9.3, Node 25 (CR-08 pinned toolchain)
+- Consulted: 2026-08-14
+- DALT files inspected: `.dalt/course/fullstack/typescript-lab/starter/**`
+- Curriculum authority: `CURRICULUM.md` §12 FS02.1 — the central principle is that a green check is not a runtime guarantee
+- Laravel bridge: not applicable — no DALT or Laravel primitive corresponds to static typechecking

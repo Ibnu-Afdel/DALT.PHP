@@ -1,0 +1,10 @@
+{
+  "title": "Client state versus server state",
+  "description": "Classify state by its authority and use TanStack Query for remote data.",
+  "order": 45,
+  "section": "fullstack",
+  "section_order": 26,
+  "icon": "database",
+  "color": "purple",
+  "prerequisites": ["44-fs07-3-test-frontend-behavior"]
+}

@@ -1,0 +1,10 @@
+{
+  "title": "Separating transport from UI",
+  "description": "Make a small typed API client so components express application intent rather than HTTP mechanics.",
+  "order": 35,
+  "section": "fullstack",
+  "section_order": 16,
+  "icon": "layers",
+  "color": "purple",
+  "prerequisites": ["34-fs04-2-mutating-server-data"]
+}

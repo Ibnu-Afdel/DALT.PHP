@@ -1,0 +1,10 @@
+{
+  "title": "Custom hooks and feature boundaries",
+  "description": "Extract repeated behavior without hiding where state, data, and decisions belong.",
+  "order": 48,
+  "section": "fullstack",
+  "section_order": 29,
+  "icon": "layers",
+  "color": "purple",
+  "prerequisites": ["47-fs08-3-context-reducers-and-zustand"]
+}

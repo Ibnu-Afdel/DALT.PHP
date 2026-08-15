@@ -1,0 +1,10 @@
+{
+  "title": "Context, reducers and Zustand",
+  "description": "Choose a bounded client-state tool without turning remote data into a global store.",
+  "order": 47,
+  "section": "fullstack",
+  "section_order": 28,
+  "icon": "layers",
+  "color": "purple",
+  "prerequisites": ["46-fs08-2-mutations-invalidation-and-optimistic-ui"]
+}

@@ -22,6 +22,23 @@ module → function → Promise → Response → body → application value
 
 Each arrow is a boundary. A failure at one boundary is not necessarily a failure at another.
 
+That last sentence is the lesson. Most broken data-loading code comes from collapsing those boundaries into one idea called "the request failed" — so a `404` is reported as a network problem, a `500` renders as an empty list, and a malformed body throws somewhere with no useful message. Keeping the boundaries distinct here is what makes Part 04's loading and error states honest instead of a single spinner and a shrug.
+
+## Before you start
+
+Required:
+
+- FS01.1 — Data, functions and transformations.
+- Node available (`node --version`) and a browser with DevTools.
+
+Recommended first:
+
+- FS00.2's distinction between a document response and a JSON response. `fetch` is where that becomes your problem rather than the browser's.
+
+Going deeper in DALT Core — optional:
+
+- None.
+
 ## By the end
 
 You should be able to:
@@ -31,6 +48,43 @@ You should be able to:
 - use `async`, `await`, and `try`/`catch` without pretending asynchronous work became synchronous;
 - trace `fetch` from `Promise<Response>` through status inspection and JSON parsing;
 - distinguish a network rejection, an HTTP error response, invalid JSON, and an application-domain failure.
+
+## Predict before reading
+
+Write answers down first.
+
+1. `const data = fetch(url)`. What is in `data`?
+2. A request returns `404`. Does the returned Promise reject, or fulfil?
+3. An `async` function returns `42`. What does its caller receive?
+4. `await` appears in the middle of a function. Does the rest of the page stop?
+5. You call `response.json()` twice on the same response. What happens the second time?
+
+Question 2 is the one that produces silent bugs in real applications.
+
+## Mental model
+
+A single `fetch` is four separate things that can go wrong, at four separate boundaries:
+
+```text
+1. TRANSPORT     fetch(url) ──▶ Promise<Response>
+                 rejects only if the request never completed
+                 (offline, DNS, CORS, aborted)
+
+2. HTTP STATUS   response.ok / response.status
+                 404 and 500 are SUCCESSFUL transports
+                 carrying an unsuccessful answer
+
+3. BODY          await response.json()
+                 rejects if the bytes are not valid JSON
+                 (an HTML error page is the classic case)
+
+4. DOMAIN        the parsed value
+                 valid JSON that your application cannot use
+```
+
+The rule to carry: **`fetch` rejects only at boundary 1.** Answer to question 2 — a `404` *fulfils*. The Promise's job is "did I get an answer?", not "was the answer good news?". Code that only wraps `fetch` in `try`/`catch` handles one boundary out of four and reports the other three as success.
+
+The second idea, underneath all of it: **a Promise is not its value.** It is a handle on work that will finish later. `await` unwraps it — and only inside the async function that wrote it. Answer to question 4: the rest of the page keeps running; `await` suspends this function's continuation, not the browser.
 
 ## Start with a tiny module boundary
 
@@ -320,7 +374,7 @@ After `await fetch(path)`, turn a non-OK response into an `Error` before calling
 One valid loader awaits `fetch`, checks `response.ok`, throws an error that includes the status when it is false, and otherwise returns `await response.json()`. The caller awaits the imported loader inside `try`/`catch` and logs an error message. With the 404 fixture, the loader creates the error after receiving a Response. With the invalid-JSON fixture, `response.json()` rejects; the caller's catch sees a parsing failure. The module boundary does not change JavaScript values or failure behavior—it makes the loader’s responsibility explicit.
 </details>
 
-## Debug async HTTP code with evidence
+## When this goes wrong
 
 When behavior surprises you, follow this order instead of guessing:
 
@@ -349,6 +403,16 @@ Keep Network and Console together: Network shows the browser/server exchange; ru
 - Swallowing an error so later evidence no longer tells you what failed.
 - Putting unrelated work in one giant `try`/`catch` and losing the failure stage.
 - Debugging an import path/name error as though it were an async failure.
+
+Answer to question 5: the second `response.json()` rejects, because the body is a stream and reading it consumes it. If you need the text and the parsed value, read once and keep both.
+
+## In the project
+
+This is the second half of **B01 — JavaScript readiness**, and it is the closest Part 01 gets to the real system.
+
+The four boundaries reappear directly. FS02.5 takes boundary 4 seriously — valid JSON that is not a valid `Issue` — and turns it into a parser. Part 04 turns all four into visible application states, because a user needs to be told something different for "you are offline", "that issue does not exist", and "the server sent something we could not read". Part 06 adds a fifth: a `401` that means the session expired.
+
+Notice how much of that is decided here, in plain JavaScript, before any library offers to hide it.
 
 ## Closed-book checkpoint
 
@@ -396,7 +460,9 @@ Close the lesson and answer before opening the disclosure.
 
 ## Maintainer source record
 
-- Source dossiers: `docs/dalt-fullstack/sources/FSO_PART_01.md`, `docs/dalt-fullstack/sources/FSO_PART_02.md`
-- Official technical sources: MDN JavaScript modules, Promises, async functions, and Fetch links above
+- Source dossier: `docs/dalt-fullstack/sources/FSO_PART_01.md`; `docs/dalt-fullstack/sources/FSO_PART_02.md`
+- Official sources: MDN JavaScript modules, Promises, async functions, and Fetch links above
+- Versions: MDN documentation consulted 2026-08-13; Node 25
 - Consulted: 2026-08-14
+- Curriculum authority: `CURRICULUM.md` §11 FS01.2 — topics and required outcome
 - Laravel source: not applicable; this is language groundwork before framework work

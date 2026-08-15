@@ -227,4 +227,5 @@ Then reopen the lesson and correct your answers in a different color.
 - Versions: web documentation consulted 2026-08-13
 - Consulted: 2026-08-14
 - DALT files inspected: `.dalt/routes/routes.php`, `.dalt/Http/controllers/learn/index.php`, `.dalt/Core/MarkdownRenderer.php`
+- Curriculum authority: `CURRICULUM.md` §10 FS00.1 — core questions, required outcomes and practice
 - Laravel source: not applicable to this web-fundamentals lesson

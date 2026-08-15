@@ -1,0 +1,10 @@
+{
+  "title": "Test frontend behavior",
+  "description": "Use Vitest and React Testing Library to prove observable application behavior at useful boundaries.",
+  "order": 44,
+  "section": "fullstack",
+  "section_order": 25,
+  "icon": "clipboard-check",
+  "color": "purple",
+  "prerequisites": ["43-fs07-2-authentication-in-the-frontend"]
+}

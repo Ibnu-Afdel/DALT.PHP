@@ -18,6 +18,23 @@ Part 00 established that browser JavaScript can participate in application behav
 
 You already know how to program. This is a focused refresher for the JavaScript patterns that will repeatedly appear in TypeScript and, later, React: issue lists, callback functions, derived values, and deliberate updates.
 
+One of them matters more than the rest. React decides whether to re-render by comparing references, so "did I change this array or produce a new one?" stops being a style question and becomes the difference between a screen that updates and one that silently does not. That is why this lesson spends its time on references and immutable updates rather than on syntax you could look up.
+
+## Before you start
+
+Required:
+
+- FS00.1 and FS00.2.
+- Node available (`node --version`), or a browser console — every snippet here runs in either.
+
+Recommended first:
+
+- Keep a scratch file or console open. This lesson is prediction-driven and the predictions are worthless unless you write them down before running anything.
+
+Going deeper in DALT Core — optional:
+
+- None.
+
 ## By the end
 
 You should be able to:
@@ -113,6 +130,32 @@ console.log(issues === nextIssues, issues[1] === nextIssues[1]);
 ```
 
 Predict all four values. Why is it useful that the changed issue and the containing array have new identities?
+
+## Mental model
+
+Two ideas carry the whole lesson.
+
+**A binding is a name pointing at a value. For objects and arrays, the value is a reference.**
+
+```text
+const a = { title: 'Broken search' }
+const b = a                     ← b points at the SAME object
+b.title = 'Fixed'               ← a.title is now 'Fixed' too
+
+const c = { ...a }              ← c points at a NEW object
+c.title = 'Something else'      ← a is untouched
+```
+
+`const` prevents the *name* being re-pointed. It says nothing about the object it points at.
+
+**A transformation produces the next value; it does not edit the current one.**
+
+```text
+current value  ──transformation──▶  next value
+     (unchanged)                      (new reference)
+```
+
+`map`, `filter` and spread work this way. `push`, `sort` and direct property assignment do not. Both styles are valid JavaScript; only one survives contact with React, which is why the habit is worth building now, four lessons before you need it.
 
 ## Values, bindings, and references
 
@@ -341,7 +384,7 @@ One valid approach uses `filter`, `find`, `some`, and `reduce` for the first fiv
 The reference bug occurs because array spread copies only the array container. Its first element still refers to the original issue, whose `assignee` still refers to the original nested object. The repair copies each changed level: new array, changed issue object, and changed assignee object. Equivalent implementations are valid if they preserve the original fixture and express the same behavior.
 </details>
 
-## Debug with evidence
+## When this goes wrong
 
 When a transformation surprises you, use this small loop:
 
@@ -364,9 +407,13 @@ This is especially useful for a missing `return` in a callback, a predicate that
 - **Using `reduce` when a named operation is clearer.** Clarity is the point.
 - **Thinking a closure copies values forever.** It retains access to its surrounding lexical environment; the useful question is which binding the function can still access.
 
-## Looking ahead
+## In the project
 
-The issue tracker begins later, not in this lesson. When it does, code will conceptually use `issues.map(...)`, `issues.filter(...)`, and `issues.find(...)`; functions will be passed as handlers; and state changes will create next values rather than quietly alter existing ones. TypeScript and React add new layers, but they rely on the JavaScript reasoning you just practised.
+This is **B01 — JavaScript readiness**. No issue-tracker code is written here; what carries forward is the reasoning.
+
+Every one of these operations reappears with a name attached. `issues.filter(...)` becomes FS03.2's derived `visibleIssues`. `issues.map(...)` becomes FS03.1's list rendering and FS03.2's immutable status update. Functions passed as values become FS03.3's `onCreate` callback. And the reference rule becomes load-bearing: React compares the old and new state by identity, so mutating an array in place produces data that changed and a screen that did not.
+
+TypeScript and React add vocabulary on top. They do not replace any of this.
 
 ## Closed-book checkpoint
 
@@ -412,6 +459,8 @@ Close the lesson and answer before reopening the details.
 ## Maintainer source record
 
 - Source dossier: `docs/dalt-fullstack/sources/FSO_PART_01.md`
-- Official technical sources: MDN JavaScript Guide and JavaScript Reference links above
+- Official sources: MDN JavaScript Guide and JavaScript Reference links above
+- Versions: MDN documentation consulted 2026-08-13; Node 25
 - Consulted: 2026-08-14
+- Curriculum authority: `CURRICULUM.md` §11 FS01.1 — topics and exercise style
 - Laravel source: not applicable; this is language groundwork before framework work

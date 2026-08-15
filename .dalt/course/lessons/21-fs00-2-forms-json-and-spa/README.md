@@ -29,6 +29,11 @@ Recommended first:
 
 - Keep the Network panel open with **Preserve log** enabled.
 
+Going deeper in DALT Core — optional:
+
+- [Routing](/learn/lessons/02-routing) shows how DALT decides which handler answers a
+  form submission. It is not required for this lesson, and nothing here depends on it.
+
 ## By the end
 
 You should be able to:
@@ -318,4 +323,5 @@ Close the lesson before answering. Write an answer before opening each reveal.
 - Versions: web documentation consulted 2026-08-13
 - Consulted: 2026-08-14
 - DALT files inspected: `.dalt/routes/routes.php`, `.dalt/Http/controllers/learn/fullstack-observation.php`, `.dalt/resources/views/learn/fullstack-observation.view.php`
+- Curriculum authority: `CURRICULUM.md` §10 FS00.2 — topics and required outcome
 - Laravel source: not applicable to this web-fundamentals lesson

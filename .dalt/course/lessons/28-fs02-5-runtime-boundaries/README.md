@@ -12,6 +12,74 @@ Project milestone: B02 — Type the future application
 Primary source dossier: TYPESCRIPT_HANDBOOK.md; FSO_TYPESCRIPT.md
 Last reviewed: 2026-08-14
 
+## Why this matters
+
+This is the load-bearing lesson of Part 02, and the one this whole course was built to make impossible to skip.
+
+Everything so far has been about the compiler's model of your source. That model is genuinely useful and it has a hard edge: **it ends at the boundary of your program.** A JSON body from DALT, a form field, a URL parameter, `localStorage` — none of it was checked by anything when it arrives. Write `const issue: Issue = await response.json()` and you have not validated anything. You have declared something, and the declaration is a claim you did not earn.
+
+That is the false green check in its purest form. The compiler reports success, the editor is quiet, and the program is one malformed response away from `Cannot read properties of null`. Every later part of this course crosses this boundary — Part 04 with real fetches, Part 05 with database rows, Part 06 with session data — so the habit has to be built here, before there is a server to blame.
+
+## Before you start
+
+Required:
+
+- FS02.4 — Functions, generics and reusable types.
+- Node and npm, and an editor with TypeScript support.
+
+Recommended first:
+
+- FS02.3's `unknown` and type-guard material. This lesson is that idea taken seriously.
+- FS01.2's fetch sequence — the place the untrusted value actually arrives.
+
+Going deeper in DALT Core — optional:
+
+- [Validation and error contracts](/learn/lessons/02-routing) shows the server-side half of the same distrust. Optional; Part 05 teaches what it needs.
+
+## By the end
+
+You should be able to:
+
+- state exactly where TypeScript's knowledge stops and why;
+- explain why `as` is a claim rather than a check, and what it costs when wrong;
+- hold external data as `unknown` and prove your way to a typed value;
+- write a small structural check (`isRecord`) and say what it does and does not establish;
+- choose between a type guard and a parser, and justify the choice;
+- write a parser that either returns a trusted value or fails with a message naming the field;
+- explain why frontend parsing does not replace backend validation.
+
+## Predict before reading
+
+Write answers down first.
+
+1. `const issue = await response.json() as Issue`. What has been checked at runtime?
+2. `typeof value === 'object'` is true. Which two values might you still be holding?
+3. A guard is annotated `value is Issue` but its body only checks that the value is an object. Does the compiler complain?
+4. Your parser rejects a bad response in the browser. Does the server still need to validate?
+
+Question 3 is the one that decides whether your guards are evidence or decoration.
+
+## Mental model
+
+```text
+       INSIDE your program              │        OUTSIDE
+   the compiler read this source        │   values you never showed it
+                                        │
+   Issue, IssueDraft, RequestState<T>   │   JSON bodies, form fields,
+   narrowing, generics, guards          │   URL params, localStorage
+                                        │
+   ─────────── proven ──────────────────┼─── unproven ───────────────
+                                        │
+                          the boundary ─┘
+
+   crossing it correctly:   unknown → checks → typed value
+   crossing it by claim:    as Issue   ← nothing happened
+```
+
+The rule, stated once: **`as` is a claim; a check is evidence.** `as` does not inspect the value, does not run at runtime, and does not appear in the emitted JavaScript — FS02.1's erasure, arriving where it costs something. When you write `as Issue`, you take personal responsibility for a fact nothing verified.
+
+The alternative is not more types. It is a small amount of ordinary JavaScript, run at the boundary, once — after which the value is genuinely an `Issue` and everything downstream can rely on the model you built in FS02.2.
+
 ## Where TypeScript's knowledge stops
 
 FS02.1 asked what the compiler can know. FS02.2 asked which values the application permits. FS02.3 asked what we know at this exact control-flow point. FS02.4 preserved those relationships through reusable code.
@@ -253,9 +321,9 @@ The parser earns trust from runtime checks: a non-null, non-array object; a fini
 `tsc` proves source-level relationships in TypeScript’s model. The runtime test proves that actual fixture values passed or failed the checks. Frontend parsing protects frontend assumptions; it does not replace the backend validation and database constraints that later protect DALT.
 </details>
 
-## Bad shortcuts are still claims
+## Common mistakes
 
-None of these establish the Issue contract:
+Every one of these is a shortcut that looks like a check and is a claim. None establishes the `Issue` contract:
 
 1. `return value as Issue` — no runtime proof.
 2. `return value as unknown as Issue` — still no runtime proof.
@@ -266,7 +334,13 @@ None of these establish the Issue contract:
 
 The last case becomes concrete in Part 04. We are deliberately not building HTTP or a client architecture here.
 
-## Debug a runtime boundary deliberately
+Two more worth naming, because they are the ones that survive review:
+
+**A guard whose body is weaker than its signature.** Answer to question 3: the compiler does **not** complain. `value is Issue` is a promise you make to it, and it believes you. That makes a sloppy guard more dangerous than a bare `as`, because it reads as diligence. Severity: high.
+
+**`typeof value === 'object'`.** Answer to question 2: you may still be holding `null` or an array. Both are objects to `typeof`. This is why `isRecord` exists.
+
+## When this goes wrong
 
 When a typed path fails in reality, use this protocol:
 
@@ -338,3 +412,51 @@ React → fetch → DALT → JSON
 ~~~
 
 The browser may declare `type Issue = ...`; the PHP backend has its own validation, database constraints, and response contract. TypeScript cannot inspect the PHP program through the network. Part 04 will make that boundary real. B02 remains the unfinished Part 02 milestone; it is not implemented or unlocked by this lesson.
+
+## In the project
+
+This is the last piece of **B02 — Type the future application**, and the one that makes the rest of it worth having. B02's parser is the seam Part 04 plugs a real server into: `fetch` returns `unknown`, the parser turns it into an `Issue`, and every component downstream works with a value that was actually established.
+
+Answer to question 4: **yes, the server still validates.** Everything you wrote here runs in a browser the user controls completely — they can edit it, disable it, or send requests that never touch it. Frontend parsing protects *your frontend's assumptions* and gives fast, specific feedback. It is not a security boundary and never becomes one. Part 05's DALT validation and database constraints, and Part 06's authorization, are the boundary that counts, and they trust nothing that arrives over the network.
+
+Two distrust layers, two different jobs. Knowing which is which is the point of this lesson.
+
+## Resources
+
+### Read
+
+- [TypeScript Handbook: Narrowing — type predicates](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#using-type-predicates) — what `value is Issue` promises, and who is responsible for it.
+- [MDN: `Response.json()`](https://developer.mozilla.org/en-US/docs/Web/API/Response/json) — note what its return type does and does not tell you.
+
+### Go deeper
+
+- [TypeScript Handbook: Type Assertions](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#type-assertions) — read it as documentation of a deliberate escape hatch.
+- [MDN: `JSON.parse()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse) — valid JSON and a valid domain value are different questions.
+
+### Reference
+
+- [TypeScript Handbook: `unknown`](https://www.typescriptlang.org/docs/handbook/2/functions.html#unknown)
+
+## You are done when
+
+- [ ] I ran the unsafe assertion, watched it fail at runtime with a clean typecheck, and kept that evidence instead of patching it away.
+- [ ] I can state where TypeScript's knowledge stops, in one sentence.
+- [ ] External data in my lab is held as `unknown` until something proves otherwise.
+- [ ] My `isRecord` check excludes `null` and arrays, and I can say why both needed excluding.
+- [ ] `parseIssue` either returns a reconstructed `Issue` or throws naming the failed field — and every promised property was actually established.
+- [ ] `npm test` passes: the valid fixture is accepted, and string id, null title, unknown status, missing title, array, null and numeric description are all rejected.
+- [ ] After parsing, downstream code uses the value with no `as`, `any`, or `!`.
+- [ ] I can explain why the server must still validate everything.
+- [ ] I attempted the closed-book checkpoint without notes.
+
+---
+
+## Maintainer source record
+
+- Source dossier: `docs/dalt-fullstack/sources/TYPESCRIPT_HANDBOOK.md`; `docs/dalt-fullstack/sources/FSO_TYPESCRIPT.md`
+- Official sources: TypeScript Handbook — Narrowing (type predicates), Type Assertions, `unknown`; MDN — `Response.json()`, `JSON.parse()`
+- Versions: TypeScript 5.9.3, Node 25 (CR-08 pinned toolchain)
+- Consulted: 2026-08-14
+- DALT files inspected: `.dalt/course/fullstack/typescript-runtime-boundaries-lab/starter/**`
+- Curriculum authority: `CURRICULUM.md` §12 FS02.5 — recorded as a load-bearing lesson; the required outcome is that external data is untrusted until proven
+- Laravel bridge: deferred to Part 05, where server-side validation is the honest comparison

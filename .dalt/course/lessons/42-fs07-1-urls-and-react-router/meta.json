@@ -1,0 +1,10 @@
+{
+  "title": "URLs and React Router",
+  "description": "Use durable URLs, route parameters, links, and not-found states to make an application navigable.",
+  "order": 42,
+  "section": "fullstack",
+  "section_order": 23,
+  "icon": "layers",
+  "color": "purple",
+  "prerequisites": ["41-fs06-3-authorization-and-ownership"]
+}

@@ -1,1 +1,18 @@
-{"compilerOptions":{"target":"ES2022","module":"ESNext","moduleResolution":"bundler","jsx":"react-jsx","strict":true,"noEmit":true},"include":["src"]}
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["vitest/globals", "@testing-library/jest-dom"]
+  },
+  "//": "vite.config.ts is deliberately excluded: Vite 8 (rolldown) and Vitest 4 ship conflicting plugin types, and that argument is not what this lab is teaching. `npm run typecheck` checks your source.",
+  "include": ["src"]
+}

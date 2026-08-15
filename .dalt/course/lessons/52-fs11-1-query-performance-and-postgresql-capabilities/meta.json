@@ -1,0 +1,10 @@
+{
+  "title": "Query performance and PostgreSQL capabilities",
+  "description": "Measure an issue-list query, read its plan, and choose PostgreSQL search and indexes from evidence.",
+  "order": 52,
+  "section": "fullstack",
+  "section_order": 33,
+  "icon": "database",
+  "color": "purple",
+  "prerequisites": ["51-fs10-2-builds-health-and-debugging"]
+}

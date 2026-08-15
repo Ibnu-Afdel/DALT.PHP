@@ -1,0 +1,10 @@
+{
+  "title": "Backend API behavior tests",
+  "description": "Prove the issue tracker’s HTTP contract, error behavior, and stored effects with deterministic tests.",
+  "order": 39,
+  "section": "fullstack",
+  "section_order": 20,
+  "icon": "layers",
+  "color": "purple",
+  "prerequisites": ["38-fs05-3-crud-queries-and-transaction-boundaries"]
+}

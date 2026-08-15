@@ -12,6 +12,73 @@ Project milestone: B02 — Type the future application
 Primary source dossier: TYPESCRIPT_HANDBOOK.md; FSO_TYPESCRIPT.md  
 Last reviewed: 2026-08-14
 
+## Why this matters
+
+The issue tracker's `Issue` type is not documentation. It is the definition of which application states are allowed to exist — and every part of this course downstream inherits it. React props in Part 03, request and response shapes in Part 04, table columns and constraints in Part 05, authorization decisions in Part 06: all of them are this model, re-expressed at another layer.
+
+A weak model costs you at every one of those layers. `status: string` means every component, every handler, and every query has to defend against values the application never designed for — and eventually one of them will not. A finite union means the invalid state cannot be written down in the first place.
+
+So the skill here is not syntax. It is **deciding what is true about your domain and saying it precisely enough that the compiler can hold you to it.**
+
+## Before you start
+
+Required:
+
+- FS02.1 — The TypeScript mental model.
+- Node and npm, and an editor with TypeScript support.
+
+Recommended first:
+
+- Have FS02.1's two-column model in mind. Everything here is still source-level; nothing you write today validates a runtime value.
+
+Going deeper in DALT Core — optional:
+
+- [Database fundamentals](/learn/lessons/05-database) shows the same modelling questions expressed as columns and constraints. Optional, and Part 05 teaches what it needs.
+
+## By the end
+
+You should be able to:
+
+- decide whether a field is required, optional, or nullable — and say why those are three different things;
+- restrict a field to a finite set of valid values instead of `string`;
+- use `readonly` to express an invariant, and state what it does not do;
+- choose between a type alias and an interface without inventing a rule;
+- reuse an existing shape rather than redeclaring it;
+- model a related entity as a nested object instead of a flattened field;
+- read a wave of compiler errors after a model change as a list of stale assumptions.
+
+## Predict before reading
+
+Write answers down first.
+
+1. `assigneeId?: number` and `assigneeId: number | null`. What does each say about an issue with nobody assigned?
+2. A field is `readonly`. Can the object still be changed at runtime?
+3. `status: string` versus `status: 'todo' | 'in_progress' | 'done'`. Which mistakes does the second prevent that the first cannot?
+4. You change one property on a widely used type. Is the resulting pile of errors a problem or information?
+
+Question 1 is the one that decides whether your API shapes are honest in Part 04.
+
+## Mental model
+
+A type is a claim about which values are possible:
+
+```text
+string                 ← every string that has ever existed
+'todo'|'in_progress'   ← exactly two values your application designed
+```
+
+Widening a type is not "being flexible." It is enlarging the set of states your code must handle, usually without handling them. Narrowing is not "being strict." It is recording a decision you already made.
+
+Three distinctions do most of the work, and they are genuinely different:
+
+```text
+required     the property is always there
+optional     the property may be absent          ← "we might not know"
+nullable     the property is there, value null   ← "we know: nobody"
+```
+
+"Absent" and "explicitly nothing" are different facts. Conflating them produces APIs where you cannot tell "not loaded" from "empty", which becomes a real bug the first time a partial update is sent in Part 05.
+
 ## Start with a model, not syntax
 
 FS02.1 established that TypeScript reasons about source before JavaScript runs. Now give it something useful to reason about: the states our application allows.
@@ -186,6 +253,44 @@ The first nested value has a string where UserSummary requires a numeric id. The
 
 Do not turn that observation into runtime validation. These are source values TypeScript can see. Later we will treat values that arrive from outside the program as a separate problem.
 
+## Common mistakes
+
+### `string` where a finite set was meant
+
+The default mistake. `status: string` accepts `'Done'`, `'don'`, and `''`, and pushes the checking into every consumer. Severity: high — the cost lands in Part 03's components and Part 05's queries, far from the decision.
+
+### Using optional to mean "no value"
+
+`assigneeId?: number` says the property might not be there. If your domain says an issue always has an assignee field and `null` means unassigned, write `assignee: UserSummary | null`. Answer to question 1: optional is about the *property*, nullable is about the *value*.
+
+### Optional everywhere, so nothing has to be supplied
+
+A model where every field is optional describes no state at all, and every consumer needs a guard. Optionality is a claim; make it only where it is true.
+
+### Expecting `readonly` to freeze an object
+
+It prevents assignment *through a typed reference in your source*. It is erased, so it does not freeze anything at runtime and does not apply deeply. Answer to question 2: yes, the object can still be changed at runtime — by JavaScript that never saw the type.
+
+### Inventing a type-alias-versus-interface rule
+
+Both describe object contracts and both disappear. Be consistent within the project and spend the decision budget on the model instead.
+
+### Flattening a related entity
+
+`assigneeName: string` plus `assigneeId: number` splits one thing into two fields that can disagree. A nested `UserSummary` cannot half-exist.
+
+### Widening the model to make errors stop
+
+After a change, the fastest way to a green check is to loosen the type until nothing complains. That deletes the information the errors were carrying. Answer to question 4: the pile is information — a map of every assumption the change invalidated.
+
+## When this goes wrong
+
+1. **One change produced twenty errors.** Expected, and useful. Read them as a list, decide per site whether the caller or the contract is wrong, and fix the contract once.
+2. **An optional property still errors when you read it.** Strict mode is asking you to handle the absent case. That is the point of declaring it optional.
+3. **`exactOptionalPropertyTypes` rejects assigning `undefined`.** With that flag, optional means absent-or-value, not present-with-`undefined`. Omit the property rather than setting it to `undefined`.
+4. **A literal union rejects a value that looks right.** Check for case and whitespace; `'Todo'` is not `'todo'`.
+5. **`readonly` did not stop a mutation.** Something reached the object through an untyped path, or the mutation is nested one level deeper than the modifier applies.
+
 ## Focused exercise — evolve one honest issue model
 
 **Mode: self-reported practice using your editor and tsc. This exercise is not automatically verified.**
@@ -293,10 +398,48 @@ Close the lesson, then answer before revealing the comparison answers.
 8. Use author: UserSummary | null when the field always exists and null deliberately means no active author. Optional means the property itself may be absent.
 </details>
 
-## Carry this model forward
+## In the project
 
-Soon these decisions will appear as Issue, Project, User, component props, state, forms, and application data. Part 03 will introduce React, but you should not have to learn object modeling and React props at the same time.
+This model *is* **B02 — Type the future application**, and it does not stop there. The `Issue`, `Project` and `UserSummary` shapes you settle here become FS03.1's component props, Part 04's request and response bodies, and Part 05's table columns — where a finite union turns into a `CHECK` constraint or an enum, and a nullable column stops being a matter of opinion.
 
-Before marking completion, make sure you predicted the diagnostics, changed the model, observed required/optional/null distinctions, tried readonly and literal restrictions, repaired the exercise after its model change, and attempted the checkpoint from memory.
+That is why Part 02 sits before React. You should not be learning object modelling and React props at the same time, and you should not be discovering in Part 05 that your model was never decided.
 
-FS02.3 remains unavailable. It will deepen reasoning about unions and control flow; this lesson is only about deciding which application states are valid.
+## Resources
+
+### Read
+
+- [TypeScript Handbook: Everyday Types](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html) — object types, optional properties, unions of literals.
+- [TypeScript Handbook: Object Types](https://www.typescriptlang.org/docs/handbook/2/objects.html) — through `readonly` and extending types.
+
+### Go deeper
+
+- [TypeScript: `exactOptionalPropertyTypes`](https://www.typescriptlang.org/tsconfig/#exactOptionalPropertyTypes) — why absent and `undefined` are worth separating.
+- [TypeScript Handbook: type aliases versus interfaces](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#differences-between-type-aliases-and-interfaces)
+
+### Reference
+
+- [TypeScript Handbook: Literal Types](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#literal-types)
+
+## You are done when
+
+- [ ] I predicted each diagnostic before running the stage that produced it.
+- [ ] Every finite field in my model is a literal union, not `string`.
+- [ ] I can state the difference between required, optional and nullable using a field from my own model.
+- [ ] I used `readonly` for an invariant and can say what it does not protect.
+- [ ] I modelled a related entity as a nested object rather than flattened fields.
+- [ ] I changed one property and repaired the callers by deciding per site, without widening the type to silence anything.
+- [ ] I attempted the closed-book checkpoint without notes.
+
+FS02.3 remains unavailable until this lesson is complete. It deepens reasoning about unions and control flow; this lesson was only about deciding which application states are valid.
+
+---
+
+## Maintainer source record
+
+- Source dossier: `docs/dalt-fullstack/sources/TYPESCRIPT_HANDBOOK.md`; `docs/dalt-fullstack/sources/FSO_TYPESCRIPT.md`
+- Official sources: TypeScript Handbook — Everyday Types, Object Types, Literal Types, type aliases versus interfaces; `tsconfig` reference for `exactOptionalPropertyTypes`
+- Versions: TypeScript 5.9.3, Node 25 (CR-08 pinned toolchain)
+- Consulted: 2026-08-14
+- DALT files inspected: `.dalt/course/fullstack/typescript-modeling-lab/starter/**`
+- Curriculum authority: `CURRICULUM.md` §12 FS02.2 — project-shaped types, learning target is deciding valid application states
+- Laravel bridge: deferred to Part 05, where the same model appears as columns and constraints

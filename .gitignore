@@ -2,6 +2,10 @@
 /node_modules
 /vendor
 
+# Course labs are installed to be run, in place or in a temp copy. The anchored rule
+# above does not reach them, so an installed lab would commit its whole dependency tree.
+node_modules/
+
 # Environment variables
 .env
 
@@ -45,5 +49,7 @@ Thumbs.db
 /docs/NEW_CODE_REVIEW.md
 /docs/
 
-# Local agent-notes pointer file — not meant for other contributors, see AGENTS.md itself
+# Local agent-notes pointer files — not meant for other contributors, see AGENTS.md itself.
+# CLAUDE.md is a one-line redirect to AGENTS.md so Claude Code and Codex load the same rules.
 /AGENTS.md
+/CLAUDE.md
