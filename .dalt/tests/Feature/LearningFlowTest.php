@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Core\CourseLoader;
 use Tests\Support\ApplicationTestClient;
 
 function p05CopyTree(string $source, string $destination): void
@@ -241,9 +242,20 @@ test('Core and Fullstack continuation and progress stay independently scoped', f
         $dashboard = $client->request('GET', '/learn');
         $fullstack = $client->request('GET', '/learn/fullstack');
 
+        // Derived, not pinned. This assertion read '0 / 13 lessons' for as long as it
+        // took someone to add nine Fullstack lessons without re-running the suite, and
+        // a literal here goes stale again at every part. The fixture copies the live
+        // .dalt, so counting the catalog is counting what the page must render.
+        $sections = array_count_values(array_column(CourseLoader::getLessons(), 'section'));
+        $fullstackLessons = $sections['fullstack'] ?? 0;
+        // Core is every section that is not Fullstack: foundation, docker, postgres,
+        // operations. Amendment A keeps the two tracks separate, so they are counted
+        // and rendered separately.
+        $coreLessons = array_sum($sections) - $fullstackLessons;
+
         expect($dashboard->body)->toContain('DALT Core')
-            ->and($dashboard->body)->toContain('0 / 19 lessons')
-            ->and($dashboard->body)->toContain('0 / 13 lessons')
+            ->and($dashboard->body)->toContain('0 / ' . $coreLessons . ' lessons')
+            ->and($dashboard->body)->toContain('0 / ' . $fullstackLessons . ' lessons')
             ->and($dashboard->body)->toContain('Begin with Request Lifecycle')
             ->and($dashboard->body)->toContain('Begin with Browser, server, request, response')
             ->and($fullstack->body)->toContain('Start with Browser, server, request, response')
@@ -337,10 +349,11 @@ test('B00 is gated by Part 00 lessons, self-reports completion, and completes on
             ->and($stillLocked->statusCode)->toBe(303)
             ->and($second->statusCode)->toBe(303)
             ->and($build->statusCode)->toBe(200)
-            ->and($build->body)->toContain('This is the Part 00 Build milestone')
-            ->and($build->body)->toContain('Close DevTools, then recall')
-            ->and($build->body)->toContain('Reference explanation')
-            ->and($build->body)->toContain('self-reported, not automatically verified')
+            ->and($build->body)->toContain('Build B00 · Part 00')
+            ->and($build->body)->toContain('Trace the system')
+            ->and($build->body)->toContain('Close everything and recall')
+            ->and($build->body)->toContain('Acceptance criteria')
+            ->and($build->body)->toContain('nothing you typed anywhere is stored')
             ->and($build->body)->toContain('href="/learn/fullstack"')
             ->and($complete->statusCode)->toBe(303)
             ->and($progress['completed_milestones'])->toContain('B00')
@@ -443,10 +456,10 @@ test('B01 requires both Part 01 lessons, stores its own completion, and unlocks 
         expect($locked->statusCode)->toBe(303)
             ->and($completeLesson->statusCode)->toBe(303)
             ->and($build->statusCode)->toBe(200)
-            ->and($build->body)->toContain('Evolve one small issue-triage program')
+            ->and($build->body)->toContain('Build B01 · Part 01')
             ->and($build->body)->toContain('.dalt/workspace/b01-issue-triage')
-            ->and($build->body)->toContain('fetch</code> automatically enter <code>catch')
-            ->and($build->body)->toContain('self-reported, not automatically verified')
+            ->and($build->body)->toContain('Decisions you have to make')
+            ->and($build->body)->toContain('nothing you typed anywhere is stored')
             ->and($build->body)->toContain('href="/learn/fullstack"')
             ->and($complete->statusCode)->toBe(303)
             ->and($progress['completed_lessons'])->toBe([
@@ -462,8 +475,8 @@ test('B01 requires both Part 01 lessons, stores its own completion, and unlocks 
             ->and($journey->body)->toContain('/learn/lessons/24-fs02-1-typescript-mental-model')
             ->and($journey->body)->not->toContain('/learn/fullstack/build/b02')
             ->and($completedBuild->statusCode)->toBe(200)
-            ->and($completedBuild->body)->toContain('B01 completed')
-            ->and($completedBuild->body)->toContain('Continue to Part 02')
+            ->and($completedBuild->body)->toContain('B01 marked complete')
+            ->and($completedBuild->body)->toContain('Back to the journey')
             ->and($partTwoLesson->statusCode)->toBe(200)
             ->and($partTwoLesson->body)->toContain('href="/learn/fullstack"')
             ->and($partTwoLesson->body)->toContain('What survives into JavaScript?')
@@ -740,8 +753,9 @@ test('B02 requires all Part 02 lessons, completes Part 02 separately, and does n
         expect($locked->statusCode)->toBe(303)
             ->and($build->statusCode)->toBe(200)
             ->and($build->body)->toContain('Back to DALT Fullstack')
-            ->and($build->body)->toContain('B03 starts that work later')
-            ->and($build->body)->toContain('Closed-book checkpoint')
+            ->and($build->body)->toContain('Build B02 · Part 02')
+            ->and($build->body)->toContain('The trust boundary')
+            ->and($build->body)->toContain('Prove it to yourself')
             ->and($complete->statusCode)->toBe(303)
             ->and($progress['completed_milestones'])->toBe(['B00', 'B01', 'B02'])
             ->and($journey->body)->toContain('Part 02 complete')
@@ -750,7 +764,7 @@ test('B02 requires all Part 02 lessons, completes Part 02 separately, and does n
     } finally { p05RemoveTree($root); }
 });
 
-test('Part 03 React lessons are gated in order, render their focused exercises, and do not create B03', function () {
+test('Part 03 React lessons unlock the B03 local issue tracker and record its self-reported completion', function () {
     $root = p05ProjectFixture();
     try {
         file_put_contents($root . '/.dalt/progress.json', json_encode([
@@ -770,25 +784,33 @@ test('Part 03 React lessons are gated in order, render their focused exercises, 
         $completeThird = $client->request('POST', '/learn/lessons/31-fs03-3-forms-and-state-design/complete', input: ['continue' => '1'], server: ['HTTP_X_CSRF_TOKEN' => 'known-token'], session: ['_csrf' => 'known-token']);
         $fourth = $client->request('GET', '/learn/lessons/32-fs03-4-tailwind-and-accessible-ui');
         $completeFourth = $client->request('POST', '/learn/lessons/32-fs03-4-tailwind-and-accessible-ui/complete', input: ['continue' => '1'], server: ['HTTP_X_CSRF_TOKEN' => 'known-token'], session: ['_csrf' => 'known-token']);
-        $journey = $client->request('GET', '/learn/fullstack');
+        $build = $client->request('GET', '/learn/fullstack/build/b03');
+        $completeBuild = $client->request('POST', '/learn/fullstack/build/b03/complete', input: ['self_report' => '1'], server: ['HTTP_X_CSRF_TOKEN' => 'known-token'], session: ['_csrf' => 'known-token']);
         $progress = json_decode(file_get_contents($root . '/.dalt/progress.json'), true, 512, JSON_THROW_ON_ERROR);
+        $journey = $client->request('GET', '/learn/fullstack');
 
         expect($first->statusCode)->toBe(200)
-            ->and($first->body)->toContain('Render is a description, not a command list')
-            ->and($first->body)->toContain('Focused exercise — Describe one project screen')
+            ->and($first->body)->toContain('A component is a function with a capital letter')
+            ->and($first->body)->toContain('Describe one project screen as a small set of components')
             ->and($lockedSecond->statusCode)->toBe(303)
             ->and($completeFirst->statusCode)->toBe(303)
             ->and($second->statusCode)->toBe(200)
-            ->and($second->body)->toContain('State is input; events request the next render')
+            ->and($second->body)->toContain('Event handlers request the next state')
             ->and($completeSecond->statusCode)->toBe(303)
             ->and($third->statusCode)->toBe(200)
-            ->and($third->body)->toContain('Controlled means React owns the value')
+            ->and($third->body)->toContain('Controlled inputs')
             ->and($completeThird->statusCode)->toBe(303)
             ->and($fourth->statusCode)->toBe(200)
-            ->and($fourth->body)->toContain('Semantics provide the interaction contract')
+            ->and($fourth->body)->toContain('Semantics carry the interaction contract')
             ->and($completeFourth->statusCode)->toBe(303)
+            ->and($build->statusCode)->toBe(200)
+            ->and($build->body)->toContain('Build B03 · Part 03')
+            ->and($build->body)->toContain('resources/app/')
+            ->and($build->body)->toContain('fullstack-build')
+            ->and($build->body)->toContain('Acceptance criteria')
+            ->and($completeBuild->statusCode)->toBe(303)
             ->and($progress['completed_lessons'])->toContain('32-fs03-4-tailwind-and-accessible-ui')
-            ->and($progress['completed_milestones'])->toBe(['B00', 'B01', 'B02'])
+            ->and($progress['completed_milestones'])->toBe(['B00', 'B01', 'B02', 'B03'])
             ->and($journey->body)->toContain('The local issue tracker')
             ->and($journey->body)->toContain('Planned material · not yet available');
     } finally {

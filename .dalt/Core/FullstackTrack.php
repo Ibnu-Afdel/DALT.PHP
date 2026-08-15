@@ -38,6 +38,7 @@ final class FullstackTrack
         }
 
         $catalog = array_column(CourseLoader::getLessons($root), null, 'id');
+        $specs = BuildMilestone::all($root);
         $seen = [];
         foreach ($track['parts'] as $number => &$part) {
             if (!is_array($part) || array_is_list($part)) {
@@ -60,6 +61,23 @@ final class FullstackTrack
                 }
                 if (isset($milestone['route']) && (!is_string($milestone['route']) || !str_starts_with($milestone['route'], '/learn/fullstack/'))) {
                     throw new CourseMetadataException("Fullstack milestone '{$milestone['id']}' has an invalid route: fullstack.php");
+                }
+                // A specification with no route is unreachable; a route with no
+                // specification is a 404 the learner finds instead of the author.
+                // Both directions are checked so neither can drift silently.
+                $hasSpec = isset($specs[$milestone['id']]);
+                if ($hasSpec && ($milestone['route'] ?? null) !== BuildMilestone::routeFor($milestone['id'])) {
+                    throw new CourseMetadataException(
+                        "Fullstack milestone '{$milestone['id']}' has a specification at "
+                        . ".dalt/course/build/{$specs[$milestone['id']]['id']}-{$specs[$milestone['id']]['slug']} but its manifest route is not '"
+                        . BuildMilestone::routeFor($milestone['id']) . "': fullstack.php",
+                    );
+                }
+                if (!$hasSpec && isset($milestone['route'])) {
+                    throw new CourseMetadataException(
+                        "Fullstack milestone '{$milestone['id']}' declares a route but has no specification. "
+                        . "Add .dalt/course/build/{$milestone['id']}-<slug>/README.md or remove the route: fullstack.php",
+                    );
                 }
                 if (isset($milestone['prerequisites']) && (!is_array($milestone['prerequisites']) || !array_is_list($milestone['prerequisites']))) {
                     throw new CourseMetadataException("Fullstack milestone '{$milestone['id']}' has invalid prerequisites: fullstack.php");

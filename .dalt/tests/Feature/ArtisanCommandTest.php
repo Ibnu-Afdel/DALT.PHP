@@ -12,9 +12,10 @@ function runF11Artisan(
     array $environment = [],
     string $input = '',
     ?string $workingDirectory = null,
+    ?string $artisanPath = null,
 ): array {
     $process = proc_open(
-        [PHP_BINARY, base_path('artisan'), ...$arguments],
+        [PHP_BINARY, $artisanPath ?? base_path('artisan'), ...$arguments],
         [
             0 => ['pipe', 'r'],
             1 => ['pipe', 'w'],
@@ -80,26 +81,52 @@ test('serve validates host and port before starting a process', function (array 
 ]);
 
 test('database commands resolve relative sqlite paths from the project root', function () {
-    $relativePath = 'database/f11_cli_' . bin2hex(random_bytes(6)) . '.sqlite';
-    $databasePath = base_path($relativePath);
-    if (file_exists($databasePath)) {
-        unlink($databasePath);
+    // Runs in a disposable project root holding only the migration this framework ships.
+    // Against the real root it would execute the learner's migrations, which B05 requires
+    // to be PostgreSQL (`BIGSERIAL`, `btrim`) and which SQLite therefore refuses — turning
+    // a test about *path resolution* into a test of the learner's schema. The claim under
+    // test is "a relative DB_DATABASE resolves from the project root, not the working
+    // directory", and that claim needs no learner content at all.
+    $root = sys_get_temp_dir() . '/dalt_relpath_' . bin2hex(random_bytes(6));
+    mkdir($root . '/database/migrations', 0o777, true);
+    $linked = [];
+    foreach (['framework', 'vendor', 'config', 'public', 'bootstrap'] as $directory) {
+        if (file_exists(base_path($directory))) {
+            symlink(base_path($directory), $root . '/' . $directory);
+            $linked[] = $directory;
+        }
     }
+    copy(base_path('artisan'), $root . '/artisan');
+    copy(
+        base_path('database/migrations/001_create_users_table.sql'),
+        $root . '/database/migrations/001_create_users_table.sql',
+    );
+
+    $relativePath = 'database/f11_cli_' . bin2hex(random_bytes(6)) . '.sqlite';
 
     try {
         $result = runF11Artisan(
             ['migrate'],
             ['DB_DRIVER' => 'sqlite', 'DB_DATABASE' => $relativePath],
             workingDirectory: sys_get_temp_dir(),
+            artisanPath: $root . '/artisan',
         );
 
         expect($result['exitCode'])->toBe(0)
             ->and($result['stderr'])->toBe('')
             ->and($result['stdout'])->toContain('Migration process completed.')
-            ->and(file_exists($databasePath))->toBeTrue()
+            ->and(file_exists($root . '/' . $relativePath))->toBeTrue()
             ->and(file_exists(sys_get_temp_dir() . '/' . $relativePath))->toBeFalse();
     } finally {
-        @unlink($databasePath);
+        @unlink($root . '/' . $relativePath);
+        foreach ($linked as $directory) {
+            unlink($root . '/' . $directory);
+        }
+        @unlink($root . '/artisan');
+        @unlink($root . '/database/migrations/001_create_users_table.sql');
+        @rmdir($root . '/database/migrations');
+        @rmdir($root . '/database');
+        @rmdir($root);
     }
 });
 

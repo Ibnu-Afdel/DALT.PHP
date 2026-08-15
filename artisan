@@ -100,6 +100,9 @@ if (count($arguments) < 2 || $arguments[1] === 'help' || $arguments[1] === '--he
     
     echo "  dalt:test [challenge]   Run the test suite globally or for a specific challenge\n";
     echo "                          Example: php artisan dalt:test broken-auth\n";
+    echo "\n";
+    echo "  fullstack:status        What is actually built in the Fullstack track, and\n";
+    echo "                          what is next. Computed from disk, never stale.\n";
     echo "\nDevelopment:\n";
     echo "  serve [host] [port]     Start PHP development server\n";
     echo "                          Example: php artisan serve\n";
@@ -209,6 +212,108 @@ switch ($command) {
         ], BASE_PATH));
 
     
+    // Ground truth for "where are we?". Every prose status in this repository can go
+    // stale, and one did: a fresh session read START_HERE.md and reported that
+    // Fullstack implementation had not started when four parts were finished. This
+    // reads the catalog, the track manifest and the build specifications on disk, so
+    // it is wrong only if the repository is.
+    case 'fullstack:status':
+        require_platform($command);
+        $track = \Core\FullstackTrack::load();
+        $lessons = array_column(\Core\CourseLoader::getLessons(), null, 'id');
+        $specs = \Core\BuildMilestone::all();
+
+        $bold = "\033[1m";
+        $dim = "\033[2m";
+        $green = "\033[32m";
+        $yellow = "\033[33m";
+        $off = "\033[0m";
+
+        echo "\n{$bold}DALT Fullstack — built state, computed from disk{$off}\n";
+        echo "{$dim}Authoring process: docs/dalt-fullstack/PIPELINE.md{$off}\n\n";
+
+        $builtLessons = 0;
+        $totalLessons = 0;
+        $nextPart = null;
+        foreach ($track['parts'] as $number => $part) {
+            $partNumber = str_pad((string) $number, 2, '0', STR_PAD_LEFT);
+            $written = count($part['lessons']);
+            $milestones = array_column($part['milestones'], 'id');
+            $specced = array_values(array_filter($milestones, static fn (string $id): bool => isset($specs[$id])));
+            $totalLessons += $written;
+            $builtLessons += $written;
+
+            // Part 12 is deliberately capstone-only: seven Build specifications and
+            // no new lessons. A zero-lesson part is therefore not evidence that
+            // implementation has not started; its declared milestones are its work.
+            $hasDeclaredWork = $written > 0 || $milestones !== [];
+            $done = $hasDeclaredWork && count($specced) === count($milestones);
+            $mark = $done ? "{$green}✔{$off}" : ($hasDeclaredWork ? "{$yellow}~{$off}" : "{$dim}·{$off}");
+            if (!$done && $nextPart === null) {
+                $nextPart = $partNumber;
+            }
+
+            printf(
+                "  %s PART %s  %-38s %s\n",
+                $mark,
+                $partNumber,
+                $part['title'],
+                $written === 0 && $milestones === []
+                    ? "{$dim}not started{$off}"
+                    : sprintf('%d lesson%s · %s', $written, $written === 1 ? '' : 's', $specced === []
+                        ? "{$yellow}" . implode(',', $milestones) . " unspecified{$off}"
+                        : implode(',', $specced) . ' specified'),
+            );
+        }
+
+        printf("\n  %d of 34 lessons written (orders 20–%d) · %d build specifications\n", $builtLessons, 19 + $builtLessons, count($specs));
+
+        echo "\n{$bold}Next{$off}\n";
+        if ($nextPart === null) {
+            echo "  All declared parts are built. Next is the A3 audit and the freeze (PIPELINE.md §5).\n";
+        } else {
+            $part = $track['parts'][$nextPart];
+            echo "  Part {$nextPart} — {$part['title']}\n";
+            echo "  {$dim}{$part['purpose']}{$off}\n";
+            echo "  Authoritative spec: CURRICULUM.md, the section for Part {$nextPart}.\n";
+            echo "  Loop, gate and audit checkpoints: docs/dalt-fullstack/PIPELINE.md.\n";
+        }
+
+        // Audit state is read from WORKLOG.md rather than hardcoded. The whole premise
+        // of this command is that it computes from disk and cannot go stale; a literal
+        // "never run" here would have kept saying that after an audit had been run.
+        $worklog = is_file(base_path('docs/dalt-fullstack/WORKLOG.md'))
+            ? (string) file_get_contents(base_path('docs/dalt-fullstack/WORKLOG.md'))
+            : '';
+
+        echo "\n{$bold}Audits{$off} {$dim}(PIPELINE.md §5){$off}\n";
+        foreach ([['A0', 'Parts 00–03', 3], ['A1', 'Parts 04–06', 6], ['A2', 'Parts 07–09', 9], ['A3', 'Parts 10–12', 12]] as [$id, $scope, $after]) {
+            $recorded = preg_match(
+                '/^##\s+.*\b' . $id . '\b.*?(\d{4}-\d{2}-\d{2})\s*$/m',
+                $worklog,
+                $match,
+            ) === 1;
+
+            if ($recorded) {
+                // A section listing open findings is not a clean pass, and saying so is
+                // the difference between a record and a rubber stamp.
+                $section = substr($worklog, (int) strpos($worklog, $match[0]));
+                $next = strpos($section, "\n## ", 1);
+                $open = preg_match_all('/—\s*OPEN\s*$/m', $next === false ? $section : substr($section, 0, $next));
+
+                $state = $open > 0
+                    ? "{$green}run {$match[1]}{$off} {$yellow}· {$open} open{$off}"
+                    : "{$green}passed {$match[1]}{$off}";
+            } else {
+                $reached = $builtLessons > 0 && $nextPart !== null && (int) $nextPart > $after;
+                $state = $reached ? "{$yellow}due{$off}" : "{$dim}pending{$off}";
+            }
+
+            printf("  %s  %-14s %s\n", $id, $scope, $state);
+        }
+        echo "\n";
+        exit(0);
+
     case 'dalt:test':
         require_platform($command);
         $dirs = array_filter(glob(base_path('.dalt/course/challenges/*')), 'is_dir');

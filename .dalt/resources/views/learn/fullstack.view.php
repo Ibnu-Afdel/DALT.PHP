@@ -38,7 +38,7 @@
                 <p class="font-mono text-xs uppercase tracking-wider text-gray-600">Build</p>
                 <?php foreach ($part['milestones'] as $milestone): ?>
                   <?php if ($milestone['completed']): ?>
-                    <p class="mt-2 text-sm text-[#c4a7ff]"><span class="font-mono text-xs">✓ <?= htmlspecialchars($milestone['id']) ?></span> <?= htmlspecialchars($milestone['title']) ?></p>
+                    <?php if (isset($milestone['route'])): ?><a href="<?= htmlspecialchars($milestone['route']) ?>" class="mt-2 block text-sm text-[#c4a7ff] hover:text-[#d9c9ff]"><span class="font-mono text-xs">✓ <?= htmlspecialchars($milestone['id']) ?></span> <?= htmlspecialchars($milestone['title']) ?> <span aria-hidden="true">→</span></a><?php else: ?><p class="mt-2 text-sm text-[#c4a7ff]"><span class="font-mono text-xs">✓ <?= htmlspecialchars($milestone['id']) ?></span> <?= htmlspecialchars($milestone['title']) ?></p><?php endif; ?>
                   <?php elseif ($milestone['available']): ?>
                     <a href="<?= htmlspecialchars($milestone['route']) ?>" class="mt-2 block text-sm font-semibold text-[#c4a7ff] hover:text-[#d9c9ff]"><span class="font-mono text-xs"><?= htmlspecialchars($milestone['id']) ?></span> <?= htmlspecialchars($milestone['title']) ?> <span aria-hidden="true">→</span></a>
                   <?php else: ?>

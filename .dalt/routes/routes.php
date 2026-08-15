@@ -5,12 +5,10 @@ global $router;
 // Learning routes
 $router->get("/learn", "learn/index.php");
 $router->get("/learn/fullstack", "learn/fullstack.php");
-$router->get("/learn/fullstack/build/b00", "learn/fullstack-build.php");
-$router->post("/learn/fullstack/build/b00/complete", "learn/fullstack-build.php")->only('csrf');
-$router->get("/learn/fullstack/build/b01", "learn/fullstack-javascript-build.php");
-$router->post("/learn/fullstack/build/b01/complete", "learn/fullstack-javascript-build.php")->only('csrf');
-$router->get("/learn/fullstack/build/b02", "learn/fullstack-typescript-build.php");
-$router->post("/learn/fullstack/build/b02/complete", "learn/fullstack-typescript-build.php")->only('csrf');
+// One pair of routes for every Build milestone, present and future. A new
+// milestone is a manifest entry plus .dalt/course/build/<ID>-<slug>/README.md.
+$router->get("/learn/fullstack/build/{milestone}", "learn/fullstack-build.php");
+$router->post("/learn/fullstack/build/{milestone}/complete", "learn/fullstack-build.php")->only('csrf');
 $router->get("/learn/fullstack/observe/forms", "learn/fullstack-observation.php");
 $router->post("/learn/fullstack/observe/forms/traditional", "learn/fullstack-observation.php");
 $router->post("/learn/fullstack/observe/forms/json", "learn/fullstack-observation.php");
