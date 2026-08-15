@@ -1,0 +1,26 @@
+{
+  "//": "Learner application TypeScript. The framework itself has no Node or TypeScript dependency; this file, like package.json and vite.config.mjs, belongs to the application layer under resources/. See PROJECT_BLUEPRINT.md CR-08 / IMPLEMENTATION_PLAN.md 5.3 (Option A).",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "skipLibCheck": true,
+    // "vite/client" types import.meta.env, which B05 Stage 5 and FS09.2 both require
+    // (VITE_API_BASE_URL). Listing "types" at all disables automatic @types discovery, so
+    // leaving it out made import.meta.env a type error while the code ran correctly — and
+    // B05's acceptance requires `npm run typecheck` to pass.
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
+    "paths": { "@/*": ["./resources/*"] },
+    "baseUrl": "."
+  },
+  "include": ["resources"]
+}
