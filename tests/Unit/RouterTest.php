@@ -106,6 +106,41 @@ test('the first matching route wins', function () {
     expect($router->route('/posts/create', 'GET')->content())->toBe('generic:create');
 });
 
+test('it registers an options route like every other verb', function () {
+    $router = new Router();
+    $router->options('/preflight', fn () => new Response('', 204));
+
+    $response = $router->route('/preflight', 'OPTIONS');
+
+    expect($response->status())->toBe(204);
+});
+
+test('a trailing {*} fallback matches the bare prefix and any nested path', function () {
+    $router = new Router();
+    $router->get('/app/{*}', fn () => 'shell');
+
+    expect($router->route('/app', 'GET')->content())->toBe('shell')
+        ->and($router->route('/app/login', 'GET')->content())->toBe('shell')
+        ->and($router->route('/app/projects/1/issues/8', 'GET')->content())->toBe('shell');
+});
+
+test('a trailing {*} fallback does not swallow an unrelated prefix', function () {
+    $router = new Router();
+    $router->get('/app/{*}', fn () => 'shell');
+
+    $router->route('/apples', 'GET');
+})->throws(HttpException::class);
+
+test('a {*} fallback still lets a more specific earlier route win', function () {
+    $router = new Router();
+    $router->get('/api/issues', fn () => 'list');
+    $router->add('OPTIONS', '/api/{*}', fn () => new Response('', 204));
+
+    expect($router->route('/api/issues', 'GET')->content())->toBe('list')
+        ->and($router->route('/api/issues', 'OPTIONS')->status())->toBe(204)
+        ->and($router->route('/api/issues/42', 'OPTIONS')->status())->toBe(204);
+});
+
 test('it dispatches controller files through the response boundary', function () {
     $router = new Router();
     $router->get('/', 'welcome.php');

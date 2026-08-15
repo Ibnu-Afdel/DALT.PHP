@@ -59,6 +59,11 @@ class Router
         return $this->add('DELETE', $uri, $handler);
     }
 
+    public function options(string $uri, Closure|string $handler): self
+    {
+        return $this->add('OPTIONS', $uri, $handler);
+    }
+
     /** @param string|list<string> $keys */
     public function only(string|array $keys): self
     {
@@ -158,16 +163,30 @@ class Router
         throw new RuntimeException("Controller not found: {$controller}");
     }
 
-    /** @return array<string, string>|false */
+    /**
+     * Match a route pattern against a request path.
+     *
+     * A pattern ending in `/{*}` is a prefix fallback: everything from the
+     * literal prefix onward (including nested slashes) matches, and the
+     * matched suffix is not captured as a named parameter. This is what an
+     * SPA route table (`/app/{*}`) and a CORS preflight catch-all
+     * (`/api/{*}`) both need — an ordinary `{param}` segment cannot span a
+     * slash, so no single named-parameter route can stand in for either.
+     *
+     * @return array<string, string>|false
+     */
     protected function matchUri(string $pattern, string $actual): array|false
     {
         if ($pattern === $actual) {
             return [];
         }
 
+        $isFallback = str_ends_with($pattern, '/{*}');
+        $matchPattern = $isFallback ? substr($pattern, 0, -4) : $pattern;
+
         preg_match_all(
             '/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/',
-            $pattern,
+            $matchPattern,
             $placeholders,
             PREG_OFFSET_CAPTURE,
         );
@@ -177,13 +196,18 @@ class Router
         $offset = 0;
 
         foreach ($placeholders[0] as $index => [$placeholder, $position]) {
-            $regex .= preg_quote(substr($pattern, $offset, $position - $offset), '#');
+            $regex .= preg_quote(substr($matchPattern, $offset, $position - $offset), '#');
             $regex .= '([^/]+)';
             $parameterNames[] = $placeholders[1][$index][0];
             $offset = $position + strlen($placeholder);
         }
 
-        $regex .= preg_quote(substr($pattern, $offset), '#');
+        $regex .= preg_quote(substr($matchPattern, $offset), '#');
+
+        // The fallback itself matches the bare prefix (`/app`) or the prefix
+        // followed by a slash and anything (`/app/projects/1`), never a
+        // partial segment (`/apples`).
+        $regex = $isFallback ? $regex . '(?:/.*)?' : $regex;
 
         if (preg_match('#^' . $regex . '$#', $actual, $matches) !== 1) {
             return false;
