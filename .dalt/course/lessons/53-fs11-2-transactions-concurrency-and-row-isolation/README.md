@@ -181,43 +181,64 @@ An application retry begins the entire transaction again because the old snapsho
 
 First make the tenant key explicit. Policies are easier to reason about when protected tables carry `workspace_id`; indirect joins can be valid but obscure a security boundary. The application establishes a trusted workspace context for each request using a connection-lifecycle-safe mechanism chosen for the actual PHP connection. This example uses a transaction-local setting, so it cannot leak to a reused connection after commit.
 
+A policy's `TO issue_app` clause names a role that must already exist, so create the
+restricted application role — the one that will actually experience these policies —
+before the first `CREATE POLICY`, not after. Table owners and superusers bypass RLS by
+default, which is exactly why this role is neither:
+
+```sql
+CREATE ROLE issue_app LOGIN NOINHERIT NOBYPASSRLS PASSWORD 'local-development-only';
+GRANT USAGE ON SCHEMA public TO issue_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON issues TO issue_app;
+GRANT USAGE ON SEQUENCE issues_id_seq TO issue_app;
+```
+
+`issues.id` is almost certainly `BIGSERIAL`, which is a `bigint` column backed by a
+sequence PostgreSQL creates and owns implicitly — `issues_id_seq` by the standard naming
+convention (`<table>_<column>_seq`; confirm yours with `\d issues` if you named it
+differently). Table privileges do not include sequence privileges: without this grant, an
+`INSERT` fails on `permission denied for sequence issues_id_seq` before your policy is
+ever evaluated, and that failure is easy to misread as the policy working when it is
+actually the policy never running at all.
+
+Every policy below reads the same transaction-local setting the same way, so the exact
+comparison matters: `NULLIF(current_setting('app.workspace_id', true), '')::bigint` rather
+than casting the raw result directly. §9 explains why — the short version is that an
+absent-context connection returns an empty string, not `NULL`, once any transaction on it
+has ever called `set_config`, and casting `''::bigint` raises rather than failing the
+comparison safely.
+
 ```sql
 ALTER TABLE issues ENABLE ROW LEVEL SECURITY;
 ALTER TABLE issues FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY issues_workspace_select ON issues
 FOR SELECT TO issue_app
-USING (workspace_id = current_setting('app.workspace_id', true)::bigint);
+USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::bigint);
 ```
 
 ```sql
 CREATE POLICY issues_workspace_write ON issues
 FOR INSERT TO issue_app
-WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::bigint);
+WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::bigint);
 
 CREATE POLICY issues_workspace_change ON issues
 FOR UPDATE TO issue_app
-USING (workspace_id = current_setting('app.workspace_id', true)::bigint)
-WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::bigint);
+USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::bigint)
+WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::bigint);
 ```
 
 ```sql
 CREATE POLICY issues_workspace_delete ON issues
 FOR DELETE TO issue_app
-USING (workspace_id = current_setting('app.workspace_id', true)::bigint);
+USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::bigint);
 ```
 
 `USING` determines existing rows visible or targetable by a command; `WITH CHECK` determines new row values allowed by insert/update. Both are needed: a policy that filters reads but lets an insert name another workspace is not tenant isolation. Apply equivalent policies to projects, comments, and other protected tenant-owned tables. Application authorization must still establish that the signed-in user is allowed to choose the workspace context; RLS does not authenticate a browser.
 
 ## 6. Prove RLS under the right role
 
-Table owners typically bypass RLS unless forced, and superusers/BYPASSRLS roles bypass it. Create or use a restricted application role, grant only required table privileges, and execute evidence as that role. A policy listed in `pg_policies` proves syntax exists, not that it protects rows.
-
-```sql
-CREATE ROLE issue_app LOGIN NOINHERIT NOBYPASSRLS PASSWORD 'local-development-only';
-GRANT USAGE ON SCHEMA public TO issue_app;
-GRANT SELECT, INSERT, UPDATE, DELETE ON issues TO issue_app;
-```
+Table owners typically bypass RLS unless forced, and superusers/BYPASSRLS roles bypass it. §5 already created `issue_app` with only the privileges it needs — no more, no less — before a single policy referenced it. Execute all evidence as that role. A policy listed in `pg_policies` proves syntax exists, not that it protects rows.
 
 ```sql
 SET ROLE issue_app;
@@ -299,7 +320,9 @@ A constraint does not encode every workflow rule. “Only a current workspace me
 
 RLS applies after normal privilege checks; a role without `SELECT` privilege does not gain it from a policy. Grant only the operations the application needs. `FORCE ROW LEVEL SECURITY` is important when a table owner might otherwise bypass policies, but it does not make a superuser test meaningful. Use a migration that records ownership, grants, enabling/forcing RLS, and policies together so a fresh database has the same boundary as your development machine.
 
-`current_setting('app.workspace_id', true)` returns null when no context exists. A comparison to null does not match rows, which is safer than silently choosing a default workspace. Still, an absent context should be diagnosed in application tests: a query unexpectedly returning an empty list can otherwise look like a harmless product bug. `set_config(..., true)` is transaction-local only inside a transaction. A session-level `SET` can leak across reused/persistent connections and is unacceptable unless the lifecycle has an explicit reset discipline you can prove.
+`current_setting('app.workspace_id', true)` returns null **only on a connection that has
+never called `set_config` for that name.** Prove this rather than trusting the intuitive
+answer — it is the opposite of what the name "transaction-local" suggests:
 
 ```sql
 BEGIN;
@@ -311,8 +334,34 @@ SELECT current_setting('app.workspace_id', true);
 
 ```text
 inside transaction: '7'
-after commit:       null (or absent context)
+after commit:       ''  ← empty string, not null
 ```
+
+Once `set_config(..., true)` has run at least once on a connection, the transaction-local
+value resets to `''` at commit, not back to absent — the setting exists, its value is just
+empty. `NULLIF(current_setting('app.workspace_id', true), '')::bigint` is therefore not a
+defensive flourish in §5's policies; without it, `''::bigint` raises
+`invalid input syntax for type bigint`, which aborts the transaction and every
+policy-protected query in it, rather than the "safely matches no rows" behavior a raw
+`current_setting(...)::bigint` comparison looks like it would give you on first read.
+
+This is not a corner case DALT can ignore: `Database` is bound as a **container singleton**
+(`framework/Core/bootstrap.php`), so one PDO connection typically serves an entire request
+— and, depending on your connection lifecycle, possibly more than one. The second
+policy-protected query issued on a connection that has already committed one
+`set_config`'d transaction hits this exact empty-string path, not the fresh-connection
+`NULL` path. Test both states, not only the first query of the first request:
+
+```sql
+-- fresh connection, never called set_config: current_setting returns NULL, comparison is safe
+-- same connection, after any set_config + COMMIT: current_setting returns '', NULLIF saves it
+```
+
+An absent context should still be diagnosed in application tests: a query unexpectedly
+returning an empty list can otherwise look like a harmless product bug. `set_config(...,
+true)` is transaction-local only inside a transaction. A session-level `SET` can leak
+across reused/persistent connections and is unacceptable unless the lifecycle has an
+explicit reset discipline you can prove.
 
 Policies must cover every command whose cross-tenant effect matters. A `SELECT` policy can make an update target zero rows, but explicit `UPDATE ... USING ... WITH CHECK` states both old-row and new-row requirements clearly. Test policy behavior with direct SQL and through the API: direct SQL proves the database boundary; API tests prove identity-to-workspace context is established correctly.
 
@@ -330,6 +379,47 @@ RLS empty result           → application distinguishes absent from unauthorize
 For RLS, do not turn every empty result into a confirmation that a resource does not exist if that changes your application's information-disclosure policy. The application can use its membership knowledge to choose an honest response, while the database still refuses the row. Test that the frontend invalidates or refetches server state after a losing race; a stale optimistic UI claiming success would recreate the defect at a different layer. This is why the milestone keeps existing API and frontend behavior tests alongside direct database proofs.
 
 Record these responses in the operation's contract and tests. A maintainer should be able to distinguish a legitimate conflict from a transient database retry and from an authorization refusal without looking at an incidental exception message. That clarity makes concurrency behavior supportable after the two-session exercise is over.
+
+## Try it
+
+**Prediction:** §9 claims an empty `set_config` context is `''`, not `NULL`, on a
+connection that has already used it once. Before running anything, predict what a policy
+written as `workspace_id = current_setting('app.workspace_id', true)::bigint` — without
+`NULLIF` — does on the *second* query of a connection that committed a tenant context on
+its first.
+
+**Run / inspect:** as the restricted `issue_app` role, run one transaction that sets and
+commits a workspace context, then a second transaction on the **same session** that never
+calls `set_config` again:
+
+```sql
+SET ROLE issue_app;
+BEGIN;
+SELECT set_config('app.workspace_id', '7', true);
+SELECT count(*) FROM issues;  -- works: context is '7'
+COMMIT;
+
+BEGIN;
+SELECT count(*) FROM issues;  -- no set_config in this transaction
+COMMIT;
+RESET ROLE;
+```
+
+Run it once against a policy using the raw cast, and once against §5's
+`NULLIF(current_setting('app.workspace_id', true), '')::bigint` version.
+
+**What happened:** the raw-cast policy raises `invalid input syntax for type bigint: ""`
+on the second transaction and aborts it. The `NULLIF` version instead returns zero rows —
+no error, just an honest "no context, so no rows" result consistent with the first
+transaction's `NULL`-context behavior.
+
+**Why:** `current_setting(..., true)` does not reset to absent when a transaction ends; it
+resets to the empty string once anything has ever called `set_config` on that connection.
+A raw cast treats that as a syntax error mid-request; `NULLIF` treats it as "no tenant
+context," which is the behavior §5's policies actually rely on. This is exactly the
+DALT-relevant case §9 names: `Database` is a container singleton, so a second
+policy-protected query on the same request-scoped connection is not a hypothetical — it is
+the second line of most handlers.
 
 ## Common mistakes
 

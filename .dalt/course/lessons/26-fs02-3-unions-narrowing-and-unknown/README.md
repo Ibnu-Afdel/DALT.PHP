@@ -230,6 +230,28 @@ npm run stage:exhaustive
 
 The new variant makes the existing handler incomplete. The compiler exposes the old assumption: it believed the listed cases were all possible. Add the refreshing member first, typecheck before changing the switch, then deliberately add its handler.
 
+## Try it
+
+**Prediction:** `describeLoadState` ends with `const exhaustive: never = state;` inside its
+`default` case. Before running anything, predict what happens to that exact line — not the
+new variant's own case, the *old* `never` line — the moment you add a `'refreshing'` member
+to `IssueLoadState` and change nothing else.
+
+**Run / inspect:** add the member, leave the `switch` untouched, and run `npx tsc --noEmit
+--strict`.
+
+**What happened:** a compile error appears, but not where a new-variant bug usually
+announces itself. It lands exactly on `const exhaustive: never = state`, reporting that a
+`{ status: "refreshing"; ... }` value is not assignable to `never`.
+
+**Why:** every case before `default` narrows `state`'s type by elimination; by the time
+control reaches `default`, TypeScript's model of "what `state` could still be" is supposed
+to be empty — that is what `never` means. Adding a variant nobody handles yet means one real
+possibility survives into `default`, so assigning it to a variable typed `never` is a
+contradiction the checker can name precisely. This is the entire value of the pattern: the
+error does not say "you forgot something" in the abstract, it names the unhandled variant at
+the exact line that assumed there were none left, before the missing branch ever ships.
+
 ## Common mistakes
 
 ### Truthiness where you meant "not null"

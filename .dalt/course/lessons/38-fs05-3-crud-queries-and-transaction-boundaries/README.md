@@ -184,7 +184,7 @@ Now the handlers. Listing treats emptiness as an ordinary answer:
 
 ```php
 // GET /api/issues?project_id=7
-return Response::json([
+return apiJson([
     'data' => array_map(issueResponse(...), $rows),
     'meta' => ['page' => $page, 'limit' => $limit],
 ]);
@@ -201,13 +201,13 @@ $row = $database->query(
 )->find();
 
 if ($row === false) {
-    return Response::json(['error' => [
+    return apiJson(['error' => [
         'code' => 'not_found',
         'message' => 'That issue does not exist.',
     ]], 404);
 }
 
-return Response::json(['data' => issueResponse($row)]);
+return apiJson(['data' => issueResponse($row)]);
 ```
 
 Create inserts with parameters and returns the *stored* row, using `RETURNING` so there is no
@@ -222,7 +222,7 @@ $row = $database->query(
     [$projectId, $title, $priority],
 )->find();
 
-return Response::json(['data' => issueResponse($row)], 201);
+return apiJson(['data' => issueResponse($row)], 201);
 ```
 
 Notice `status` is absent from the INSERT. The schema's `DEFAULT 'todo'` supplies it, and
@@ -247,7 +247,7 @@ if (array_key_exists('status', $input)) {
 }
 
 if ($assignments === []) {
-    return Response::json(['error' => [
+    return apiJson(['error' => [
         'code' => 'validation_failed',
         'message' => 'No supported fields were supplied.',
     ]], 422);
@@ -262,7 +262,7 @@ $row = $database->query(
 )->find();
 
 if ($row === false) {
-    return Response::json(['error' => ['code' => 'not_found', 'message' => 'That issue does not exist.']], 404);
+    return apiJson(['error' => ['code' => 'not_found', 'message' => 'That issue does not exist.']], 404);
 }
 ```
 
@@ -284,8 +284,8 @@ something and deleting nothing:
 $deleted = $database->query('DELETE FROM issues WHERE id = ? RETURNING id', [$id])->find();
 
 return $deleted === false
-    ? Response::json(['error' => ['code' => 'not_found', 'message' => 'That issue does not exist.']], 404)
-    : new Response('', 204);
+    ? apiJson(['error' => ['code' => 'not_found', 'message' => 'That issue does not exist.']], 404)
+    : new Response('', 204, corsHeaders());
 ```
 
 ## 3. Classify failures instead of flattening them
@@ -318,7 +318,7 @@ try {
 } catch (PDOException $exception) {
     // 23503 = foreign_key_violation, 23505 = unique_violation. Everything else is ours.
     if ($exception->getCode() === '23503') {
-        return Response::json(['error' => [
+        return apiJson(['error' => [
             'code' => 'not_found',
             'message' => 'That project does not exist.',
         ]], 404);
@@ -445,9 +445,12 @@ keep. A project without that parser would have rendered `undefined` and left you
 
 Two things will still differ from the fixture and are worth expecting. CORS is now your
 server's problem — the fixture reflected loopback origins, and your DALT server does not do
-that by default, so a browser request will fail where curl succeeded. And ids are now
-`BIGSERIAL` values from PostgreSQL rather than `ISS-41` strings, so any code that assumed the
-`ISS-` prefix has to go. Both are honest consequences of leaving a teaching prop behind.
+that by default. FS05.1's `apiJson()` and `OPTIONS /api/{*}` route are what make a browser
+request behave the same as the curl proof above; if a request that works under curl fails
+silently in the browser here, that is the symptom of a handler that still calls
+`Response::json()` directly, not a new problem. And ids are now `BIGSERIAL` values from
+PostgreSQL rather than `ISS-41` strings, so any code that assumed the `ISS-` prefix has to
+go. Both are honest consequences of leaving a teaching prop behind.
 
 ## Try it
 

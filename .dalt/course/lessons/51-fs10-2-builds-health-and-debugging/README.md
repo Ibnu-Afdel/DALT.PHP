@@ -69,15 +69,33 @@ Copy dependency manifests before application source when the dependency installa
 ```dockerfile
 FROM php:8.4-cli AS dependencies
 WORKDIR /app
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+RUN apt-get update && apt-get install -y --no-install-recommends git unzip \
+    && rm -rf /var/lib/apt/lists/*
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-interaction --prefer-dist
 
 FROM php:8.4-cli AS runtime
+RUN apt-get update && apt-get install -y --no-install-recommends libpq-dev \
+    && docker-php-ext-install pdo_pgsql \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=dependencies /app/vendor ./vendor
 COPY . .
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+CMD ["php", "artisan", "serve", "0.0.0.0", "8000"]
 ```
+
+The `php:*-cli` images are a deliberately small PHP install: no Composer binary, and no
+`pdo_pgsql`. Composer's own image publishes a single static binary built for exactly this
+multi-stage pattern — copy it in rather than downloading an installer script inside the
+build. `--prefer-dist` still wants `unzip` to open the packages Composer downloads, and
+some packages resolve as VCS clones, hence `git`. `pdo_pgsql` follows the same shape as
+every other PHP extension: it is compiled against `libpq-dev`'s headers, which is why the
+runtime stage installs the `-dev` package only long enough to run
+`docker-php-ext-install`, then discards the apt cache. Skip either omission and the
+failure arrives at a different, later layer — `composer: not found` at build time, or
+`could not find driver` the first time a handler opens a PostgreSQL connection, printing a
+green migration that touched nothing.
 
 ```sh
 docker build --progress=plain -t issue-tracker-app:local .
@@ -102,17 +120,58 @@ RUN npm run build
 
 ```dockerfile
 FROM nginx:1.29.4-alpine
-COPY --from=frontend-build /frontend/dist /usr/share/nginx/html
+COPY --from=frontend-build /frontend/public/build /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 ```
+
+The output path must match the learner's actual Vite configuration — this project's
+`vite.config.mjs` sets `outDir: public/build`, not Vite's own default of `dist`, so `dist`
+here would copy nothing and ship an nginx that serves its stock welcome page while looking
+successful. Check `docker compose exec web ls /usr/share/nginx/html` against your own
+config rather than trusting either path from memory.
+
+A containerized production web service cannot rely on the development proxy, and the
+default nginx config answers only the file that exists at the exact requested path — it has
+no idea a client-side router exists. Without help, `/issues/42` is a 404 from nginx before
+React's `BrowserRouter` ever runs, the same defect FS07.1 names for the DALT-served
+topology, reproduced here because a second server is now in the request path:
+
+```nginx
+# nginx.conf
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+
+    location /api/ {
+        proxy_pass http://app:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location / {
+        try_files $uri /index.html;
+    }
+}
+```
+
+`try_files $uri /index.html` answers a request with the matching built asset when one
+exists (`/assets/app-4f2a1c.js`) and falls back to the application document for everything
+else, which is exactly what a client route needs. The `/api/` block must come first —
+nginx uses the most specific matching `location`, not registration order, so an `/api/`
+rule after `location /` would never be reached. Test both halves, not just one:
 
 ```sh
 docker build -f Dockerfile.web -t issue-tracker-web:local .
 docker run --rm -p 8080:80 issue-tracker-web:local
-curl -I http://localhost:8080
+curl -I http://localhost:8080/issues/42     # 200: the built document, via the fallback
+curl -I http://localhost:8080/assets/app.js # 200 or 404 from the real file, not the fallback
 ```
 
-The output path must match the learner’s actual Vite configuration. A containerized production web service cannot rely on the development proxy. If a web server routes `/api`, make that rule visible and test it. If PHP serves assets itself, document that instead. Both can be honest; an unexplained proxy is neither.
+If PHP serves the built assets itself instead of a separate web service, document that
+choice and its own SPA-fallback and `/api` routing decisions instead — FS07.1 covers the
+DALT-side equivalent. Both topologies can be honest; an unexplained proxy, or a `/issues/42`
+that silently 404s from whichever server answered it, is neither.
 
 ## 3. Health is a question with a useful answer
 
@@ -141,6 +200,14 @@ docker compose logs db
 ```
 
 Compose implementations and application bootstrap needs determine whether a health condition is appropriate; check the supported Compose version and rendered configuration. Even a healthy database does not automatically mean migrations or seeds have happened. Treat migrations as an explicit documented step or an intentionally designed startup operation, never a silent race.
+
+That `pg_isready` line also answers this lesson's third prediction. Docker's health check
+runs *inside* the `db` container's own network namespace — Compose does not execute it from
+the host or from another service — so `localhost` there names the `db` container itself,
+exactly as `-h` is omitted above. That is precisely why the same word means something
+different a service over: `localhost` inside `app` never reaches PostgreSQL, but
+`localhost` inside `db`'s own health check is correct by construction, because the process
+being checked and the process running the check are the same container.
 
 ## 4. Configuration has a lifetime and an audience
 
@@ -231,18 +298,37 @@ A health check has an observer, a command, timing policy, and a meaning. `pg_isr
 services:
   app:
     healthcheck:
-      test: ["CMD", "php", "artisan", "health:check"]
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://localhost:8000/api/health') === false ? 1 : 0);"]
       start_period: 15s
       interval: 10s
       timeout: 3s
       retries: 5
 ```
 
-This is a shape, not a command the learner should add blindly; inspect whether DALT actually has such a command or implement a deliberately small, safe endpoint as part of their project. Never make a health route disclose configuration, credentials, user records, or stack traces. A failing health check must be diagnosable through logs and command output, otherwise it only creates a new opaque failure.
+`php artisan health:check` **does not exist** — do not add it to a Compose file on the
+strength of this lesson; a shell that runs a command DALT never shipped is a health check
+that always fails and teaches nothing about the application. The shape that does exist is
+an ordinary route: a small `GET /api/health` handler, registered like any other, that
+returns 200 with a minimal body once the process can actually respond:
+
+```php
+// app/Http/controllers/api/health.php
+return apiJson(['status' => 'ok']);
+```
+
+The healthcheck command above uses `php -r` deliberately rather than `curl`: the
+`php:*-cli` image guarantees PHP and nothing beyond it, and this lesson already spent §1
+explaining that a minimal base image ships only what it says it does. Confirm your own
+image before trusting `curl` in a `CMD-SHELL` check — `docker compose exec app which curl`
+answers it in one line, and a health check that silently always fails because its own tool
+is missing is a worse outcome than the one this section is trying to prevent. Never make a
+health route disclose configuration, credentials, user records, or stack traces. A failing
+health check must be diagnosable through logs and command output, otherwise it only
+creates a new opaque failure.
 
 ```sh
 docker inspect --format '{{json .State.Health}}' issue-tracker-app-1
-docker compose exec app php artisan health:check
+docker compose exec app php -r "var_dump(file_get_contents('http://localhost:8000/api/health'));"
 docker compose logs app
 ```
 
@@ -254,7 +340,7 @@ Root inside a container is not the same as root on every host, but it is still b
 RUN addgroup --system app && adduser --system --ingroup app app
 COPY --chown=app:app . /app
 USER app
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+CMD ["php", "artisan", "serve", "0.0.0.0", "8000"]
 ```
 
 ```sh

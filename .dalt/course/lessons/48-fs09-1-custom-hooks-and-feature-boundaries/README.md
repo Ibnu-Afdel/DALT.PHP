@@ -6,7 +6,7 @@ Part: 09 — Advanced React and tooling
 Order: 1
 Status: Published
 Estimated effort: 90–120 minutes
-Difficulty: Integration
+Difficulty: Advanced
 Prerequisites: FS08.1, FS08.2, FS08.3
 Project milestone: B09 — Maintainable frontend
 Primary source dossier: FSO_PART_07.md

@@ -1,6 +1,6 @@
 {
-  "title": "Forms, JavaScript, JSON and the SPA model",
-  "description": "Observe the difference between browser-default submission and JavaScript-controlled UI updates.",
+  "title": "What changes when JavaScript takes over a form?",
+  "description": "Compare a normal form submission with a JSON update that stays on the page.",
   "order": 21,
   "section": "fullstack",
   "section_order": 2,

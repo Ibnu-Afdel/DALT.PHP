@@ -1,7 +1,7 @@
-# FS00.1 — Browser, server, request, response
+# FS00.1 — What happens when you open a web page?
 
 Lesson ID: FS00.1  
-Title: Browser, server, request, response  
+Title: What happens when you open a web page?  
 Part: 00 — Web fundamentals  
 Order: 1  
 Status: Published  
@@ -10,213 +10,290 @@ Difficulty: Foundation
 Prerequisites: None  
 Project milestone: B00 — Trace the system  
 Primary source dossier: FSO_PART_00.md  
-Last reviewed: 2026-08-14
+Last reviewed: 2026-08-15
 
 ## Why this matters
 
-Later, your issue tracker will have a React interface, a DALT server, and PostgreSQL behind it. When something looks wrong, the useful first question is not “which framework is broken?” It is: **what did the browser ask for, and what came back?**
+Type `/learn/fullstack` into the address bar and press Enter. A moment later, a page appears. It feels like one action, but several things have happened: the browser has contacted a server, the server has chosen a response, and the browser has decided how to use what came back.
 
-That question works before React, after React, and when no framework is involved. It gives you evidence instead of a guess.
+That boundary will be the most useful place to look when the issue tracker later behaves strangely. If the screen is empty, the request may have gone to the wrong URL. If the request succeeded but the page is wrong, the response body may not contain what you expected. If the browser never made the request, the problem is somewhere before the server.
 
-You are starting with a deliberately small model: a browser asks a server for something; the server responds; the browser decides what to do with that response. The details grow later, but this boundary stays.
+Before React, TypeScript, or DALT adds its own vocabulary, let’s watch this basic exchange happen and learn how to describe it precisely.
 
 ## Before you start
 
 Required:
 
-- A browser with Developer Tools (Chrome/Chromium or Firefox are both fine).
+- A browser with Developer Tools. Chrome/Chromium and Firefox are both fine.
 - This DALT application running locally.
 
 Recommended:
 
-- Keep a small note open for predictions and observations.
+- Keep a small note open. You will write down a guess, then compare it with evidence.
 
-Going deeper (optional, DALT Core):
+Going deeper in DALT Core — optional:
 
-- [Request Lifecycle](/learn/lessons/01-request-lifecycle) examines DALT's server-side request path in more depth. It is not required for this lesson.
+- [Request Lifecycle](/learn/lessons/01-request-lifecycle) follows a request inside DALT. It is not needed here; this lesson stays at the browser/server boundary.
 
 ## By the end
 
 You should be able to:
 
-- trace a page visit from browser to server and back;
-- identify a request's method, URL, request headers, optional request body, status, response headers, and response body;
-- distinguish an HTML document response from a JSON response;
-- use the Network panel as evidence when a browser/server interaction surprises you.
+- follow a page visit from the address bar to the rendered document;
+- find a request’s method, URL, headers, optional body, and response status;
+- find a response’s headers and body, including its `Content-Type`;
+- tell the difference between an HTML document and JSON data;
+- use the Network panel to replace “the app is broken” with a specific observation.
 
 ## Predict before reading
 
-Open a new tab and write down answers before checking.
+Before opening Developer Tools, make a guess about what the browser will do.
 
-1. When you load `/learn`, how many requests do you expect to see: one, or several?
-2. Which response do you expect contains the words “DALT.PHP learning”?
-3. If a request returns HTML, which process turns it into visible text and controls?
-4. If a request returns JSON, does the browser automatically turn it into a page?
+1. When you load `/learn/fullstack`, will the browser make one request or several?
+2. Which response will contain the words **DALT Fullstack**: the first document response, a stylesheet, or a script?
+3. If the server returns HTML, who turns that HTML into the page you see?
+4. If the server returns JSON, will the browser automatically replace the page with it?
 
-There is no score here. The comparison between your prediction and the evidence is the exercise.
+Write your answers down. They do not need to be correct. A useful prediction gives you something definite to compare with the browser later.
 
 ## Mental model
+
+Here is the whole journey in its smallest useful form:
 
 ```text
 you enter a URL
         ↓
-browser creates an HTTP request
+the browser creates an HTTP request
         ↓
-server chooses how to handle it
+the server handles the request
         ↓
-server sends an HTTP response
+the server sends an HTTP response
         ↓
-browser interprets the response
+the browser interprets the response
 ```
 
-The browser is a **client**: it initiates the request and renders or otherwise uses the response. The server receives the request, runs application code, and returns a response. They are separate processes with a message boundary between them.
+The browser is the **client**. It starts the conversation and uses the response. The server is a separate process that receives the request, runs application code, and sends something back. HTTP is the protocol used for the messages between them.
 
-HTTP is the message protocol at that boundary. A request usually has a method and URL, plus headers and sometimes a body. A response has a status, headers, and often a body.
+That model is intentionally plain. Later, the browser will run JavaScript, the server will call DALT code, and PostgreSQL will sit behind the server. Each new layer adds detail without removing this boundary.
 
-## 1. A request is a specific question
+## 1. Start with the request
 
-For a normal page visit, the browser commonly sends a `GET` request. `GET` means “retrieve a representation of this URL.” The URL tells the server which resource is being requested.
+Open the DALT Fullstack journey in your browser:
 
-Headers add context. For example, a browser may say which response formats it accepts, what language it prefers, or which existing session cookie it is sending. You do not need to memorize headers yet; learn to notice that they are part of the message.
+**→ [/learn/fullstack](/learn/fullstack)**
 
-A request body is optional. A browser usually has no request body for a simple `GET`. Later, form submissions and JSON API requests will often carry one.
+Open Developer Tools, choose **Network**, and reload the page. The first important entry is the document request. Select it and look at the **Headers** panel.
+
+For a normal page visit, the browser usually sends a `GET`. That means it is asking the server to return a representation of the URL. The URL identifies what it wants. Headers carry additional information, such as which response formats the browser can accept or which cookies it already has.
+
+This is the shape of the message, not an exact transcript from your machine:
 
 ```text
-GET /learn HTTP/1.1
+GET /learn/fullstack HTTP/1.1
 Host: localhost:8000
 Accept: text/html, ...
-Cookie: ...                 ← only if the browser has one
+Cookie: ...
 ```
 
-The exact headers and host/port on your machine will differ. The shape is what matters.
+The exact host, port, and headers will vary. What matters is that a request has identifiable parts:
 
-## 2. A response answers with status, headers, and a body
+- **method** — what kind of operation the client is asking for;
+- **URL** — where the request is going;
+- **request headers** — extra information about the request;
+- **request body** — optional data sent with the request.
 
-The server answers with a status code. A `200` commonly means the server successfully produced the requested representation. A `404` means it could not find a matching resource. Status is concise evidence about the server's result; it is not the whole response.
+A simple `GET` usually has no body. Forms and API calls will often send one later.
 
-Response headers describe the response. `Content-Type: text/html` tells the browser it received HTML. `Content-Type: application/json` tells it the body is JSON data. The response body contains the actual HTML, JSON, image bytes, CSS, JavaScript, or another representation.
+## 2. Read the response
+
+Now stay on the same Network entry and examine the response. The server answers with its own set of information:
+
+- a **status code** describing the result;
+- **response headers** describing the response;
+- a **response body** containing the representation itself.
+
+The response for the page should look roughly like this:
 
 ```text
 HTTP/1.1 200 OK
 Content-Type: text/html; charset=UTF-8
 
 <!doctype html>
-<html>...
+<html>
+  ...
+</html>
 ```
 
-HTML is a document the browser can parse and render. JSON is data. Seeing JSON in a Network response does not by itself change the screen; JavaScript has to decide what to do with it. That distinction is central to the React work ahead.
+`200` tells you that the server successfully returned a response. `Content-Type` tells the browser what the body represents. Here it is HTML, so the browser parses it as a document and renders the result.
 
-## Inspect real evidence
+A `404` would mean that the server could not find what this URL requested. A `500` would mean that the server encountered an error while handling it. A status code is valuable evidence, but it is not the entire story: a successful `200` response can still contain the wrong data or markup.
 
-Use your running DALT application. This is observation, not a hidden test.
+Now compare HTML with JSON:
 
-1. Open Developer Tools, select **Network**, and enable “Preserve log” if your browser offers it.
-2. Reload `/learn`. Select the document request (usually named `learn` or `/learn`).
-3. In its panels, find the method, URL, status, request headers, response headers, and response body/preview.
-4. Find at least one additional request for a stylesheet, JavaScript file, or font. Notice that one visible page can require several responses.
-5. Follow a visible link such as **DALT Fullstack**. In the Network panel, identify the new document request and its status.
+```text
+Content-Type: application/json
 
-Write one sentence for each: “The browser requested ___; the server responded with ___; the browser then ___.” Be concrete about the URL and response type.
+{"message":"The server received the request."}
+```
+
+JSON is structured data. It is not automatically a new page. JavaScript can read that data and decide what to display, but the browser does not turn every JSON response into a document by itself.
+
+## 3. One page can mean several requests
+
+Look at the rest of the Network panel. Loading one visible page may produce requests for its HTML document, stylesheet, JavaScript, fonts, and images.
+
+```text
+browser → GET /learn/fullstack       → HTML document
+browser → GET /assets/app.css        → CSS
+browser → GET /assets/app.js         → JavaScript
+browser → GET /assets/icon.svg       → image
+```
+
+The address bar gave you one visible action, but the HTML document can contain links to resources that the browser fetches separately. This is why the answer to “how many requests did the page make?” is often more than one.
+
+Select one stylesheet or script request. Its method will probably also be `GET`, but its `Content-Type` and response body will be different from the document’s. The browser uses each response according to what it represents.
+
+This is also why the Network panel is more useful than a vague report such as “the page loaded slowly.” It lets you ask which resource was requested, what status came back, and what the browser received.
 
 ## Try it
 
-**Mode: manual-proof.** You are proving a real observation to yourself, not submitting source text for an automated checker.
+Let’s follow one real page visit instead of talking about an imaginary one.
 
-### Goal
+**Mode: manual-proof.** You will prove the model with browser evidence and a trace in your own notes. The platform does not inspect or grade the note.
 
-Reconstruct a browser/server exchange without relying on the lesson.
+### First, make your guess
 
-### Starting state
+Open `/learn/fullstack` in a new tab. Before reloading it, write down:
 
-The DALT application is open and the Network panel is recording.
+- which request you expect to be the document request;
+- which response you expect to contain the page title;
+- whether you expect any other requests after the document arrives.
 
-### Requirements
+### Now inspect the exchange
 
-- Reload `/learn/fullstack` and select its document request.
-- Record its method, full URL/path, status, one request header, one response header, and what kind of body it returned.
-- In a note, draw this trace from memory:
+Open **Network**, enable **Preserve log** if your browser provides it, and reload the page. Select the document request and record:
+
+- the method and URL;
+- one request header;
+- the status;
+- one response header;
+- the kind of body returned.
+
+Then select one additional request, such as a stylesheet or script. Notice what is different about its response.
+
+### Tell the story in your own words
+
+Write this sentence twice, once for the document and once for the additional resource:
 
 ```text
-browser → request → server → response → browser
+The browser requested __________ using __________.
+The server answered with __________, and the browser used it as __________.
 ```
 
-- Label where the HTML came from and what the browser did with it.
+### Check yourself
 
-### Verification
+Your note is complete when another person could use it to answer these questions without opening the lesson:
 
-Compare your note with the Network entry. Correct it until each label corresponds to evidence you can point at. If you can explain the trace aloud without calling every step “the app,” you have the model B00 needs.
+- What did the browser ask for?
+- Where did it ask?
+- What did the server return?
+- How did the browser know what the response represented?
+- What did the browser do next?
 
-### Hints
+If your explanation says only “the app loaded the page,” replace “the app” with the actual request, response, and browser action.
+
+### If you need a nudge
 
 <details>
-<summary>Hint 1: finding the document request</summary>
+<summary>Finding the document request</summary>
 
-Reload with Network open. Filter by **Doc** or look for the request whose response preview contains the page title.
+Filter the Network panel by **Doc**, or choose the entry whose response preview contains the page’s HTML. The request name may be `/learn/fullstack` or a shortened version of it.
 </details>
 
 <details>
-<summary>Hint 2: where the message pieces live</summary>
+<summary>Finding the message pieces</summary>
 
-The Headers panel normally groups General (method, URL, status), Request Headers, and Response Headers. Preview or Response shows the body.
+The Headers panel normally groups the method, URL, and status under General. Request Headers and Response Headers are separate groups. Preview or Response shows the body.
 </details>
 
 <details>
-<summary>Revealable reference trace</summary>
+<summary>Reference trace — read after your attempt</summary>
 
-The browser sends a `GET` for `/learn/fullstack`. DALT's router selects the Fullstack controller, which reads course data and returns an HTML response. The browser receives a successful HTML response, parses it, and renders the Fullstack journey. Asset requests may follow separately.
+The browser sends a `GET` request for `/learn/fullstack`. DALT’s router selects the Fullstack handler, which returns an HTML response. The browser reads the response’s content type, parses the HTML, renders the document, and then requests any linked assets it needs.
 </details>
 
 ## Common mistakes
 
-### “The browser got the page” is enough detail
+### “The browser got the page” is enough
 
-It is a start, but it hides the boundary. Name the method, URL, status, content type, and body. Those are the clues you will use when the result is wrong.
+That sentence hides the useful evidence. A debugging trace should name the method, URL, status, content type, and what the browser did with the body.
 
-### HTML and JSON are interchangeable responses
+### “A `200` means the screen must be correct”
 
-Both are response bodies, but the browser treats them differently. HTML can become a document directly. JSON is data that code must deliberately use.
+`200` means the server successfully returned a response. The response can still contain unexpected HTML or data, and browser-side code can still display it incorrectly.
 
-### A successful status means the screen must be correct
+### “HTML and JSON are just two spellings of the same thing”
 
-No. A `200` says the server returned a successful response. The body may still contain unexpected data, and browser-side code may still render it incorrectly.
+They are both response bodies, but they play different roles here. HTML can be parsed as a document. JSON is data that code must choose to use.
+
+### “The address bar tells me everything that happened”
+
+The address bar shows the current document URL, not every request that produced the document. The Network panel shows the rest of the conversation.
 
 ## When this goes wrong
 
-1. If Network is empty, open it before reloading the page.
-2. If you see too many entries, filter by **Doc** first; then inspect CSS, JS, and fonts one at a time.
-3. If the app is unavailable, use any local page you can load and practice the same request/response inventory. Return to DALT when it is running.
+If the Network panel is empty, open it before reloading. Developer Tools cannot show a request that happened before the panel started recording.
+
+If there are too many entries, filter by **Doc** first. Once you understand the document request, inspect the CSS, JavaScript, font, and image requests one at a time.
+
+If the application does not load, check the address and whether the local server is running. You can practise the same inventory on another local page, then return to the DALT page so your final trace describes the actual course route.
+
+If you cannot find the response body, select the request and use **Response** or **Preview**. The body is the part that contains the representation the server sent.
 
 ## In the project
 
-This is B00 — **Trace the system**. There is no issue-tracker code yet. The output is a reliable habit: predict an interaction, inspect the browser's evidence, then explain the path across the boundary.
+This is the first half of B00 — **Trace the system**. The issue tracker does not exist yet. What you are building now is a habit you will use throughout it:
+
+```text
+something looks wrong
+        ↓
+inspect the browser evidence
+        ↓
+identify the request and response
+        ↓
+choose the layer worth investigating
+```
+
+In Part 04, the browser will request issue data from a server. In Part 05, that server will ask PostgreSQL for it. The path will become longer, but the first question will stay the same.
 
 ## Closed-book checkpoint
 
-Close this lesson before answering.
+Close this lesson before answering. Do not look back until you have written something for each question.
 
-1. Name the six pieces you can identify in a Network entry for a request.
-2. A browser receives `Content-Type: application/json`. What must happen before JSON changes the visible page?
-3. What is one useful difference between a `GET` request and a request with a body?
-4. Draw the five-step path from entering a URL to seeing a response.
+1. What four pieces can you identify in an HTTP request?
+2. What three pieces can you identify in an HTTP response?
+3. A response has `Content-Type: application/json`. What must happen before that data changes the visible page?
+4. Why can loading one URL produce requests for a document, a stylesheet, and a script?
+5. Draw the path from entering a URL to the browser rendering the response.
 
-Then reopen the lesson and correct your answers in a different color.
+Then reopen the lesson and correct your answers in a different colour. The corrections are useful evidence about what you remembered and what you only recognized while reading.
 
 ## Resources
 
 ### Read
 
-- [MDN: An overview of HTTP](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Overview) — read the introduction, client/server roles, HTTP flow, and request/response message sections.
+- [MDN: An overview of HTTP](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Overview) — read the introduction, client/server roles, HTTP flow, and the request/response message sections.
 
 ### Reference
 
-- [Chrome DevTools Network panel](https://developer.chrome.com/docs/devtools/network/) — use the sections relevant to the fields you inspected; equivalent Firefox tools are fine.
+- [Chrome DevTools Network panel](https://developer.chrome.com/docs/devtools/network/) — use the sections related to requests, headers, responses, and initiators. Firefox Developer Tools are fine too.
 
 ## You are done when
 
 - [ ] I inspected a real DALT document request in Developer Tools.
-- [ ] I can identify method, URL, headers, body, and status without guessing.
+- [ ] I can identify the request and response parts without guessing.
 - [ ] I can explain why HTML and JSON do not automatically produce the same browser behavior.
-- [ ] I reconstructed the trace and completed the closed-book checkpoint.
+- [ ] I wrote and recalled a browser/server trace.
 
 ---
 
@@ -225,7 +302,7 @@ Then reopen the lesson and correct your answers in a different color.
 - Source dossier: `docs/dalt-fullstack/sources/FSO_PART_00.md`
 - Official sources: MDN HTTP Overview; Chrome DevTools Network documentation
 - Versions: web documentation consulted 2026-08-13
-- Consulted: 2026-08-14
+- Consulted: 2026-08-15
 - DALT files inspected: `.dalt/routes/routes.php`, `.dalt/Http/controllers/learn/index.php`, `.dalt/Core/MarkdownRenderer.php`
 - Curriculum authority: `CURRICULUM.md` §10 FS00.1 — core questions, required outcomes and practice
 - Laravel source: not applicable to this web-fundamentals lesson

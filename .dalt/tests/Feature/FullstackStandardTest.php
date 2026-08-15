@@ -247,6 +247,7 @@ const FULLSTACK_LESSON_SECTIONS = [
     '## By the end',
     '## Predict before reading',
     '## Mental model',
+    '## Try it',
     '## Common mistakes',
     '## When this goes wrong',
     '## In the project',
@@ -255,6 +256,17 @@ const FULLSTACK_LESSON_SECTIONS = [
     '## You are done when',
     '## Maintainer source record',
 ];
+
+// '## Exercise' is deliberately NOT enforced here despite being in LESSON_STANDARD.md
+// 97's template. Lessons 20-28 (Parts 00-02) predate the literal-heading convention and
+// use differently-titled, differently-shaped exercise sections instead — FS00.1's
+// "## Inspect real evidence" / "## Try it" pair, and FS00.2/FS01.1-FS02.5's
+// "## Two ways to submit" / "## Focused exercise — <name>" headings, which already carry
+// a real Goal/Requirements/Verification/Hints-equivalent structure under a descriptive
+// title. Renaming nine shipped lessons' headings for a mechanical presence check is a
+// content-standardization decision for whoever owns the Part 00-02 curve, not a defect
+// this test should paper over by adding the check and immediately failing on it. See
+// WORKLOG.md F29.
 
 test('the lesson contains every mandatory section', function (string $id) {
     $body = fullstackLessonBody($id);

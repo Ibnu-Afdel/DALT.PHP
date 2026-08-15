@@ -370,6 +370,113 @@ Testing only through React merges a route mistake, a CORS problem, a parser bug 
 rendering error into one vague failure. curl separates them. Every minute spent here is
 returned with interest the first time something breaks.
 
+### Answer the browser before React does
+
+curl just proved the route. It did not prove the route works from a browser, and it never
+will — curl has no origin policy, so it cannot reproduce the one failure mode that is
+guaranteed to appear the moment FS05.3 points React at this server instead of the fixture.
+A cross-origin request (Vite on `5173`, DALT on `8000`) is subject to two browser rules that
+curl simply does not implement:
+
+1. A "non-simple" request — `POST`/`PATCH`/`PUT`/`DELETE` with a JSON body, which is every
+   mutation this API has — is preceded by an automatic `OPTIONS` preflight. The browser
+   sends it; your code never asked for it.
+2. **Every** cross-origin response, preflighted or not, must carry
+   `Access-Control-Allow-Origin` naming the requesting origin (or `*`). Without it the
+   browser discards the response before JavaScript ever sees it — the request still
+   completes and still shows in your server logs, which is exactly why this looks like a
+   frontend bug and is not one.
+
+`Core\Router` has `get`/`post`/`patch`/`put`/`delete`/`options`, and none of your five
+routes answers `OPTIONS`, so a preflight 404s before your handler runs. Registering
+`OPTIONS` for every resource path by hand would work but does not scale past the second
+resource, and an ordinary `{id}` placeholder cannot help — it matches one path segment, not
+a whole subtree. This is the one place in Part 05 you need a route that matches *any* path
+under a prefix, which is what `{*}` as the final path segment means: it matches the prefix
+itself and everything after it, slashes included.
+
+```php
+// routes/routes.php
+require base_path('app/Http/support/api-response.php');
+
+$router->add('OPTIONS', '/api/{*}', fn () => new Response('', 204, corsHeaders()));
+```
+
+That answers rule 1 for every current and future `/api/*` route in one line. Rule 2 still
+needs every *real* response — not just the preflight — to carry the same origin header, so
+wrap the envelope you already agreed on instead of calling `Response::json()` directly:
+
+```php
+<?php
+// app/Http/support/api-response.php
+
+declare(strict_types=1);
+
+use Core\Response;
+
+/**
+ * The allowed origin is configuration, not a constant: it is your Vite dev
+ * server today and a deployed frontend origin later. `*` is tempting and
+ * wrong here — a wildcard origin cannot be combined with credentialed
+ * requests, and it hides which origins you actually intend to serve.
+ *
+ * @return array<string, string>
+ */
+function corsHeaders(): array
+{
+    return [
+        'Access-Control-Allow-Origin' => env('CORS_ALLOWED_ORIGIN', 'http://localhost:5173'),
+        'Access-Control-Allow-Methods' => 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers' => 'Content-Type',
+    ];
+}
+
+/**
+ * Every handler in Part 05 onward returns through this instead of
+ * `Response::json()` directly, so no response can ship without the header
+ * its own preflight promised.
+ *
+ * @param array<array-key, mixed> $data
+ * @param array<string, string> $headers
+ */
+function apiJson(array $data, int $status = 200, array $headers = []): Response
+{
+    return Response::json($data, $status, corsHeaders() + $headers);
+}
+```
+
+`app/Http/support/` holds plain functions, not `App\Http\`-namespaced classes, so
+Composer's autoloader never sees it — the `require` above is not boilerplate, it is the
+only reason `apiJson` and `corsHeaders` exist by the time a route resolves. Miss it and
+every symptom in this section returns despite the code above being correct.
+
+From here on, replace `Response::json(...)` with `apiJson(...)` in every handler this
+lesson and FS05.3 write — same arguments, same envelope, now with the header a browser
+actually requires. Prove both rules with curl, which can inspect headers even though it
+does not enforce them:
+
+```sh
+php artisan serve &
+curl -i -X OPTIONS http://127.0.0.1:8000/api/issues \
+  -H 'Origin: http://localhost:5173' \
+  -H 'Access-Control-Request-Method: POST'
+curl -i http://127.0.0.1:8000/api/issues/42 -H 'Origin: http://localhost:5173'
+```
+
+```text
+HTTP/1.1 204 No Content
+Access-Control-Allow-Origin: http://localhost:5173
+Access-Control-Allow-Methods: GET, POST, PATCH, PUT, DELETE, OPTIONS
+
+HTTP/1.1 200 OK
+Access-Control-Allow-Origin: http://localhost:5173
+Content-Type: application/json; charset=UTF-8
+```
+
+If the second response is missing its `Access-Control-Allow-Origin` line, a handler is
+still calling `Response::json()` directly — that is the whole defect class this section
+exists to close before React can rediscover it the hard way.
+
 ## 5. Decide what a response is allowed to contain
 
 A contract constrains the response as much as the request. The shortest path from a database
@@ -520,6 +627,8 @@ one-line change — and if it is not, that is worth knowing now rather than in P
 - [ ] The server accepts only an explicit subset of input fields.
 - [ ] A create request with three bad fields reports three field errors, not one.
 - [ ] React parses the documented response rather than trusting its TypeScript type.
+- [ ] `OPTIONS /api/{*}` answers a preflight, and a real response carries
+      `Access-Control-Allow-Origin` because it went through `apiJson()`, not `Response::json()`.
 - [ ] I know that persistence, SQL, and database constraints arrive in the next lessons.
 
 ---

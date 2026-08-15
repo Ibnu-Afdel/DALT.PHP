@@ -314,6 +314,44 @@ const closeIssue = (issues, issueId) =>
 
 This returns a new array. It keeps unchanged issue objects as they were and creates a new object only for the issue being changed. It is an intentional, shallow update—not a claim that JavaScript itself is immutable.
 
+## Try it
+
+**Prediction:** `closeIssue` above returns a new array using `map`. Before running anything,
+predict whether the *unchanged* issue objects inside that new array are the same references
+as the ones in the original array, or new objects too.
+
+**Run / inspect:**
+
+```js
+const issues = [
+  { id: 1, status: 'open' },
+  { id: 2, status: 'open' },
+];
+
+const closeIssue = (issues, issueId) =>
+  issues.map((issue) =>
+    issue.id === issueId ? { ...issue, status: 'closed' } : issue,
+  );
+
+const next = closeIssue(issues, 1);
+
+console.log(issues === next);
+console.log(issues[1] === next[1]); // the untouched issue, id 2
+console.log(issues[0] === next[0]); // the changed issue, id 1
+```
+
+**What happened:** the outer array is a new reference (`issues === next` is `false`), the
+untouched issue object is the *same* reference in both arrays, and only the changed issue is
+a new object.
+
+**Why:** `map` always returns a new array, but the callback above only builds a new object
+for the id that matches — every other iteration returns the exact value it received. This is
+not an accident worth losing: it is the reason `closeIssue` is cheap to call on a large list,
+and it is exactly the signal a reference-comparing re-render check needs later — an unrelated
+issue's row can skip re-rendering because its object identity provably did not change,
+something a full deep clone of every issue would have destroyed without changing a single
+visible value.
+
 ## Focused exercise — Issue triage report
 
 **Mode: self-reported practice with your own Node or browser-console evidence. This exercise is not automatically verified.**

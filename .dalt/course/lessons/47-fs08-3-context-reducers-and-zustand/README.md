@@ -6,7 +6,7 @@ Part: 08 — Server and application state
 Order: 3
 Status: Published
 Estimated effort: 90–120 minutes
-Difficulty: Integration
+Difficulty: Advanced
 Prerequisites: FS08.2 — Mutations, invalidation and optimistic UI
 Project milestone: B08 — Intentional state architecture
 Primary source dossier: FSO_PART_06.md

@@ -6,7 +6,7 @@ Part: 08 — Server and application state
 Order: 1
 Status: Published
 Estimated effort: 100–130 minutes
-Difficulty: Integration
+Difficulty: Advanced
 Prerequisites: FS07.3 — Test frontend behavior
 Project milestone: B08 — Intentional state architecture
 Primary source dossier: FSO_PART_06.md

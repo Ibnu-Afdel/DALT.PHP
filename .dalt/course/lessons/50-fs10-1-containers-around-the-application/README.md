@@ -69,10 +69,10 @@ The application service needs a command, a working directory, source or built as
 FROM php:8.4-cli
 WORKDIR /app
 COPY . .
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+CMD ["php", "artisan", "serve", "0.0.0.0", "8000"]
 ```
 
-`0.0.0.0` means the process accepts connections on container interfaces. Binding only to `127.0.0.1` inside the container often makes a published port look broken: Docker can forward traffic, but the process refuses it. This teaching Dockerfile is intentionally small; FS10.2 makes the copy strategy and runtime image deliberate.
+`0.0.0.0` means the process accepts connections on container interfaces. Binding only to `127.0.0.1` inside the container often makes a published port look broken: Docker can forward traffic, but the process refuses it. `artisan serve` takes **positional** arguments (`serve [host] [port]`), not flags — `--host=0.0.0.0` would be read as the host itself, fail validation, and exit before binding anything. Run the exact `CMD` locally first (`php artisan serve 0.0.0.0 8000`) so a typo shows up before it is baked into an image. This teaching Dockerfile is intentionally small; FS10.2 makes the copy strategy and runtime image deliberate.
 
 ```sh
 docker build -t issue-tracker-app:local .
@@ -92,8 +92,12 @@ services:
     build: .
     ports: ["8000:8000"]
     environment:
+      DB_DRIVER: pgsql
       DB_HOST: db
       DB_PORT: "5432"
+      DB_NAME: issue_tracker
+      DB_USERNAME: issue_tracker
+      DB_PASSWORD: development-only-change-me
     depends_on: [db]
   db:
     image: postgres:17.7
@@ -102,6 +106,13 @@ services:
       POSTGRES_USER: issue_tracker
       POSTGRES_PASSWORD: development-only-change-me
 ```
+
+`config/database.php` reads `DB_DRIVER`, and it defaults to `sqlite` when nothing sets it.
+`DB_HOST` and `DB_PORT` are inert under that default — they simply go unread — so a Compose
+file that sets only those two still leaves the application writing to a local SQLite file
+inside the container while believing it configured PostgreSQL. Set `DB_DRIVER` explicitly,
+in the same block as the connection details it governs, or a later `migrate` can print
+success without the `db` service ever having been touched.
 
 ```text
 host browser: localhost:8000
@@ -132,7 +143,7 @@ docker compose up -d db
 docker compose exec db psql -U issue_tracker -d issue_tracker -c 'select 1'
 docker compose down
 docker compose up -d db
-docker compose volume ls
+docker volume ls
 ```
 
 Running `docker compose down -v` deliberately removes named volumes. Read that `-v` before using it: it is appropriate for a disposable local reset and destructive for data you meant to keep. Migrations describe schema evolution; a volume only preserves current bytes.

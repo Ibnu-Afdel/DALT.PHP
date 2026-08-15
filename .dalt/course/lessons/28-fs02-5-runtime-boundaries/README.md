@@ -270,6 +270,36 @@ return { id, title, status, description };
 
 That visible reconstruction matters. Do not validate one or two properties and finish with `return value as Issue`; the remaining fields would still be unproven.
 
+## Try it
+
+**Prediction:** `isRecord` exists specifically because `typeof null === 'object'` and arrays
+also report `'object'`. Before running anything, predict the three results of calling
+`isRecord(null)`, `isRecord([1, 2, 3])`, and `isRecord({ id: 1 })`.
+
+**Run / inspect:**
+
+```js
+function isRecord(value) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+console.log(isRecord(null));
+console.log(isRecord([1, 2, 3]));
+console.log(isRecord({ id: 1 }));
+```
+
+**What happened:** `false`, `false`, `true`.
+
+**Why:** each of `isRecord`'s three conditions is load-bearing, not defensive padding. Drop
+`value !== null` and `isRecord(null)` becomes `true`, because `typeof null` really is the
+string `'object'` — one of JavaScript's oldest surprises. Drop `!Array.isArray(value)` and
+`isRecord([1, 2, 3])` becomes `true` too, because an array genuinely is an object by
+`typeof`'s accounting. Neither omission would be visible from reading `parseIssue`'s
+happy-path output; both would let a JSON response shaped as `null` or as a bare array reach
+field access code that assumes an `Issue`-like record exists. This is the same "prove it,
+do not assume it" discipline the rest of the lesson applies to individual fields, applied
+one level earlier, to the shape those fields are supposed to live inside.
+
 ## Focused exercise — establish the Issue trust boundary
 
 **Mode: self-reported practice using TypeScript and Node. This exercise is not automatically verified by the course platform. Your evidence is the commands and outcomes below.**

@@ -1,6 +1,6 @@
 {
-  "title": "Browser, server, request, response",
-  "description": "Trace what actually happens between entering a URL and seeing a page.",
+  "title": "What happens when you open a web page?",
+  "description": "Follow a real page request from the address bar to the screen.",
   "order": 20,
   "section": "fullstack",
   "section_order": 1,

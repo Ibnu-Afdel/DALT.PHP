@@ -30,7 +30,7 @@ Use the actual Compose service and configured database name from your project. T
 ```sh
 docker compose exec db psql -U issue_tracker -d issue_tracker
 docker compose exec db psql -U issue_tracker -d issue_tracker -c 'ANALYZE issues'
-docker compose exec db psql -U issue_tracker -d issue_tracker -c '\\d+ issues'
+docker compose exec db psql -U issue_tracker -d issue_tracker -c '\d+ issues'
 ```
 
 ## By the end
@@ -292,6 +292,39 @@ Measure end-to-end behavior too. A faster database plan may still leave an API r
 Finally, treat migrations as the deployable artifact. `CREATE INDEX` on a busy real database can have operational implications, and production migration choices may need an online/concurrent strategy appropriate to the project deployment process. Do not paste a production-only option into a transaction-managed migration without verifying its restrictions. The learner's local migration should be honest, repeatable, and reviewed; production rollout is a separate decision that starts from the same measured query evidence.
 
 Plan evidence is time-bound, not eternal. Keep the captured output small enough to review, but retain enough context to reproduce it: database major version, seed revision, the result columns, and whether the run was warm or cold. When a query returns a radically different number of rows after a feature change, revisit the decision rather than assuming the old index remains correct. That discipline is the capability this lesson is building: PostgreSQL features remain tied to a named workload, observable evidence, and a reversible migration.
+
+## Try it
+
+**Prediction:** §3's index is `(workspace_id, status, created_at DESC)`. Before running
+anything, predict what plan PostgreSQL chooses for a query that filters only on
+`assignee_id` — a column the index does not lead with — for the same `issues` table.
+
+**Run / inspect:**
+
+```sql
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT id, title, status, created_at
+FROM issues
+WHERE assignee_id = 9
+ORDER BY created_at DESC
+LIMIT 20;
+```
+
+Compare that plan with §3's `EXPLAIN (ANALYZE, BUFFERS)` output for the `workspace_id` +
+`status` query, run back to back on the same seeded data with no schema change between
+them.
+
+**What happened:** the `assignee_id` query almost certainly falls back to a sequential
+scan or a much less selective plan than the workspace/status query did, even though both
+run against the identical table and the identical set of indexes.
+
+**Why:** the leftmost-prefix property is not a suggestion — an index on
+`(workspace_id, status, created_at DESC)` cannot serve an `assignee_id`-only predicate at
+all, because PostgreSQL can only use a B-tree index by matching a prefix of its declared
+column order, and `assignee_id` never appears in that prefix. A query needing this access
+path would need its own index; retrofitting the existing one, or reordering its columns
+without checking every other query that already depends on the current order, is not the
+same fix.
 
 ## Common mistakes
 

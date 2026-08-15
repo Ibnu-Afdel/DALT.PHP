@@ -307,6 +307,33 @@ There is one more boundary. Valid JSON is only data representation, not proof th
 
 A genuine network failure depends on the learner’s network, browser policy, and server state, so this lesson does not fake one. If you later observe one, inspect the rejected error and the absence of a usable `Response`; it is not the same evidence as a 404 response.
 
+## Try it
+
+**Prediction:** the table above names four failure boundaries. Before running anything,
+predict which single boundary each of these two calls will actually exercise, using your
+repaired `inspectIssuePreview` (the one with the `response.ok` check and JSON parsing both
+in place):
+
+```js
+inspectIssuePreview('/learn/fullstack/observe/async/missing-issue');
+inspectIssuePreview('/learn/fullstack/observe/async/invalid-json');
+```
+
+**Run / inspect:** run each call separately and read exactly where the thrown error's
+message comes from — your explicit `response.ok` check, or the JSON parser.
+
+**What happened:** `missing-issue` throws from your explicit HTTP-status check; `fetch`
+itself fulfilled normally, because the server answered — it just answered with 404.
+`invalid-json` throws from `response.json()` itself; `response.ok` was true, so your check
+never fires, and the failure only appears once parsing runs.
+
+**Why:** both calls reach `catch`, so a `console.error` alone cannot tell you which boundary
+failed — that is the entire reason the table separates four questions instead of one. Notice
+what you *cannot* reproduce this way: a genuine network/transport failure, where `fetch`
+itself rejects before any `Response` exists. That boundary depends on conditions this
+fixture cannot simulate honestly, which is exactly what the paragraph after the table
+says — do not manufacture a fake one and mistake it for the real thing.
+
 ## Focused exercise — Load an issue preview safely
 
 **Mode: self-reported practice with browser DevTools evidence. This exercise is not automatically verified.** Work in a scratch `issue-preview.mjs` module and an importing `run-preview.mjs` module, or adapt the code in the browser Console while keeping the two responsibilities separate.

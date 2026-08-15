@@ -141,7 +141,11 @@ Nothing here is checked automatically. Read every item against software you actu
 - [ ] `.dockerignore` excludes private and irrelevant build context material.
 - [ ] A multi-stage build exists only if it improves the actual frontend/runtime boundary.
 - [ ] A meaningful health check and supported health-aware dependency strategy replace arbitrary sleeps.
-- [ ] Migrations are explicitly documented and succeed against the Compose database.
+- [ ] Migrations are explicitly documented and succeed against the Compose database — proven
+      by querying tables from *inside the `db` service* (`docker compose exec db psql -U
+      <user> -d <database> -c '\dt'`), not only by a green `php artisan migrate` line. A
+      green migration against `DB_DRIVER=sqlite`'s default proves nothing about PostgreSQL;
+      confirm `docker compose exec app printenv DB_DRIVER` reads `pgsql` first.
 - [ ] Client-visible `VITE_*` configuration remains harmless; runtime/private values are not in images or committed environment files.
 - [ ] The runtime runs non-root where practical, or the documented constraint is specific and reviewed.
 - [ ] From a clean copy, documented setup, build, start, migration, test, and browser/API commands succeed.

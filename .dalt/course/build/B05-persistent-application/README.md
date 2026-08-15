@@ -140,9 +140,11 @@ changes — only the environment variable and, at most, the API client module.
 
 **Check it yourself:** list every difference you had to fix and name which side was wrong. Ids
 are now database integers rather than `ISS-41` strings, and CORS is now your server's
-responsibility rather than the fixture's; both are expected. If you had to edit a component,
-write down why — that is where the FS04.3 boundary leaked, and it is worth knowing before
-Part 07 depends on it.
+responsibility rather than the fixture's — FS05.1's `apiJson()` and `OPTIONS /api/{*}` route
+are what carry that responsibility; a mutation that 404s or a response the browser silently
+drops means a handler still calls `Response::json()` directly. Both are expected differences.
+If you had to edit a component, write down why — that is where the FS04.3 boundary leaked, and
+it is worth knowing before Part 07 depends on it.
 
 ## Decisions you have to make
 
@@ -167,6 +169,8 @@ Nothing here is checked automatically. Read each item against software you ran.
 - [ ] An unaccepted JSON field provably cannot alter a row.
 - [ ] Filters, sorting, and pagination are parameterized and explicitly allowlisted.
 - [ ] No response returns a raw database row or a raw PDO error message.
+- [ ] `OPTIONS /api/{*}` answers a preflight, and every real `/api/*` response carries
+      `Access-Control-Allow-Origin` — proven from a browser, not only from curl.
 - [ ] React uses its existing API client boundary, with no direct database knowledge.
 - [ ] Restarting DALT does not erase projects or issues.
 - [ ] A forced second write in the chosen transaction rolls back the first, proven from a separate session.

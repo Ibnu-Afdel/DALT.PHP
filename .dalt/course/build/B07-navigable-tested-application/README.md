@@ -154,6 +154,9 @@ Nothing here is checked automatically. Read each item against software you actua
 
 - [ ] Login, project, issue-detail, and not-found screens have intentional routes.
 - [ ] Refreshing and copying a resource URL restores the expected screen.
+- [ ] `curl` against `/login`, `/workspaces/...`, and `/issues/...` — a request the app never
+      routed, not a browser refresh inside a tab it already loaded — returns the built document,
+      via the per-resource `{*}` fallback routes from FS07.1, not a DALT 404.
 - [ ] Browser Back and Forward move through meaningful application locations.
 - [ ] Route and query parameters are validated before they affect an API request.
 - [ ] One useful filter is durable URL state and sensitive drafts are not in URLs.

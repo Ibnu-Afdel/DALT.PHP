@@ -253,6 +253,38 @@ The first nested value has a string where UserSummary requires a numeric id. The
 
 Do not turn that observation into runtime validation. These are source values TypeScript can see. Later we will treat values that arrive from outside the program as a separate problem.
 
+## Try it
+
+**Prediction:** `readonly` "does not make nested values deeply immutable," this lesson
+already told you. Before running anything, predict which of these two lines the checker
+rejects, and which one it accepts:
+
+```ts
+type Issue = {
+  readonly id: number;
+  assignee: { name: string };
+};
+
+const issue: Issue = { id: 1, assignee: { name: 'Mina' } };
+
+issue.id = 2;
+issue.assignee.name = 'Noah';
+```
+
+**Run / inspect:** `npx tsc --noEmit --strict` on a file containing exactly this.
+
+**What happened:** `issue.id = 2` is rejected — `Cannot assign to 'id' because it is a
+read-only property.` `issue.assignee.name = 'Noah'` typechecks cleanly.
+
+**Why:** `readonly` restricts reassigning the *property itself* on the object that declares
+it. `assignee` is not `readonly`, and its own `name` field is not either, so nothing stops
+you from reaching through the unprotected property and mutating what it points to. This is
+the concrete shape of "shallow": a `readonly id` is a real, enforced contract about
+`issue.id` specifically, not a claim about everything reachable from `issue`. If an
+invariant needs to hold deeper than one level, every level that matters needs its own
+`readonly`, and even then — this lesson already said it, and now you have seen it — none of
+it exists once JavaScript runs.
+
 ## Common mistakes
 
 ### `string` where a finite set was meant

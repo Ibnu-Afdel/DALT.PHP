@@ -152,6 +152,52 @@ A route match is not proof a record exists. A valid `/issues/42` may receive 404
 from the API. Display a clear state and never turn denial into a blank page. Do not redirect every
 failure to login: an authenticated user forbidden from an issue needs a different explanation.
 
+## Make the server answer every address React owns
+
+Everything above works the moment you click a Link, because the browser never leaves the
+document React already loaded. It stops working the moment you refresh `/issues/42` or paste it
+into a fresh tab, because that *is* a new document request, and DALT — not React — decides how to
+answer it. `Core\Router` matches an exact path or a single `{param}` segment; it has nothing
+today that means "and anything under here," so a direct request to any client location except
+whichever one DALT already serves the shell at gets a 404 before React has a chance to boot.
+
+The fix is not one route, because your table has three unrelated top-level names, and it is not a
+route per client path, because `/issues/42/comments` would need a fourth one the day you add
+comments. Register one server route **per top-level resource name**, using `{*}` — a path
+segment that matches the name itself and everything nested under it — to absorb whatever React
+adds beneath it later:
+
+```php
+// routes/routes.php — after your /api/* routes, before anything else
+$router->get('/login', 'app.php');
+$router->get('/workspaces/{*}', 'app.php');
+$router->get('/issues/{*}', 'app.php');
+```
+
+`app.php` is the same controller that already serves your built frontend for `/` — it returns the
+one HTML document every client route boots from; React Router then reads the actual browser
+location and picks the screen. This is three lines because your route table has three top-level
+names, not because the pattern does not scale: `/issues/{*}` matches `/issues/42` and
+`/issues/42/comments` identically, so a deeper client route never needs a fourth line.
+
+**Do not** reach for a bare `/{*}` at the root of `routes/routes.php` to cover all three in one
+line. Routes match in registration order and DALT's own `.dalt` pages (`/learn/...`) register
+*after* your file, so an unscoped root fallback would swallow every one of them structurally,
+before their handlers ever run — a router 404 you cannot fix from inside a controller, because
+the match already happened. Scope the wildcard to the names your own route table actually owns.
+
+Prove it the way FS07.1's own "Working looks like" will ask for — a browser tab you did not
+navigate to from inside the app:
+
+```sh
+php artisan serve &
+curl -i http://127.0.0.1:8000/issues/42        # 200, the built document
+curl -i http://127.0.0.1:8000/api/issues/42    # unchanged: still your JSON API
+```
+
+If the second line now returns HTML instead of JSON, a route registered earlier than intended is
+too broad — check order before touching either handler.
+
 ## Try it
 
 Add one project route, one issue-detail route, links from the issue list, and a not-found page.
@@ -386,6 +432,8 @@ shell around these routes; FS07.3 proves their observable behavior.
 - [ ] Invalid route values do not reach the API as accidental ids.
 - [ ] Browser Back and Forward restore meaningful screen state.
 - [ ] The server still denies an unauthorized direct resource request.
+- [ ] A direct request or refresh at `/login`, `/workspaces/...`, and `/issues/...` returns the
+      built document from DALT, not a 404 — proven with curl, not only by clicking inside the app.
 - [ ] `npm run typecheck` passes.
 
 ## Maintainer source record

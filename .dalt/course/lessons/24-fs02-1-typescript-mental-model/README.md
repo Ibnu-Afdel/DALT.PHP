@@ -254,6 +254,39 @@ Run `npm run typecheck`, read what relationship TypeScript cannot establish, the
 
 We are deliberately not walking every compiler option. The durable model is that a TypeScript project has rules, and those rules affect what the checker accepts.
 
+## Try it
+
+**Prediction:** `richerIssue` above has extra properties and is still assignable to
+`IssueSummary` because TypeScript checks shape, not membership. Before running the
+typechecker, predict whether this second assignment — same required shape, same extra
+properties, written as a literal instead of a variable — typechecks too:
+
+```ts
+type IssueSummary = { id: number; title: string };
+
+const summary: IssueSummary = {
+  id: 17,
+  title: 'Broken search',
+  status: 'open', // not part of IssueSummary
+};
+```
+
+**Run / inspect:** `npx tsc --noEmit` on a file containing both the `richerIssue` version
+and this literal version.
+
+**What happened:** `richerIssue` still typechecks; the object-literal version does not.
+TypeScript reports `status` as an excess property that `IssueSummary` does not define.
+
+**Why:** structural typing decides *assignability* — does the required shape exist — but
+a **fresh object literal** assigned directly to a typed target gets one extra pass called
+excess property checking, precisely because there is no other binding for a typo to hide
+behind. Assign the same literal to an untyped `const` first, then pass that variable, and
+the excess-property check no longer applies — the value's shape still satisfies
+`IssueSummary`, which is the same rule as `richerIssue` all along. The literal check exists
+to catch a mistyped field name on the spot, not to contradict "shape, not membership"; it
+is a narrower, additional check that only fires at the moment a literal is written in
+typed position.
+
 ## Common mistakes
 
 ### Reading a green typecheck as a runtime guarantee

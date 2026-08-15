@@ -124,11 +124,16 @@ array from `issue-data.mjs` is unchanged.
 **Check it yourself — this is the important one:**
 
 ```js
-const updated = markDone(issues, 'ISS-3');
+const updated = markDone(issues, 23); // the starter's second issue, not the first
 console.log(issues === updated);              // false — a new array
 console.log(issues[0] === updated[0]);        // true  — untouched issues are shared
-console.log(issues.find(i => i.id === 'ISS-3').status);   // still the original
+console.log(issues.find(i => i.id === 23).status);   // still the original
 ```
+
+(`23` names the second issue in the shipped `issue-data.mjs`, so checking index `0`
+tests an issue that genuinely was not touched. If you added your own fixture data with
+different ids, use one of yours the same way — the point is comparing a changed issue
+against an untouched one, not this specific number.)
 
 All three must hold. The second one surprises people and is not an accident: only the
 issue that changed becomes a new object, so everything else can be reused. React
@@ -145,11 +150,12 @@ Add a lookup for an issue ID that does not exist, and decide what your function 
 about it: return `undefined`, return a default, or throw. Then make the caller handle
 your decision.
 
-**Working looks like:** asking for `ISS-999` produces something you deliberately
-designed, not a `TypeError` three lines later.
+**Working looks like:** asking for issue id `999` — one that does not exist in
+`issue-data.mjs` — produces something you deliberately designed, not a `TypeError`
+three lines later.
 
 **Check it yourself:** the error message names the thing that went wrong. `Cannot
-read properties of undefined (reading 'title')` does not; `Unknown issue ISS-999`
+read properties of undefined (reading 'title')` does not; `Unknown issue 999`
 does.
 
 ---

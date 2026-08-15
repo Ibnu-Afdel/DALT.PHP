@@ -107,8 +107,8 @@ test('learning pages expose navigation state prerequisites and no-script content
         ->and($index->body)->toContain('/learn/fullstack')
         ->and($fullstack->statusCode)->toBe(200)
         ->and($fullstack->body)->toContain('PART 00')
-        ->and($fullstack->body)->toContain('Browser, server, request, response')
-        ->and($fullstack->body)->toContain('Forms, JavaScript, JSON and the SPA model')
+        ->and($fullstack->body)->toContain('What happens when you open a web page?')
+        ->and($fullstack->body)->toContain('What changes when JavaScript takes over a form?')
         ->and($fullstack->body)->toContain('Planned material')
         ->and($resources->statusCode)->toBe(200)
         ->and($resources->body)->toContain('All resources')
@@ -257,8 +257,8 @@ test('Core and Fullstack continuation and progress stay independently scoped', f
             ->and($dashboard->body)->toContain('0 / ' . $coreLessons . ' lessons')
             ->and($dashboard->body)->toContain('0 / ' . $fullstackLessons . ' lessons')
             ->and($dashboard->body)->toContain('Begin with Request Lifecycle')
-            ->and($dashboard->body)->toContain('Begin with Browser, server, request, response')
-            ->and($fullstack->body)->toContain('Start with Browser, server, request, response')
+            ->and($dashboard->body)->toContain('Begin with What happens when you open a web page?')
+            ->and($fullstack->body)->toContain('Start with What happens when you open a web page?')
             ->and($fullstack->body)->not->toContain('Required: <a href="/learn/lessons/01-request-lifecycle"');
     } finally {
         p05RemoveTree($root);
@@ -292,13 +292,13 @@ test('FS00.2 follows FS00.1 in the Fullstack journey and keeps the Fullstack bac
             ->and($complete->statusCode)->toBe(303)
             ->and($nextLesson->statusCode)->toBe(200)
             ->and($nextLesson->body)->toContain('href="/learn/fullstack"')
-            ->and($nextLesson->body)->toContain('Forms, JavaScript, JSON and the SPA model')
+            ->and($nextLesson->body)->toContain('What changes when JavaScript takes over a form?')
             ->and($nextLesson->body)->toContain('30–45 minutes')
             ->and($nextLesson->body)->not->toContain('Lesson ID: FS00.2')
-            ->and($nextLesson->body)->toContain('Two ways to submit')
+            ->and($nextLesson->body)->toContain('First, let the browser submit the form')
             ->and($nextLesson->body)->toContain('Closed-book checkpoint')
             ->and($track->body)->toContain('1 of 2 available lessons complete')
-            ->and($track->body)->toContain('Continue Forms, JavaScript, JSON and the SPA model');
+            ->and($track->body)->toContain('Continue What changes when JavaScript takes over a form?');
     } finally {
         p05RemoveTree($root);
     }

@@ -287,6 +287,40 @@ type Status = Issue['status'];
 
 It reuses the property type. Stop here: this helper is useful precisely because it remains readable; no keyof puzzle or type-level machinery is needed.
 
+## Try it
+
+**Prediction:** `first<T>(items: T[]): T | undefined` preserves whatever element type it is
+given. Before running anything, predict whether it accepts a `readonly Issue[]` — the kind
+FS02.2 taught you to reach for when a list should resist reassignment — the same way it
+accepts an ordinary `Issue[]`.
+
+**Run / inspect:**
+
+```ts
+function first<T>(items: T[]): T | undefined {
+  return items[0];
+}
+
+const readonlyIssues: readonly Issue[] = issues;
+
+first(readonlyIssues);
+```
+
+**What happened:** it is rejected — `Argument of type 'readonly Issue[]' is not assignable
+to parameter of type 'Issue[]'. The type 'readonly Issue[]' is 'readonly' and cannot be
+assigned to the mutable type 'Issue[]'.` Change the parameter to `items: readonly T[]` and
+both a `readonly Issue[]` and an ordinary `Issue[]` are accepted.
+
+**Why:** `T[]` is a promise that the function may treat its argument as mutable — nothing in
+`first`'s body actually reassigns an element, but the *type* does not say that, so
+TypeScript will not silently drop the caller's `readonly` guarantee to let the call through.
+This is the same lesson FS02.2 taught about `readonly` being a real, checked contract, now
+showing up at a second boundary: a generic function's parameter type is exactly as strict
+about mutability as a concrete one, because `T` is still standing in for a real type, not an
+escape hatch from the rules the rest of this lesson establishes. Preferring `readonly T[]`
+for a function that only reads its input is the more reusable default for exactly this
+reason.
+
 ## Common mistakes
 
 ### `<T>` where a concrete type was meant
