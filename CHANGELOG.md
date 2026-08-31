@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **MySQL support** — `DB_DRIVER=mysql` is now a first-class supported driver (via
+  `pdo_mysql`), mirroring how PostgreSQL is handled: hardened connection validation,
+  DSN construction with charset, `migrate:fresh` and `make:migration` MySQL branches,
+  and automatic SQLite-to-MySQL conversion of migration files. The `DB_DRIVER` contract
+  now accepts `sqlite`, `pgsql`, and `mysql`.
+
 ### Changed
 
 - Replaced the installed-project marketing page with a focused welcome screen that

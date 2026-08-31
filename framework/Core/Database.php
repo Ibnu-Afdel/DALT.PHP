@@ -93,6 +93,15 @@ class Database
             return "pgsql:host={$host};port={$port};dbname={$database}";
         }
 
+        if ($driver === 'mysql') {
+            $host = self::mysqlValue($config, 'host', '127.0.0.1');
+            $port = self::mysqlPort($config);
+            $database = self::mysqlValue($config, 'dbname');
+            $charset = self::mysqlValue($config, 'charset', 'utf8mb4');
+
+            return "mysql:host={$host};port={$port};dbname={$database};charset={$charset}";
+        }
+
         $database = $config['database'] ?? null;
 
         if (!is_string($database)) {
@@ -143,7 +152,7 @@ class Database
     {
         $driver = $config['driver'] ?? 'sqlite';
 
-        if (!is_string($driver) || !in_array($driver, ['sqlite', 'pgsql'], true)) {
+        if (!is_string($driver) || !in_array($driver, ['sqlite', 'pgsql', 'mysql'], true)) {
             $display = is_scalar($driver) ? (string) $driver : get_debug_type($driver);
 
             throw new InvalidArgumentException("Unsupported database driver: {$display}");
@@ -192,6 +201,38 @@ class Database
         if (!is_int($port) || $port < 1 || $port > 65535) {
             throw new InvalidArgumentException(
                 "Database configuration 'port' must be an integer from 1 to 65535 for pgsql.",
+            );
+        }
+
+        return $port;
+    }
+
+    /** @param array<string, mixed> $config */
+    private static function mysqlValue(
+        array $config,
+        string $key,
+        ?string $default = null,
+    ): string {
+        $value = $config[$key] ?? $default;
+        $pattern = $key === 'host' ? '/\A[A-Za-z0-9_.:\/-]+\z/' : '/\A[A-Za-z0-9_.-]+\z/';
+
+        if (!is_string($value) || $value === '' || preg_match($pattern, $value) !== 1) {
+            throw new InvalidArgumentException(
+                "Database configuration '{$key}' must be a safe non-empty string for mysql.",
+            );
+        }
+
+        return $value;
+    }
+
+    /** @param array<string, mixed> $config */
+    private static function mysqlPort(array $config): int
+    {
+        $port = $config['port'] ?? 3306;
+
+        if (!is_int($port) || $port < 1 || $port > 65535) {
+            throw new InvalidArgumentException(
+                "Database configuration 'port' must be an integer from 1 to 65535 for mysql.",
             );
         }
 

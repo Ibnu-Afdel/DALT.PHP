@@ -20,7 +20,7 @@ you should not build on it expecting otherwise.
 |---|---|
 | PHP | 8.2, 8.3, 8.4, 8.5 |
 | Required extensions | `pdo`, plus the PDO driver for your database |
-| Databases | SQLite (via `pdo_sqlite`, the default) and PostgreSQL 16+ (via `pdo_pgsql`; the course labs run `postgres:16-alpine`) |
+| Databases | SQLite (via `pdo_sqlite`, the default), PostgreSQL 16+ (via `pdo_pgsql`; the course labs run `postgres:16-alpine`), and MySQL 8.0+ (via `pdo_mysql`) |
 | Composer | 2.x |
 | Node.js | not required to run a project. Node 20.19+ or 22.12+ only to rebuild frontend assets |
 | Operating systems | Linux is tested. macOS is expected to work. Windows is untested; use WSL2 |
@@ -28,7 +28,7 @@ you should not build on it expecting otherwise.
 Adding support for a newer PHP version is a minor release. Dropping a PHP version that
 1.x supports is a major release.
 
-`DB_DRIVER` accepts exactly `sqlite` and `pgsql`. Any other value throws
+`DB_DRIVER` accepts exactly `sqlite`, `pgsql`, and `mysql`. Any other value throws
 `InvalidArgumentException: Unsupported database driver: <value>` before connecting.
 That rejection is itself part of the contract — code may rely on the failure being loud.
 

@@ -73,7 +73,6 @@ test('connection configuration rejects unsupported or incomplete drivers', funct
     expect(fn () => DatabaseManager::create($config))
         ->toThrow(InvalidArgumentException::class, $message);
 })->with([
-    'unsupported driver' => [['driver' => 'mysql'], 'Unsupported database driver: mysql'],
     'missing SQLite database' => [['driver' => 'sqlite'], "Database configuration 'database' must be a string for sqlite."],
     'missing PostgreSQL host' => [[
         'driver' => 'pgsql',
@@ -92,6 +91,23 @@ test('connection configuration rejects unsupported or incomplete drivers', funct
         'port' => 5432,
         'dbname' => 'dalt',
     ], "Database configuration 'host' must be a safe non-empty string for pgsql."],
+    'missing MySQL dbname' => [[
+        'driver' => 'mysql',
+        'host' => '127.0.0.1',
+        'port' => 3306,
+    ], "Database configuration 'dbname' must be a safe non-empty string for mysql."],
+    'invalid MySQL port' => [[
+        'driver' => 'mysql',
+        'host' => '127.0.0.1',
+        'port' => 'not-a-port',
+        'dbname' => 'dalt',
+    ], "Database configuration 'port' must be an integer from 1 to 65535 for mysql."],
+    'unsafe MySQL host' => [[
+        'driver' => 'mysql',
+        'host' => '127.0.0.1;password=exposed',
+        'port' => 3306,
+        'dbname' => 'dalt',
+    ], "Database configuration 'host' must be a safe non-empty string for mysql."],
 ]);
 
 test('SQLite setup rejects a parent path that is a file', function () {
@@ -157,4 +173,36 @@ test('PostgreSQL matches the query and fetch contract when test infrastructure i
         ->toBe(['id' => 1, 'name' => 'Ada'])
         ->and($database->query('SELECT id, name FROM dalt_f08_parity WHERE id = ?', [404])->find())
         ->toBeFalse();
+});
+
+test('MySQL matches the query and fetch contract when test infrastructure is configured', function () {
+    $json = getenv('DALT_TEST_MYSQL_CONFIG');
+
+    if (!is_string($json) || $json === '') {
+        $this->markTestSkipped('Set DALT_TEST_MYSQL_CONFIG to run MySQL parity checks.');
+    }
+
+    $config = json_decode($json, true, flags: JSON_THROW_ON_ERROR);
+
+    if (!is_array($config)) {
+        throw new RuntimeException('DALT_TEST_MYSQL_CONFIG must decode to an object.');
+    }
+
+    $table = 'dalt_f08_parity_' . bin2hex(random_bytes(4));
+    $database = DatabaseManager::create($config);
+
+    try {
+        $database->query("CREATE TABLE `{$table}` (id INTEGER PRIMARY KEY, name TEXT NOT NULL)");
+        $database->query("INSERT INTO `{$table}` (id, name) VALUES (:id, :name)", [
+            'id' => 1,
+            'name' => 'Ada',
+        ]);
+
+        expect($database->query("SELECT id, name FROM `{$table}` WHERE id = ?", [1])->find())
+            ->toBe(['id' => 1, 'name' => 'Ada'])
+            ->and($database->query("SELECT id, name FROM `{$table}` WHERE id = ?", [404])->find())
+            ->toBeFalse();
+    } finally {
+        $database->query("DROP TABLE IF EXISTS `{$table}`");
+    }
 });
