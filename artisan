@@ -326,6 +326,22 @@ switch ($command) {
                 echo $e->getMessage() . "\n";
                 exit(1);
             }
+        } elseif ($driver === 'mysql') {
+            try {
+                $database = new Core\Database($dbConfig['database']);
+                $connection = $database->getConnection();
+                $tables = $connection
+                    ->query("SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE()")
+                    ->fetchAll(PDO::FETCH_COLUMN);
+                foreach ($tables as $table) {
+                    $connection->exec("DROP TABLE IF EXISTS `{$table}`");
+                }
+                echo "Dropped all tables (" . count($tables) . ").\n";
+            } catch (\Throwable $e) {
+                echo "\nFailed to reset MySQL database.\n";
+                echo $e->getMessage() . "\n";
+                exit(1);
+            }
         } else {
             echo "Unsupported database driver: " . (is_scalar($driver) ? (string) $driver : get_debug_type($driver)) . "\n";
             exit(1);
@@ -369,7 +385,7 @@ switch ($command) {
             exit(1);
         }
         $driver = $dbConfig['database']['driver'] ?? 'sqlite';
-        if (!in_array($driver, ['sqlite', 'pgsql'], true)) {
+        if (!in_array($driver, ['sqlite', 'pgsql', 'mysql'], true)) {
             echo "Unsupported database driver: " . (is_scalar($driver) ? (string) $driver : get_debug_type($driver)) . "\n";
             exit(1);
         }
@@ -402,6 +418,21 @@ CREATE TABLE IF NOT EXISTS "{$cleanName}" (
 
 -- Add indexes here
 -- CREATE INDEX IF NOT EXISTS idx_{$cleanName}_name ON "{$cleanName}"(name);
+SQL;
+        } elseif ($driver === 'mysql') {
+            $template = <<<SQL
+-- Migration: {$name}
+-- Created: {$currentDate}
+
+CREATE TABLE IF NOT EXISTS `{$cleanName}` (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add indexes here
+-- CREATE INDEX idx_{$cleanName}_name ON `{$cleanName}`(name);
 SQL;
         } else {
             $template = <<<SQL
