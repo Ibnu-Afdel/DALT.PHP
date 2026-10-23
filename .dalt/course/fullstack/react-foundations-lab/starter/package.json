@@ -23,7 +23,7 @@
     "jsdom": "27.0.1",
     "tailwindcss": "4.3.0",
     "typescript": "5.9.3",
-    "vite": "8.0.12",
+    "vite": "8.3.5",
     "vitest": "4.0.18"
   }
 }
