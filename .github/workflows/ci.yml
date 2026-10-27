@@ -39,7 +39,7 @@ jobs:
         uses: shivammathur/setup-php@2.37.2
         with:
           php-version: ${{ matrix.php }}
-          extensions: pdo, pdo_sqlite, pdo_pgsql, mbstring
+          extensions: pdo, pdo_sqlite, pdo_pgsql, pdo_mysql, mbstring
           coverage: none
           tools: composer:v2
 

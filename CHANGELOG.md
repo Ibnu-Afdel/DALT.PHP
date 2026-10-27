@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **MySQL support** — `DB_DRIVER=mysql` is now a first-class supported driver (via
+  `pdo_mysql`), mirroring how PostgreSQL is handled: hardened connection validation,
+  DSN construction with charset, `migrate:fresh` and `make:migration` MySQL branches,
+  and automatic SQLite-to-MySQL conversion of migration files. The `DB_DRIVER` contract
+  now accepts `sqlite`, `pgsql`, and `mysql`.
+- **MySQL stacked-query protection** — MySQL connections disable multi-statement
+  execution (`PDO::MYSQL_ATTR_MULTI_STATEMENTS` / `Pdo\Mysql::ATTR_MULTI_STATEMENTS`)
+  so a single injected statement cannot be amplified into stacked destructive ones,
+  matching the single-statement posture of PostgreSQL. The migration runner splits
+  raw migration files into individual statements to run under this hardened driver.
+
 ### Changed
 
 - Replaced the installed-project marketing page with a focused welcome screen that

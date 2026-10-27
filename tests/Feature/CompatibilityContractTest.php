@@ -170,20 +170,21 @@ test('every artisan command the policy promises is dispatched', function () use 
     }
 })->group('compatibility');
 
-test('the policy does not promise a database driver the framework rejects', function () use ($contract) {
+test('the policy promises every supported database driver and rejects the rest loudly', function () use ($contract) {
     $body = $contract();
 
-    expect($body)->toContain('`sqlite` and `pgsql`');
+    expect($body)->toContain('`sqlite`, `pgsql`, and `mysql`');
 
-    // The rejection message is itself documented as part of the contract.
+    // The rejection message is itself part of the contract — a driver the framework
+    // does not support must still fail loudly rather than be silently accepted.
     try {
-        new Core\Database(['driver' => 'mysql', 'database' => ':memory:']);
+        new Core\Database(['driver' => 'oracle', 'database' => ':memory:']);
         $message = null;
     } catch (InvalidArgumentException $exception) {
         $message = $exception->getMessage();
     }
 
-    expect($message)->toBe('Unsupported database driver: mysql');
+    expect($message)->toBe('Unsupported database driver: oracle');
 })->group('compatibility');
 
 test('the environment keys the policy covers are the ones the example file ships', function () use ($contract) {
