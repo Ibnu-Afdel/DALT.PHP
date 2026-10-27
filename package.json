@@ -34,7 +34,7 @@
     "typescript": "5.9.3",
     "typescript-eslint": "8.67.0",
     "vite": "^8.2.2",
-    "vitest": "4.1.11"
+    "vitest": "4.1.12"
   },
   "dependencies": {
     "react": "19.2.3",
